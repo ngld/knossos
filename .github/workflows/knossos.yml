@@ -59,8 +59,7 @@ jobs:
           cd build/client/launcher/Release
           7z a Knossos.7z .
 
-      - name: Upload build
-        uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v2
         with:
           name: windows-x64
           path: build/client/launcher/Release/Knossos.7z
@@ -118,8 +117,7 @@ jobs:
           cd build/client/launcher/Release
           tar -cf - . | zstd > ../Knossos.tar.zstd
 
-      - name: Upload build
-        uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v2
         with:
           name: ubuntu-x64
           path: build/client/launcher/Knossos.tar.zstd
@@ -177,8 +175,7 @@ jobs:
           cd build/client/launcher/Release
           tar -cJf Knossos.tar.xz Knossos.app
 
-      - name: Upload build
-        uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v2
         with:
           name: darwin-x64
           path: build/client/launcher/Release/Knossos.tar.xz
