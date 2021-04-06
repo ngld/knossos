@@ -1,8 +1,6 @@
 package config
 
 import (
-	"os"
-
 	"github.com/cristalhq/aconfig"
 	"github.com/cristalhq/aconfig/aconfigtoml"
 	"github.com/jackc/pgx/v4/pgxpool"
@@ -12,7 +10,7 @@ import (
 
 // Config describes all configuration options
 type Config struct {
-	Database string `default:"$DATABASE_URL" usage:"PostgreSQL DSN to connect to (i.e. postgres://localhost/nebula)"`
+	Database string `default:"postgres://localhost/nebula" usage:"PostgreSQL DSN to connect to (i.e. postgres://localhost/nebula)"`
 	Log      struct {
 		Level string `default:"info"`
 		File  string
@@ -75,10 +73,6 @@ func Loader() (*Config, *aconfig.Loader) {
 
 // Validate verifies that all config fields have valid values
 func (cfg *Config) Validate() error {
-	if cfg.Database == "$DATABASE_URL" {
-		cfg.Database = os.Getenv("DATABASE_URL")
-	}
-
 	_, err := pgxpool.ParseConfig(cfg.Database)
 	if err != nil {
 		return eris.Wrapf(err, `Invalid value for database`)

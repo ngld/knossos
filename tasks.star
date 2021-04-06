@@ -366,7 +366,7 @@ def configure():
     db_user = "nebula"
     db_pass = "nebula"
     db_name = "nebula"
-    db_url = "postgres://%s:%s@localhost:%d/%s" % (db_user, db_pass, db_port, db_name)
+    setenv("NEBULA_DATABASE", "postgres://%s:%s@localhost:%d/%s" % (db_user, db_pass, db_port, db_name))
 
     task(
         "database-setup",
@@ -424,8 +424,7 @@ def configure():
             "cmd/**/*.go",
             "pkg/**/*.go",
         ],
-        outputs = [neb_bin],
-        env = { "DATABASE_URL": db_url },
+        outputs = [str(neb_bin)],
         cmds = [
             "go generate -x ./pkg/db/queries.go",
             "go build -o '%s' ./cmd/server/main.go" % neb_bin,
@@ -437,7 +436,6 @@ def configure():
         desc = "Launches Nebula",
         deps = ["server-build", "front-build", "database-migrate"],
         base = "packages/server",
-        env = { "DATABASE_URL": db_url },
         cmds = ["%s %s" % (neb_bin, neb_args)],
     )
 
