@@ -58,6 +58,7 @@ type Task struct {
 	SkipIfExists []string
 	Outputs      []string
 	Cmds         []TaskCmd
+	IgnoreExit   bool
 	Hidden       bool
 }
 
