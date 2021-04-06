@@ -29,6 +29,7 @@ Task help:
   inputs: a list of files
   outputs: a list of files; if this task is called as a dependency of another task and all outputs exist and are newer
     than the input files, this task is skipped
+  ignore_exit: boolean (default False), disregard exit status of cmds when True
   cmds: a list of commands to execute
     the following types are allowed as list items:
       string: Will be interpreted as a shell script. Bash syntax is supported (even on Windows)
@@ -370,14 +371,12 @@ def configure():
     task(
         "database-setup",
         hidden = True,
-        skip_if_exists = [
-            ".tools/db_setup"
-        ],
+        skip_if_exists = [".tools/db_setup"],
         cmds = [
             "docker network create '%s'" % db_network,
             "docker create --name '%s' --network '%s' -p '%d:5432' -e POSTGRES_USER='%s' -e POSTGRES_PASSWORD='%s' -e POSTGRES_DB='%s' postgres:alpine" % (db_container, db_network, db_port, db_user, db_pass, db_name),
-            "touch .tools/db_setup"
-        ]
+            "touch .tools/db_setup",
+        ],
     )
 
     task(
@@ -387,22 +386,18 @@ def configure():
         cmds = [
             "docker start '%s'" % db_container,
             "until docker exec '%s' pg_isready; do sleep 1; done" % db_container,
-        ]
+        ],
     )
 
     task(
         "database-migrate",
         desc = "Initializes and migrates the Nebula database (using Docker)",
         deps = ["database-ready"],
-        inputs = [
-            "db/migrations/*.sql"
-        ],
-        outputs = [
-            ".tools/db_migrated"
-        ],
+        inputs = ["db/migrations/*.sql"],
+        outputs = [".tools/db_migrated"],
         cmds = [
             "docker run --rm --network '%s' -v \"$PWD/db/migrations:/flyway/sql\" flyway/flyway:latest-alpine -url='jdbc:postgresql://%s/%s?user=%s&password=%s' migrate" % (db_network, db_container, db_name, db_user, db_pass),
-            "touch .tools/db_migrated"
+            "touch .tools/db_migrated",
         ]
     )
 
@@ -414,11 +409,11 @@ def configure():
         cmds = [
             "docker rm -f '%s'" % db_container,
             "docker network rm '%s'" % db_network,
-            "rm .tools/db_*"
+            "rm .tools/db_*",
         ]
     )
 
-    neb_bin = resolve_path("./build/nebula%s" % binext)
+    neb_bin = resolve_path("build/nebula%s" % binext)
 
     task(
         "server-build",
