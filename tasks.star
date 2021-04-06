@@ -40,13 +40,23 @@ Task help:
 """
 
 build = option("build", "Release", help = "Whether to build a Debug or Release build")
+libkn_static = option("static", "true", help = "Whether to statically or dynamically link libknossos")
+
 msys2_path = option("msys2_path", "//third_party/msys64", help = "The path to your MSYS2 installation. Only used on Windows. " +
                                                                  "Defaults to the bundled MSYS2 directory")
 generator_opt = option("generator", "", help = "The CMake generator to use. Defaults to ninja if available. " +
                                                "Please note that on Windows you'll  have to run the vcvarsall.bat if you don't choose a Visual Studio generator")
-libkn_static = option("static", "true", help = "Whether to statically or dynamically link libknossos")
+
+db_network = option("db_network", "nebula", help = "The name of the Docker network to use for Nebula-related containers.")
+db_container = option("db_container", "nebula-db", help = "The name of the Docker container for Nebula's managed database.")
+db_port = option("db_port", "4142", help="The port to expose Nebula's managed database on.")
+db_user = option("db_user", "nebula", help="The username to use for Nebula's managed database.")
+db_pass = option("db_pass", "nebula", help="The password to use for Nebula's managed database.")
+db_name = option("db_name", "nebula", help="The name of the database used by Nebula.")
+
 kn_args = option("client_args", "", help = "The parameters to pass to Knossos in the client-run target")
 neb_args = option("server_args", "", help = "The parameters to pass to Nebula in the server-run target")
+
 
 yarn_path = resolve_path(read_yaml(".yarnrc.yml", "yarnPath"))
 
@@ -132,6 +142,7 @@ def configure():
     if build not in ("Debug", "Release"):
         error("Invalid build mode %s passed. Only Debug or Release are valid." % build)
 
+    setenv("NEBULA_DATABASE", "postgres://%s:%s@localhost:%s/%s" % (db_user, db_pass, db_port, db_name))
     setenv("NODE_OPTIONS", '-r "%s"' % to_slashes(str(resolve_path("//.pnp.js"))))
 
     if OS == "windows":
@@ -360,21 +371,13 @@ def configure():
         ],
     )
 
-    db_network = "nebula"
-    db_container = "nebula-db"
-    db_port = 1234
-    db_user = "nebula"
-    db_pass = "nebula"
-    db_name = "nebula"
-    setenv("NEBULA_DATABASE", "postgres://%s:%s@localhost:%d/%s" % (db_user, db_pass, db_port, db_name))
-
     task(
         "database-setup",
         hidden = True,
         skip_if_exists = [".tools/db_setup"],
         cmds = [
             "docker network create '%s'" % db_network,
-            "docker create --name '%s' --network '%s' -p '%d:5432' -e POSTGRES_USER='%s' -e POSTGRES_PASSWORD='%s' -e POSTGRES_DB='%s' postgres:alpine" % (db_container, db_network, db_port, db_user, db_pass, db_name),
+            "docker create --name '%s' --network '%s' -p '%s:5432' -e POSTGRES_USER='%s' -e POSTGRES_PASSWORD='%s' -e POSTGRES_DB='%s' postgres:alpine" % (db_container, db_network, db_port, db_user, db_pass, db_name),
             "touch .tools/db_setup",
         ],
     )
