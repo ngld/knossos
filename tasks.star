@@ -419,12 +419,12 @@ def configure():
         "server-build",
         desc = "Compiles the Nebula server code",
         deps = ["proto-build", "database-migrate"],
-        inputs = [
-            "packages/server/cmd/**/*.go",
-            "packages/server/pkg/**/*.go",
-        ],
-        outputs = ["build/nebula%s" % binext],
         base = "packages/server",
+        inputs = [
+            "cmd/**/*.go",
+            "pkg/**/*.go",
+        ],
+        outputs = [neb_bin],
         env = { "DATABASE_URL": db_url },
         cmds = [
             "go generate -x ./pkg/db/queries.go",
