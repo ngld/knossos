@@ -310,19 +310,6 @@ def configure():
     )
 
     if OS == "windows":
-        mingw64_bootstrap = [
-            'usr/bin/bash -lc true'
-        ]
-
-        if getenv("CI") == "":
-            mingw64_bootstrap.append(
-                'usr/bin/bash -lc "pacman --noconfirm -Syu"',
-            )
-
-        mingw64_bootstrap.append(
-            'usr/bin/bash -lc "pacman --noconfirm -Syu --needed mingw-w64-x86_64-{gcc,xz,ccache,cmake,SDL2} make"',
-        )
-
         task(
             "bootstrap-mingw64",
             desc = "Runs first-time setup for MSYS2",
@@ -333,7 +320,11 @@ def configure():
                 "mingw64/bin/cmake.exe",
                 "mingw64/bin/SDL2.dll",
             ],
-            cmds = mingw64_bootstrap,
+            cmds = [
+                'usr/bin/bash -lc true',
+                'usr/bin/bash -lc "pacman --noconfirm -Syu"',
+                'usr/bin/bash -lc "pacman --noconfirm -Syu --needed mingw-w64-x86_64-{gcc,xz,ccache,cmake,SDL2} make"',
+            ],
         )
 
     task(

@@ -1,12 +1,6 @@
-name: Nightly
+name: Knossos
 
-on:
-  push:
-    branches:
-      - nu
-  pull_request:
-    branches:
-      - nu
+on: [push, pull_request]
 
 jobs:
   windows-x64:
@@ -16,36 +10,33 @@ jobs:
       run:
         shell: pwsh
     steps:
-      - name: Git checkout
-        uses: actions/checkout@v2
-
-      - name: Setup Go
-        uses: actions/setup-go@v2
+      - uses: actions/setup-go@v2
         with:
-          go-version: 1.16.2
+          go-version: 1.16.3
 
-      - name: Restore cache
-        uses: actions/cache@v2
+      - uses: msys2/setup-msys2@v2
+
+      - uses: actions/checkout@v2
+
+      - uses: actions/cache@v2
         with:
           key: windows-cache-${{ hashFiles('yarn.lock', 'packages/build-tools/DEPS.yml', 'packages/*/go.mod') }}
           restore-keys: windows-cache-
           path: |
             ~/go/pkg/mod
-            .tools
             .yarn/cache
             .yarn/unplugged
             .yarn/build-state.yml
             .yarn/install-state.gz
             third_party
             packages/build-tools/DEPS.stamps
+            .tools
+            !.tools/tool.exe
 
-      - name: Delete cached build tool
-        run: Remove-Item -Path .tools\tool.exe
-
-      - name: Configure
+      - name: Configure build
         run: .\task.ps1 configure msys2_path=C:\msys64 build=Release
 
-      - name: Install dependencies
+      - name: Fetch dependencies
         run: .\task.ps1 install-tools fetch-deps
 
       - name: Compile API definitions
@@ -57,14 +48,16 @@ jobs:
       - name: Build libknossos
         run: .\task.ps1 libknossos-build
 
-      - name: Build Knossos
+      - name: Build Knossos wrapper
         run: .\task.ps1 client-build
 
-      - name: Build client UI
+      - name: Build Knossos UI
         run: .\task.ps1 client-ui-build
 
-      - name: Compress final build
-        run: cd build/client/launcher/Release && 7z a Knossos.7z .
+      - name: Archive build
+        run: |
+          cd build/client/launcher/Release
+          7z a Knossos.7z .
 
       - name: Upload build
         uses: actions/upload-artifact@v2
@@ -76,36 +69,31 @@ jobs:
     name: Ubuntu 20.04 x64
     runs-on: ubuntu-20.04
     steps:
-      - name: Git checkout
-        uses: actions/checkout@v2
-
-      - name: Setup Go
-        uses: actions/setup-go@v2
+      - uses: actions/setup-go@v2
         with:
-          go-version: 1.16.2
+          go-version: 1.16.3
 
-      - name: Restore cache
-        uses: actions/cache@v2
+      - uses: actions/checkout@v2
+
+      - uses: actions/cache@v2
         with:
           key: ubuntu-cache-${{ hashFiles('yarn.lock', 'packages/build-tools/DEPS.yml', 'packages/*/go.mod') }}
           restore-keys: ubuntu-cache-
           path: |
             ~/go/pkg/mod
-            .tools
             .yarn/cache
             .yarn/unplugged
             .yarn/build-state.yml
             .yarn/install-state.gz
             third_party
             packages/build-tools/DEPS.stamps
+            .tools
+            !.tools/tool
 
-      - name: Delete cached build tool
-        run: rm -f .tools/tool
-
-      - name: Configure
+      - name: Configure build
         run: ./task.sh configure build=Release
 
-      - name: Install dependencies
+      - name: Fetch dependencies
         run: |
           sudo apt install -y libgtk-3-dev liblzma-dev libzstd-dev zlib1g-dev
           ./task.sh install-tools fetch-deps
@@ -119,14 +107,16 @@ jobs:
       - name: Build libknossos
         run: ./task.sh libknossos-build
 
-      - name: Build Knossos
+      - name: Build Knossos wrapper
         run: ./task.sh client-build
 
-      - name: Build client UI
+      - name: Build Knossos UI
         run: ./task.sh client-ui-build
 
-      - name: Compress final build
-        run: cd build/client/launcher/Release && tar -cf - . | zstd > ../Knossos.tar.zstd
+      - name: Archive build
+        run: |
+          cd build/client/launcher/Release
+          tar -cf - . | zstd > ../Knossos.tar.zstd
 
       - name: Upload build
         uses: actions/upload-artifact@v2
@@ -138,36 +128,31 @@ jobs:
     name: macOS 10.15 x64
     runs-on: macos-10.15
     steps:
-      - name: Git checkout
-        uses: actions/checkout@v2
-
-      - name: Setup Go
-        uses: actions/setup-go@v2
+      - uses: actions/setup-go@v2
         with:
-          go-version: 1.16.2
+          go-version: 1.16.3
 
-      - name: Restore cache
-        uses: actions/cache@v2
+      - uses: actions/checkout@v2
+
+      - uses: actions/cache@v2
         with:
           key: darwin-cache-${{ hashFiles('yarn.lock', 'packages/build-tools/DEPS.yml', 'packages/*/go.mod') }}
           restore-keys: darwin-cache-
           path: |
             ~/go/pkg/mod
-            .tools
             .yarn/cache
             .yarn/unplugged
             .yarn/build-state.yml
             .yarn/install-state.gz
             third_party
             packages/build-tools/DEPS.stamps
+            .tools
+            !.tools/tool
 
-      - name: Delete cached build tool
-        run: rm -f .tools/tool
-
-      - name: Configure
+      - name: Configure build
         run: ./task.sh configure build=Release
 
-      - name: Install dependencies
+      - name: Fetch dependencies
         run: |
           brew install xz
           ./task.sh install-tools fetch-deps
@@ -181,14 +166,16 @@ jobs:
       - name: Build libknossos
         run: ./task.sh libknossos-build
 
-      - name: Build Knossos
+      - name: Build Knossos wrapper
         run: ./task.sh client-build
 
-      - name: Build client UI
+      - name: Build Knossos UI
         run: ./task.sh client-ui-build
 
-      - name: Compress final build
-        run: cd build/client/launcher/Release && tar -cJf Knossos.tar.xz knossos.app
+      - name: Archive build
+        run: |
+          cd build/client/launcher/Release
+          tar -cJf Knossos.tar.xz Knossos.app
 
       - name: Upload build
         uses: actions/upload-artifact@v2
