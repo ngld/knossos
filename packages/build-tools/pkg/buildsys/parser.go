@@ -219,7 +219,7 @@ func task(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kw
 
 	err := starlark.UnpackArgs(fn.Name(), args, kwargs, "short??", &task.Short, "hidden?", &task.Hidden,
 		"desc?", &task.Desc, "deps?", &deps, "base?", &task.Base, "skip_if_exists?", &skipIfExists, "inputs?",
-		&inputs, "outputs?", &outputs, "env?", &env, "cmds?", &cmds)
+		&inputs, "outputs?", &outputs, "env?", &env, "cmds?", &cmds, "ignore_exit?", &task.IgnoreExit)
 	if err != nil {
 		return nil, err
 	}

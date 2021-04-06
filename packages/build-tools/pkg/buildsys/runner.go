@@ -245,6 +245,12 @@ func runTaskInternal(ctx context.Context, task *Task, tasks TaskList, dryRun, fo
 		}
 	}
 
+	// Default to running with 'set -e'
+	params := ""
+	if !task.IgnoreExit {
+		params += "-e"
+	}
+
 	// With the skip and input/output checks done, we can finally start executing
 	runner, err := interp.New(
 		interp.Dir(task.Base),
@@ -252,7 +258,7 @@ func runTaskInternal(ctx context.Context, task *Task, tasks TaskList, dryRun, fo
 		interp.ExecHandler(execHandler),
 		interp.OpenHandler(openHandler),
 		interp.StdIO(nil, os.Stdout, os.Stderr),
-		interp.Params("-e"),
+		interp.Params(params),
 	)
 	if err != nil {
 		return eris.Wrap(err, "Failed to initialize runner")
@@ -267,7 +273,7 @@ func runTaskInternal(ctx context.Context, task *Task, tasks TaskList, dryRun, fo
 	for _, item := range task.Cmds {
 		stmts, err := item.ToShellStmts(parser)
 		if err != nil {
-			return eris.Wrap(err, "failed to parser shell script")
+			return eris.Wrap(err, "failed to parse shell script")
 		}
 		if stmts != nil {
 			for _, stm := range stmts {
@@ -281,7 +287,10 @@ func runTaskInternal(ctx context.Context, task *Task, tasks TaskList, dryRun, fo
 				if !dryRun {
 					err = runner.Run(ctx, stm)
 					if err != nil {
-						return err
+						_, exit := interp.IsExitStatus(err)
+						if !exit || (exit && !task.IgnoreExit) {
+							return err
+						}
 					}
 
 					if runner.Exited() {
