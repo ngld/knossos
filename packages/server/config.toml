@@ -1,5 +1,3 @@
-database = "postgresql://localhost/nebula"
-
 [log]
 level = "debug"
 

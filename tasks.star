@@ -44,7 +44,8 @@ msys2_path = option("msys2_path", "//third_party/msys64", help = "The path to yo
 generator_opt = option("generator", "", help = "The CMake generator to use. Defaults to ninja if available. " +
                                                "Please note that on Windows you'll  have to run the vcvarsall.bat if you don't choose a Visual Studio generator")
 libkn_static = option("static", "true", help = "Whether to statically or dynamically link libknossos")
-kn_args = option("args", "", help = "The parameters to pass to Knossos in the client-run target")
+kn_args = option("client_args", "", help = "The parameters to pass to Knossos in the client-run target")
+neb_args = option("server_args", "", help = "The parameters to pass to Nebula in the server-run target")
 
 yarn_path = resolve_path(read_yaml(".yarnrc.yml", "yarnPath"))
 
@@ -358,20 +359,91 @@ def configure():
         ],
     )
 
+    db_network = "nebula"
+    db_container = "nebula-db"
+    db_port = 1234
+    db_user = "nebula"
+    db_pass = "nebula"
+    db_name = "nebula"
+    db_url = "postgres://%s:%s@localhost:%d/%s" % (db_user, db_pass, db_port, db_name)
+
+    task(
+        "database-setup",
+        hidden = True,
+        skip_if_exists = [
+            ".tools/db_setup"
+        ],
+        cmds = [
+            "docker network create '%s'" % db_network,
+            "docker create --name '%s' --network '%s' -p '%d:5432' -e POSTGRES_USER='%s' -e POSTGRES_PASSWORD='%s' -e POSTGRES_DB='%s' postgres:alpine" % (db_container, db_network, db_port, db_user, db_pass, db_name),
+            "touch .tools/db_setup"
+        ]
+    )
+
+    task(
+        "database-ready",
+        hidden = True,
+        deps = ["database-setup"],
+        cmds = [
+            "docker start '%s'" % db_container,
+            "until docker exec '%s' pg_isready; do sleep 1; done" % db_container,
+        ]
+    )
+
+    task(
+        "database-migrate",
+        desc = "Initializes and migrates the Nebula database (using Docker)",
+        deps = ["database-ready"],
+        inputs = [
+            "db/migrations/*.sql"
+        ],
+        outputs = [
+            ".tools/db_migrated"
+        ],
+        cmds = [
+            "docker run --rm --network '%s' -v \"$PWD/db/migrations:/flyway/sql\" flyway/flyway:latest-alpine -url='jdbc:postgresql://%s/%s?user=%s&password=%s' migrate" % (db_network, db_container, db_name, db_user, db_pass),
+            "touch .tools/db_migrated"
+        ]
+    )
+
+    task(
+        "database-clean",
+        desc = "Tears down the managed Nebula database",
+        deps = ["build-tool"],
+        ignore_exit = True,
+        cmds = [
+            "docker rm -f '%s'" % db_container,
+            "docker network rm '%s'" % db_network,
+            "rm .tools/db_*"
+        ]
+    )
+
+    neb_bin = resolve_path("./build/nebula%s" % binext)
+
     task(
         "server-build",
         desc = "Compiles the Nebula server code",
-        deps = ["proto-build"],
+        deps = ["proto-build", "database-migrate"],
         inputs = [
             "packages/server/cmd/**/*.go",
             "packages/server/pkg/**/*.go",
         ],
         outputs = ["build/nebula%s" % binext],
+        base = "packages/server",
+        env = { "DATABASE_URL": db_url },
         cmds = [
-            "cd packages/server",
             "go generate -x ./pkg/db/queries.go",
-            "go build -o ../../build/nebula%s ./cmd/server/main.go" % binext,
+            "go build -o '%s' ./cmd/server/main.go" % neb_bin,
         ],
+    )
+
+    task(
+        "server-run",
+        desc = "Launches Nebula",
+        deps = ["server-build", "front-build", "database-migrate"],
+        base = "packages/server",
+        env = { "DATABASE_URL": db_url },
+        cmds = ["%s %s" % (neb_bin, neb_args)],
     )
 
     task(
@@ -531,13 +603,14 @@ def configure():
     task(
         "clean",
         desc = "Delete all generated files",
-        deps = ["build-tool"],
+        deps = ["build-tool", "database-clean"],
+        ignore_exit = True,
         cmds = [
             "rm -rf build/*",
             "rm -f packages/api/api/**/*.{ts,go}",
             "rm -f packages/api/client/**/*.go",
             "rm -rf packages/{client-ui,front}/dist",
-            "rm -f packages/{cleint-ui,front}/gen/*",
+            "rm -f packages/{client-ui,front}/gen/*",
         ],
     )
 
@@ -546,6 +619,7 @@ def configure():
             "%s-clean" % name,
             desc = "Delete all generated files from the %s package" % name,
             deps = ["build-tool"],
+            ignore_exit = True,
             cmds = [
                 "rm -rf build/%s" % name,
             ],
