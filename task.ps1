@@ -30,11 +30,6 @@ if (!(Get-Command 'go.exe' -ea 0)) {
     }
 }
 
-if (Test-Path -Path "${ToolRoot}\tool.exe.rebuild" -ea 0){
-    Remove-Item -Path "${ToolRoot}\tool.exe"
-    Remove-Item -Path "${ToolRoot}\tool.exe.rebuild"
-}
-
 if (!(Test-Path -Path "${ToolRoot}\tool.exe" -ea 0)) {
     Push-Location
     Set-Location -Path 'packages\build-tools'
@@ -43,3 +38,4 @@ if (!(Test-Path -Path "${ToolRoot}\tool.exe" -ea 0)) {
 }
 
 Invoke-Expression "${ToolRoot}\tool.exe task ${Args}"
+Remove-Item -Path "${ToolRoot}\tool.exe.old.*"

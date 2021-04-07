@@ -211,35 +211,26 @@ def configure():
 
     prepend_path("third_party/go/bin")
     prepend_path("third_party/protoc-dist")
-
-    if OS == "windows":
-        prepend_path("third_party/nodejs")
-        build_tool_cmds = [
-            "touch .tools/tool.exe.rebuild",
-            "echo \"Can't rebuild tool in one step on Windows. The old build was removed, please run the same command " +
-            "again to finish the build tool update.\"",
-            "exit 1",
-        ]
-    else:
-        prepend_path("third_party/nodejs/bin")
-        build_tool_cmds = [
-            "cd packages/build-tools",
-            "go build -o ../../.tools/tool%s" % binext,
-        ]
-
+    prepend_path("third_party/nodejs" if OS == "windows" else "third_party/nodejs/bin")
     prepend_path(".tools")
+
+    tool_bin = resolve_path(".tools/tool%s" % binext)
+
+    build_tool_extra_cmds = []
+    if OS == "windows":
+        build_tool_extra_cmds = [
+            "mv '%s' \"%s.old.$$\"" % (tool_bin, tool_bin),
+        ]
 
     task(
         "build-tool",
         desc = "Build our build tool",
-        inputs = [
-            "packages/build-tools/**/*.go",
-            "packages/libknossos/pkg/archives/*.go",
+        base = "packages/build-tools",
+        inputs = ["**/*.go"],
+        outputs = [str(tool_bin)],
+        cmds = build_tool_extra_cmds + [
+            "go build -o '%s'" % tool_bin,
         ],
-        outputs = [
-            ".tools/tool%s" % binext,
-        ],
-        cmds = build_tool_cmds,
     )
 
     extra_tools = []
