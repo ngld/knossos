@@ -381,7 +381,7 @@ def configure():
 
     res_dir = ""
     if OS == "darwin":
-        res_dir = "knossos.app/Contents/Frameworks/Chromium Embedded Framework.framework/Resources/"
+        res_dir = "Knossos.app/Contents/Frameworks/Chromium Embedded Framework.framework/Resources/"
 
     task(
         "client-ui-build",
@@ -463,7 +463,7 @@ def configure():
     )
 
     if OS == "darwin":
-        kn_bin = "./launcher/%s/knossos.app/Contents/MacOS/knossos" % build
+        kn_bin = "./launcher/%s/Knossos.app/Contents/MacOS/knossos" % build
     else:
         kn_bin = "./launcher/%s/knossos" % build
 
