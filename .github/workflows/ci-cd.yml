@@ -32,7 +32,7 @@ jobs:
         id: vars
         shell: bash
         run: |
-          msys2_extras=$(cat msys2-packages.txt)
+          msys2_extras=$(tr -s '\n' ' ' < msys2-packages.txt)
           echo "Adding ${msys2_extras} to MSYS2"
           echo "::set-output name=msys2_extras::${msys2_extras}"
           go_version=$(cat .go-version)
