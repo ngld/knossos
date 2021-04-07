@@ -16,10 +16,12 @@ function Get-Go($Source, $Target) {
 }
 
 if (!(Get-Command 'go.exe' -ea 0)) {
-    Get-Go -Source 'https://golang.org/dl/go1.16.3.windows-amd64.zip' -Target (Split-Path -Path $GoRoot)
+    $GoVersion = Get-Content "${PSScriptRoot}/.go-version"
+
+    Get-Go -Source "https://golang.org/dl/go${GoVersion}.windows-amd64.zip" -Target (Split-Path -Path $GoRoot)
 
     if (!(Test-Path -Path "${GoRoot}\bin\go.exe" -ea 0)) {
-        Write-Host "Could not find or fetch Go!"
+        Write-Host "Could not find or fetch Go ${GoVersion}!"
         Write-Host ""
         Write-Host "Please install the Go toolchain, or fix the previous error"
         Write-Host "and try again."
