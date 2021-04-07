@@ -10,7 +10,7 @@ import (
 
 // Config describes all configuration options
 type Config struct {
-	Database string `default:"pgsql://localhost/nebula" usage:"PostgreSQL DSN to connect to (i.e. pgsql://localhost/nebula)"`
+	Database string `default:"postgres://localhost/nebula" usage:"PostgreSQL DSN to connect to (i.e. postgres://localhost/nebula)"`
 	Log      struct {
 		Level string `default:"info"`
 		File  string

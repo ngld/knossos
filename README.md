@@ -28,10 +28,12 @@ You'll need the following:
 
 * go (the package is sometimes called golang)
 * CMake
+* Docker (only for Nebula)
 * GCC
 * GTK 3
 * liblzma
 * libzstd
+* ninja (optional)
 * zlib
 
 Once you've installed these dependencies, follow the general instructions and

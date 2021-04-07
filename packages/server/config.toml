@@ -1,4 +1,5 @@
-database = "postgresql://localhost/nebula"
+# This is usually set through $NEBULA_DATABASE, but can be set here as well.
+# database = "postgres://localhost/nebula"
 
 [log]
 level = "debug"
