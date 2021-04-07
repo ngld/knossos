@@ -1,0 +1,130 @@
+name: CI/CD
+
+on:
+  push:
+    branches:
+      - nu
+  pull_request:
+
+jobs:
+  knossos:
+    name: Knossos / ${{ matrix.archive }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-2019, macos-10.15, ubuntu-20.04]
+        include:
+          - os: windows-2019
+            script: .\task.ps1
+            archive: windows-x64
+          - os: macos-10.15
+            script: ./task.sh
+            archive: darwin-x64
+          - os: ubuntu-20.04
+            script: ./task.sh
+            archive: ubuntu-x64
+      fail-fast: false
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Reading additional settings from repository
+        id: vars
+        shell: bash
+        run: |
+          msys2_extras=$(tr -s '\n' ' ' < msys2-packages.txt)
+          echo "Adding ${msys2_extras} to MSYS2"
+          echo "::set-output name=msys2_extras::${msys2_extras}"
+          go_version=$(cat .go-version)
+          echo "Using Go version ${go_version}"
+          echo "::set-output name=go_version::${go_version}"
+
+      - name: Setup MSYS2 toolchain (Windows)
+        uses: msys2/setup-msys2@v2
+        if: runner.os == 'Windows'
+        with:
+          update: true
+          install: ${{ steps.vars.outputs.msys2_extras }}
+
+      - name: Setup Go toolchain
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ steps.vars.outputs.go_version }}
+
+      - name: Cache Go dependencies
+        uses: actions/cache@v2
+        id: golang-cache
+        with:
+          key: golang-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
+          restore-keys: golang-${{ runner.os }}-
+          path: ~/go/pkg/mod
+
+      - name: Cache Yarn dependencies
+        uses: actions/cache@v2
+        id: yarn-cache
+        with:
+          key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
+          restore-keys: yarn-${{ runner.os }}-
+          path: |
+            .pnp.*
+            .yarn/
+            !.yarn/releases
+            !.yarn/plugins
+      
+      - name: Cache managed dependencies
+        uses: actions/cache@v2
+        id: third_party-cache
+        with:
+          key: third_party-${{ runner.os }}-${{ hashFiles('packages/build-tools/DEPS.yml') }}
+          restore-keys: third_party-${{ runner.os }}-
+          path: |
+            packages/build-tools/DEPS.stamps
+            third_party
+
+      - name: Fetch system dependencies (*nix)
+        if: runner.os != 'Windows'
+        run: |
+          if [ "$RUNNER_OS" = 'macOS' ]; then
+            brew install xz
+          elif [ "$RUNNER_OS" = 'Linux' ]; then
+            sudo apt-get install -y libgtk-3-dev liblzma-dev libzstd-dev zlib1g-dev
+          fi
+
+      - name: Locate MSYS2 installation (Windows)
+        id: msys2_install
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
+        run: |
+          path=$(cygpath -w /)
+          echo "MSYS2 is installed at ${path}"
+          echo "extra_options=\"msys2_path=${path}\"" >> "$GITHUB_ENV"
+
+      - name: Configure build
+        run: ${{ matrix.script }} configure build=Release ${{ env.extra_options }}
+
+      - name: Fetch managed dependencies
+        run: ${{ matrix.script }} fetch-deps
+
+      - name: Install build tools
+        run: ${{ matrix.script }} install-tools
+
+      - name: Compile API definitions
+        run: ${{ matrix.script }} proto-build
+
+      - name: Build libarchive
+        run: ${{ matrix.script }} libarchive-build
+
+      - name: Build libknossos
+        run: ${{ matrix.script }} libknossos-build
+
+      - name: Build Knossos wrapper
+        run: ${{ matrix.script }} client-build
+
+      - name: Build Knossos UI
+        run: ${{ matrix.script }} client-ui-build
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ matrix.archive }}
+          path: build/client/launcher/Release/
