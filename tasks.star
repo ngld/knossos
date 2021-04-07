@@ -323,7 +323,7 @@ def configure():
             cmds = [
                 'usr/bin/bash -lc true',
                 'usr/bin/bash -lc "pacman --noconfirm -Syu"',
-                'usr/bin/bash -lc "pacman --noconfirm -Syu --needed mingw-w64-x86_64-{gcc,xz,ccache,cmake,SDL2} make"',
+                'usr/bin/bash -lc "pacman --noconfirm -Syu --needed" < "%s"' % resolve_path('//msys2-packages.txt'),
             ],
         )
 

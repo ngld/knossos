@@ -32,8 +32,7 @@ jobs:
         id: vars
         shell: bash
         run: |
-          msys2_extras=$(grep -o 'pacman --noconfirm -Syu --needed [^"]*' tasks.star | cut -d ' ' -f 5-)
-          msys2_extras=$(sh -c "echo $msys2_extras") # subshell echo to perform brace expansion
+          msys2_extras=$(cat msys2-packages.txt)
           echo "Adding ${msys2_extras} to MSYS2"
           echo "::set-output name=msys2_extras::${msys2_extras}"
           go_version=$(cat .go-version)
@@ -98,14 +97,14 @@ jobs:
         run: |
           path=$(cygpath -w /)
           echo "MSYS2 is installed at ${path}"
-          echo "extra_options="msys2_path=${path}"" >> "$GITHUB_ENV"
+          echo "extra_options=\"msys2_path=${path}\"" >> "$GITHUB_ENV"
 
       - name: Configure build
         run: ${{ matrix.script }} configure build=Release ${{ env.extra_options }}
 
       - name: Fetch managed dependencies
         run: ${{ matrix.script }} fetch-deps
-      
+
       - name: Install build tools
         run: ${{ matrix.script }} install-tools
 
