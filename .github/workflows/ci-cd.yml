@@ -16,7 +16,6 @@ jobs:
         include:
           - os: windows-2019
             script: .\task.ps1
-            options: msys2_path=C:\msys64
             archive: windows-x64
           - os: macos-10.15
             script: ./task.sh
@@ -26,19 +25,32 @@ jobs:
             archive: ubuntu-x64
       fail-fast: false
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Reading additional settings from repository
+        id: vars
+        shell: bash
+        run: |
+          msys2_extras=$(grep -o 'pacman --noconfirm -Syu --needed [^"]*' tasks.star | cut -d ' ' -f 5-)
+          msys2_extras=$(sh -c "echo $msys2_extras") # subshell echo to perform brace expansion
+          echo "Adding ${msys2_extras} to MSYS2"
+          echo "::set-output name=msys2_extras::${msys2_extras}"
+          go_version=$(cat .go-version)
+          echo "Using Go version ${go_version}"
+          echo "::set-output name=go_version::${go_version}"
+
       - name: Setup MSYS2 toolchain (Windows)
         uses: msys2/setup-msys2@v2
         if: runner.os == 'Windows'
         with:
           update: true
+          install: ${{ steps.vars.outputs.msys2_extras }}
 
       - name: Setup Go toolchain
         uses: actions/setup-go@v2
         with:
-          go-version: 1.16.3
-
-      - name: Checkout repository
-        uses: actions/checkout@v2
+          go-version: ${{ steps.vars.outputs.go_version }}
 
       - name: Cache Go dependencies
         uses: actions/cache@v2
@@ -48,7 +60,7 @@ jobs:
           restore-keys: golang-${{ runner.os }}-
           path: ~/go/pkg/mod
 
-      - name: Cache yarn dependencies
+      - name: Cache Yarn dependencies
         uses: actions/cache@v2
         id: yarn-cache
         with:
@@ -56,7 +68,7 @@ jobs:
           restore-keys: yarn-${{ runner.os }}-
           path: .yarn/cache
       
-      - name: Cache third_party dependencies
+      - name: Cache managed dependencies
         uses: actions/cache@v2
         id: third_party-cache
         with:
@@ -75,8 +87,17 @@ jobs:
             sudo apt-get install -y libgtk-3-dev liblzma-dev libzstd-dev zlib1g-dev
           fi
 
+      - name: Locate MSYS2 installation (Windows)
+        id: msys2_install
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
+        run: |
+          path=$(cygpath -w /)
+          echo "MSYS2 is installed at ${path}"
+          echo "extra_options="msys2_path=${path}"" >> "$GITHUB_ENV"
+
       - name: Configure build
-        run: ${{ matrix.script }} configure build=Release ${{ matrix.options }}
+        run: ${{ matrix.script }} configure build=Release ${{ env.extra_options }}
 
       - name: Fetch managed dependencies
         run: ${{ matrix.script }} fetch-deps
