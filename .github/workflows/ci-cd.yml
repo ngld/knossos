@@ -66,7 +66,11 @@ jobs:
         with:
           key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
           restore-keys: yarn-${{ runner.os }}-
-          path: .yarn/cache
+          path: |
+            .pnp.*
+            .yarn/
+            !.yarn/releases
+            !.yarn/plugins
       
       - name: Cache managed dependencies
         uses: actions/cache@v2
