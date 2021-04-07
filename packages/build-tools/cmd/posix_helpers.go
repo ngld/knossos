@@ -29,13 +29,16 @@ var mvCmd = &cobra.Command{
 			return eris.Errorf("%s is not a directory!", destParent)
 		}
 
-		info, err = os.Stat(dest)
-		if err != nil && !eris.Is(err, os.ErrNotExist) {
-			return eris.Wrapf(err, "Failed to retrieve info about destination %s", dest)
-		}
+		rename := false
 
-		if len(args) > 2 && !info.IsDir() {
-			return eris.Errorf("Can't move multiple items to %s because it is not a directory!", dest)
+		info, err = os.Stat(dest)
+		if eris.Is(err, os.ErrNotExist) || !info.IsDir(){
+			if len(args) > 2{
+				return eris.Errorf("Can't move multiple items to %s because it is not a directory!", dest)
+			}
+			rename = true
+		} else if err != nil {
+			return eris.Wrapf(err, "Failed to retrieve info about destination %s", dest)
 		}
 
 		items := []string{}
@@ -57,7 +60,12 @@ var mvCmd = &cobra.Command{
 		}
 
 		for _, item := range items {
-			itemDest := filepath.Join(dest, filepath.Base(item))
+			var itemDest string
+			if rename {
+				itemDest = dest
+			} else {
+				itemDest = filepath.Join(dest, filepath.Base(item))
+			}
 			err = os.Rename(item, itemDest)
 			if err != nil {
 				return eris.Wrapf(err, "Failed to move %s to %s", item, itemDest)
@@ -106,7 +114,7 @@ var rmCmd = &cobra.Command{
 
 		for _, item := range items {
 			info, err := os.Stat(item)
-			if err != nil {
+			if err != nil && !force {
 				return eris.Wrapf(err, "Could not stat %s", item)
 			}
 
