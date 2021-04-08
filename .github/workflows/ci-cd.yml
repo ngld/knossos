@@ -8,34 +8,34 @@ on:
 
 jobs:
   knossos:
-    name: Knossos / ${{ matrix.archive }}
-    runs-on: ${{ matrix.os }}
+    name: Knossos / ${{ matrix.os }}
+    runs-on: ${{ matrix.runner }}
     strategy:
       matrix:
-        os: [windows-2019, macos-10.15, ubuntu-20.04]
+        os: [Windows, macOS, Ubuntu]
         include:
-          - os: windows-2019
+          - os: Windows
+            runner: windows-2019
             script: .\task.ps1
-            archive: windows-x64
-          - os: macos-10.15
+          - os: macOS
+            runner: macos-10.15
             script: ./task.sh
-            archive: darwin-x64
-          - os: ubuntu-20.04
+          - os: Ubuntu
+            runner: ubuntu-20.04
             script: ./task.sh
-            archive: ubuntu-x64
       fail-fast: false
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Reading additional settings from repository
+      - name: Read additional settings from repository
         id: vars
         shell: bash
         run: |
           msys2_extras=$(tr -s '\n' ' ' < msys2-packages.txt)
           echo "Adding ${msys2_extras} to MSYS2"
           echo "::set-output name=msys2_extras::${msys2_extras}"
-          go_version=$(cat .go-version)
+          go_version=$(< .go-version)
           echo "Using Go version ${go_version}"
           echo "::set-output name=go_version::${go_version}"
 
@@ -126,5 +126,5 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: ${{ matrix.archive }}
+          name: Knossos-${{ matrix.os }}-${{ github.sha }}
           path: build/client/launcher/Release/
