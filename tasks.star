@@ -394,7 +394,7 @@ def configure():
         cmds = [
             "docker rm -f '%s'" % db_container,
             "docker network rm '%s'" % db_network,
-            "rm .tools/db_*",
+            "rm -f .tools/db_*",
         ]
     )
 
