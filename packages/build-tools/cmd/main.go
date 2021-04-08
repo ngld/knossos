@@ -18,5 +18,5 @@ func init() {
 }
 
 func Execute() {
-	cobra.CheckErr(rootCmd.Execute())
+	rootCmd.Execute()
 }
