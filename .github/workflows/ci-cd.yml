@@ -43,7 +43,6 @@ jobs:
 
       - name: Cache Go dependencies
         uses: actions/cache@v2
-        id: golang-cache
         with:
           key: golang-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
           restore-keys: golang-${{ runner.os }}-
@@ -51,7 +50,6 @@ jobs:
 
       - name: Cache Yarn dependencies
         uses: actions/cache@v2
-        id: yarn-cache
         with:
           key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
           restore-keys: yarn-${{ runner.os }}-
@@ -60,6 +58,15 @@ jobs:
             .yarn/
             !.yarn/releases
             !.yarn/plugins
+
+      - name: Cache managed dependencies
+        uses: actions/cache@v2
+        with:
+          key: third_party-${{ runner.os }}-${{ hashFiles('packages/build-tools/DEPS.yml') }}
+          restore-keys: third_party-${{ runner.os }}-
+          path: |
+            packages/build-tools/DEPS.stamps
+            third_party
 
       - name: Configure build
         run: ./task.sh configure build=Release
@@ -129,7 +136,6 @@ jobs:
           install: ${{ needs.setup.outputs.msys2_packages }}
 
       - name: Locate MSYS2 installation (Windows)
-        id: msys2_install
         if: runner.os == 'Windows'
         shell: msys2 {0}
         run: |
@@ -139,7 +145,6 @@ jobs:
 
       - name: Cache Go dependencies
         uses: actions/cache@v2
-        id: golang-cache
         with:
           key: golang-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
           restore-keys: golang-${{ runner.os }}-
@@ -147,7 +152,6 @@ jobs:
 
       - name: Cache Yarn dependencies
         uses: actions/cache@v2
-        id: yarn-cache
         with:
           key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
           restore-keys: yarn-${{ runner.os }}-
@@ -159,7 +163,6 @@ jobs:
 
       - name: Cache managed dependencies
         uses: actions/cache@v2
-        id: third_party-cache
         with:
           key: third_party-${{ runner.os }}-${{ hashFiles('packages/build-tools/DEPS.yml') }}
           restore-keys: third_party-${{ runner.os }}-
