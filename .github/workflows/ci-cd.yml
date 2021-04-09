@@ -46,7 +46,9 @@ jobs:
         with:
           key: golang-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
           restore-keys: golang-${{ runner.os }}-
-          path: ~/go/pkg/mod
+          path: |
+            ~/go/pkg
+            ~/.cache/go-build
 
       - name: Cache Yarn dependencies
         uses: actions/cache@v2
@@ -148,7 +150,9 @@ jobs:
         with:
           key: golang-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
           restore-keys: golang-${{ runner.os }}-
-          path: ~/go/pkg/mod
+          path: |
+            ~/go/pkg
+            ~/.cache/go-build
 
       - name: Cache Yarn dependencies
         uses: actions/cache@v2

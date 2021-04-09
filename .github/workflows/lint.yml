@@ -4,7 +4,6 @@ on: [pull_request]
 
 jobs:
   commitlint:
-    name: commitlint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
