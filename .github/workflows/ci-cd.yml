@@ -8,16 +8,20 @@ on:
 
 jobs:
   setup:
+    name: Setup
     runs-on: ubuntu-latest
     outputs:
       short_sha: ${{ steps.sha.outputs.short_sha }}
       go_version: ${{ steps.read.outputs.go_version }}
       msys2_packages: ${{ steps.read.outputs.msys2_packages }}
     steps:
-      - uses: actions/checkout@v2
-      - name: Generate a shortened SHA for artifacts
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Generate short SHA
         id: sha
         run: echo "::set-output name=short_sha::$(git rev-parse --short HEAD)"
+
       - name: Read build settings from repository
         id: read
         run: |
@@ -44,8 +48,8 @@ jobs:
       - name: Cache Go dependencies
         uses: actions/cache@v2
         with:
-          key: golang-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
-          restore-keys: golang-${{ runner.os }}-
+          key: golang-${{ github.job }}-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
+          restore-keys: golang-${{ github.job }}-${{ runner.os }}-
           path: |
             ~/go/pkg
             ~/.cache/go-build
@@ -90,18 +94,6 @@ jobs:
 
       - name: Build Nebula frontend
         run: ./task.sh front-build
-
-      - name: Upload server artifacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: Nebula-server-${{ needs.setup.outputs.short_sha }}
-          path: build/nebula
-
-      - name: Upload frontend artifacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: Nebula-frontend-${{ needs.setup.outputs.short_sha }}
-          path: packages/front/dist/prod
 
   knossos:
     name: Knossos / ${{ matrix.os }}
@@ -148,8 +140,8 @@ jobs:
       - name: Cache Go dependencies
         uses: actions/cache@v2
         with:
-          key: golang-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
-          restore-keys: golang-${{ runner.os }}-
+          key: golang-${{ github.job }}-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
+          restore-keys: golang-${{ github.job }}-${{ runner.os }}-
           path: |
             ~/go/pkg
             ~/.cache/go-build
@@ -174,9 +166,6 @@ jobs:
             packages/build-tools/DEPS.stamps
             third_party
 
-      - name: Configure build
-        run: ${{ matrix.script }} configure build=Release ${{ env.extra_options }}
-
       - name: Fetch system dependencies (*nix)
         if: runner.os != 'Windows'
         run: |
@@ -185,6 +174,9 @@ jobs:
           elif [ "$RUNNER_OS" = 'Linux' ]; then
             sudo apt-get install -y libgtk-3-dev liblzma-dev libzstd-dev zlib1g-dev
           fi
+
+      - name: Configure build
+        run: ${{ matrix.script }} configure build=Release ${{ env.extra_options }}
 
       - name: Fetch managed dependencies
         run: ${{ matrix.script }} fetch-deps
