@@ -32,8 +32,8 @@ var mvCmd = &cobra.Command{
 		rename := false
 
 		info, err = os.Stat(dest)
-		if eris.Is(err, os.ErrNotExist) || !info.IsDir(){
-			if len(args) > 2{
+		if eris.Is(err, os.ErrNotExist) || !info.IsDir() {
+			if len(args) > 2 {
 				return eris.Errorf("Can't move multiple items to %s because it is not a directory!", dest)
 			}
 			rename = true
@@ -115,7 +115,7 @@ var rmCmd = &cobra.Command{
 		for _, item := range items {
 			info, err := os.Stat(item)
 			if err != nil {
-				if !(force && eris.Is(err, os.ErrNotExist)) {
+				if !force || !eris.Is(err, os.ErrNotExist) {
 					return eris.Wrapf(err, "Could not stat %s", item)
 				}
 			} else if info.IsDir() && !recursive {
