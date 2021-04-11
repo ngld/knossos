@@ -11,16 +11,37 @@ jobs:
           fetch-depth: 0
       - uses: wagoid/commitlint-github-action@v3
 
-  golangci:
+  jslint:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        package: [build-tools, libarchive, libknossos, server, updater]
     steps:
-      - uses: actions/checkout@v2
-      - uses: golangci/golangci-lint-action@v2
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Cache Go dependencies
+        uses: actions/cache@v2
         with:
-          version: v1.39.0
-          working-directory: packages/${{ matrix.package }}
-          only-new-issues: true
+          key: golang-jslint-Linux-${{ hashFiles('**/go.sum') }}
+          restore-keys: golang-jslint-Linux-
+          path: |
+            ~/go/pkg
+            ~/.cache/go-build
+
+      - name: Cache Yarn dependencies
+        uses: actions/cache@v2
+        with:
+          key: yarn-Linux-${{ hashFiles('yarn.lock') }}
+          restore-keys: yarn-Linux-
+          path: |
+            .pnp.*
+            .yarn/
+            !.yarn/releases
+            !.yarn/plugins
+
+      - name: Configure tasks
+        run: ./tasks.sh static_deps=false
+
+      - name: Fetch JS dependencies
+        run: ./task.sh yarn-install
+
+      - name: Run JS lint
+        run: ./tasks.sh js-lint
