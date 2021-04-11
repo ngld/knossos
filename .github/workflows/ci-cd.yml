@@ -20,6 +20,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
 
       - name: Generate short SHA
         id: sha
@@ -36,25 +38,32 @@ jobs:
           echo "::set-output name=msys2_packages::${msys2_packages}"
 
       - name: Detect changed files
-        if: ${{ github.event_name == 'pull_request' }}
-        run: git diff --name-only "${{ github.base_ref }}..HEAD" > _changed_files
-
-      - name: Detect changed files
-        if: ${{ github.event_name == 'push' }}
-        run: git diff --name-only "${{ github.event.before }}..HEAD" > _changed_files
-
-      - name: Detect changed packages
         id: changes
         run: |
-          if grep '^packages/(server|front|build-tools)' > /dev/null < _changed_files; then
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base_ref="${{ github.base_ref }}"
+          else if [ "${{ github.event_name }}" = "push" ]; then
+            base_ref="${{ github.event.before }}"
+          else
+            echo "Unsupported event ${{ github.event_name }}"
+            exit 1
+          fi
+
+          changed="$(git diff --name-only "$base_ref..HEAD")"
+
+          echo "::group::Changed files"
+          echo "$changed"
+          echo "::endgroup::"
+
+          if grep '^packages/(server|front|build-tools)' > /dev/null <<< "$changed"; then
             echo "::set-output name=nebula_changed::1"
           fi
 
-          if grep '^packages/(libarchive|libknossos|client|client-ui|build-tools)' > /dev/null < _changed_files; then
+          if grep '^packages/(libarchive|libknossos|client|client-ui|build-tools)' > /dev/null <<< "$changed"; then
             echo "::set-output name=knossos_changed::1"
           fi
 
-          if grep '^packages/(libarchive|updater|build-tools)' > /dev/null < _changed_files; then
+          if grep '^packages/(libarchive|updater|build-tools)' > /dev/null <<< "$changed"; then
             echo "::set-output name=updater_changed::1"
           fi
 
