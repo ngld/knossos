@@ -407,15 +407,15 @@ func loadModule(thread *starlark.Thread, module string) (starlark.StringDict, er
 
 // RunScript executes a starlake scripts and returns the declared options. If doConfigure is true, the script's
 // configure function is called and the declared tasks are collected and returned.
-func RunScript(ctx context.Context, filename, projectRoot string, options map[string]string, doConfigure bool) (TaskList, map[string]ScriptOption, error) {
+func RunScript(ctx context.Context, filename, projectRoot string, options map[string]string, doConfigure bool) (TaskList, map[string]ScriptOption, []string, error) {
 	projectRoot, err := filepath.Abs(projectRoot)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	filename, err = filepath.Abs(filename)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	builtins := starlark.StringDict{
@@ -475,37 +475,37 @@ func RunScript(ctx context.Context, filename, projectRoot string, options map[st
 
 	script, err := ioutil.ReadFile(filename)
 	if err != nil {
-		return nil, nil, eris.Wrapf(err, "failed to read file")
+		return nil, nil, nil, eris.Wrapf(err, "failed to read file")
 	}
 
 	// wrap the entire script in a function to work around the limitation that ifs are only allowed inside functions
 	globals, err := starlark.ExecFile(thread, simplifyPath(&threadCtx, filename), script, builtins)
 	if err != nil {
 		if evalError, ok := err.(*starlark.EvalError); ok {
-			return nil, nil, eris.Errorf("failed to execute %s:\n%s", simplifyPath(&threadCtx, filename), evalError.Backtrace())
+			return nil, nil, nil, eris.Errorf("failed to execute %s:\n%s", simplifyPath(&threadCtx, filename), evalError.Backtrace())
 		}
-		return nil, nil, eris.Wrap(err, "failed to execute")
+		return nil, nil, nil, eris.Wrap(err, "failed to execute")
 	}
 
 	tasks := TaskList{}
 	if doConfigure {
 		configure, ok := globals["configure"]
 		if !ok {
-			return nil, nil, eris.Errorf("%s did not declare a configure function", simplifyPath(&threadCtx, filename))
+			return nil, nil, nil, eris.Errorf("%s did not declare a configure function", simplifyPath(&threadCtx, filename))
 		}
 
 		configureFunc, ok := configure.(starlark.Callable)
 		if !ok {
-			return nil, nil, eris.Errorf("%s did declare a configure value but it's not a function", simplifyPath(&threadCtx, filename))
+			return nil, nil, nil, eris.Errorf("%s did declare a configure value but it's not a function", simplifyPath(&threadCtx, filename))
 		}
 
 		threadCtx.initPhase = false
 		_, err = starlark.Call(thread, configureFunc, make(starlark.Tuple, 0), make([]starlark.Tuple, 0))
 		if err != nil {
 			if evalError, ok := err.(*starlark.EvalError); ok {
-				return nil, nil, eris.New(evalError.Backtrace())
+				return nil, nil, nil, eris.New(evalError.Backtrace())
 			}
-			return nil, nil, eris.Wrapf(err, "failed configure call in %s", simplifyPath(&threadCtx, filename))
+			return nil, nil, nil, eris.Wrapf(err, "failed configure call in %s", simplifyPath(&threadCtx, filename))
 		}
 
 		for _, task := range threadCtx.tasks {
@@ -520,5 +520,10 @@ func RunScript(ctx context.Context, filename, projectRoot string, options map[st
 		}
 	}
 
-	return tasks, threadCtx.options, nil
+	scriptFiles := make([]string, 0, len(threadCtx.moduleCache))
+	for path, _ := range threadCtx.moduleCache {
+		scriptFiles = append(scriptFiles, path)
+	}
+
+	return tasks, threadCtx.options, scriptFiles, nil
 }
