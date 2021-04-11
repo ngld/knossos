@@ -40,7 +40,6 @@ Task help:
 """
 
 build = option("build", "Release", help = "Whether to build a Debug or Release build")
-libkn_static = option("static", "true" if OS == "windows" else "false", help = "Whether to statically or dynamically link libknossos (only Windows)")
 msys2_path = option("msys2_path", "//third_party/msys64", help = "The path to your MSYS2 installation. Only used on Windows. " +
                                                                  "Defaults to the bundled MSYS2 directory")
 generator_opt = option("generator", "", help = "The CMake generator to use. Defaults to ninja if available. " +
@@ -496,9 +495,6 @@ def configure():
     )
 
     libkn_ldflags = ""
-    if libkn_static == "true":
-        libkn_ldflags += "-static "
-
     # platform specific filename for libarchive
     if OS == "windows":
         libkn_ldflags += str(resolve_path("build/libarchive/libarchive/libarchive_static.a"))
