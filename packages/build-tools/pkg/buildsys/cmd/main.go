@@ -4,6 +4,8 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -96,9 +98,10 @@ var RootCmd = &cobra.Command{
 		projectRoot := filepath.Dir(taskPath)
 		var taskList buildsys.TaskList
 		rebuildCache := isConfigure
+		var cacheInfo fs.FileInfo
 
 		if !rebuildCache {
-			cacheInfo, err := os.Stat(cacheFile)
+			cacheInfo, err = os.Stat(cacheFile)
 			if err != nil {
 				if !eris.Is(err, os.ErrNotExist) {
 					logger.Fatal().Err(err).Msg("Failed to check cache")
@@ -117,18 +120,39 @@ var RootCmd = &cobra.Command{
 		}
 
 		if !isConfigure {
+			var scriptFiles []string
+
 			// We read the cache even if rebuildCache is true because we need the options from the last configure run.
 			// Overwriting options here is fine because the sanity check earlier ensures that options are only passed
 			// on the CLI for the configure task.
-			options, taskList, err = buildsys.ReadCache(cacheFile)
-			if err != nil && !eris.Is(err, os.ErrNotExist) {
+			options, taskList, scriptFiles, err = buildsys.ReadCache(cacheFile)
+			if err != nil && !eris.Is(err, os.ErrNotExist) && !eris.Is(err, io.EOF) {
 				logger.Fatal().Err(err).Msg("Failed to open cache")
+			}
+
+			if scriptFiles == nil {
+				// Old cache without the script file list
+				rebuildCache = true
+			} else {
+				for _, path := range scriptFiles {
+					info, err := os.Stat(path)
+					if err != nil && !eris.Is(err, os.ErrNotExist) {
+						logger.Fatal().Err(err).Msgf("Failed to check loaded script %s", path)
+					}
+
+					if cacheInfo.ModTime().Sub(info.ModTime()) < 0 {
+						// script is newer than our cache
+						rebuildCache = true
+						break
+					}
+				}
 			}
 		}
 
 		if rebuildCache || listOpts {
 			var scriptOptions map[string]buildsys.ScriptOption
-			taskList, scriptOptions, err = buildsys.RunScript(ctx, taskPath, filepath.Dir(taskPath), options, !listOpts)
+			var scriptFiles []string
+			taskList, scriptOptions, scriptFiles, err = buildsys.RunScript(ctx, taskPath, filepath.Dir(taskPath), options, !listOpts)
 			if err != nil {
 				logger.Fatal().Err(err).Msg("Failed to parse tasks")
 			}
@@ -137,7 +161,7 @@ var RootCmd = &cobra.Command{
 				return printOptHelp(scriptOptions)
 			}
 
-			err = buildsys.WriteCache(cacheFile, options, taskList)
+			err = buildsys.WriteCache(cacheFile, options, taskList, scriptFiles)
 			if err != nil {
 				logger.Fatal().Err(err).Msg("Failed to cache processed tasks")
 			}
