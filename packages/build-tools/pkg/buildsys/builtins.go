@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -457,4 +458,46 @@ echo KN_LIB=%LIB%
 	}
 
 	return starlark.True, nil
+}
+
+var libCache map[string]string = nil
+
+func starLookupLib(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	var lib string
+	err := starlark.UnpackPositionalArgs(fn.Name(), args, kwargs, 1, &lib)
+	if err != nil {
+		return nil, err
+	}
+
+	if libCache == nil {
+		info(thread, "Running ldconfig -p")
+		pattern := regexp.MustCompile(`^\s*([^ ]+) \([^)]+\) => (.*)$`)
+
+		ldCmd := exec.Command("ldconfig", "-p")
+		ldCmd.Stderr = os.Stderr
+
+		output, err := ldCmd.Output()
+		if err != nil {
+			return nil, err
+		}
+
+		lines := strings.Split(string(output), "\n")
+		libCache = make(map[string]string)
+		for _, line := range lines {
+			match := pattern.FindStringSubmatch(line)
+			if match == nil {
+				warn(thread, "Skipping unexpected line from ldconfig: %s", line)
+				continue
+			}
+
+			libCache[match[1]] = match[2]
+		}
+	}
+
+	path, ok := libCache[lib]
+	if !ok {
+		return starlark.None, nil
+	}
+
+	return starlark.String(path), nil
 }

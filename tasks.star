@@ -40,12 +40,11 @@ Task help:
 """
 
 build = option("build", "Release", help = "Whether to build a Debug or Release build")
-libkn_static = option("static", "true", help = "Whether to statically or dynamically link libknossos")
-
+libkn_static = option("static", "true" if OS == "windows" else "false", help = "Whether to statically or dynamically link libknossos (only Windows)")
 msys2_path = option("msys2_path", "//third_party/msys64", help = "The path to your MSYS2 installation. Only used on Windows. " +
                                                                  "Defaults to the bundled MSYS2 directory")
 generator_opt = option("generator", "", help = "The CMake generator to use. Defaults to ninja if available. " +
-                                               "Please note that on Windows you'll  have to run the vcvarsall.bat if you don't choose a Visual Studio generator")
+                                               "Please note that on Windows you'll have to run the vcvarsall.bat if you don't choose a Visual Studio generator")
 
 db_network = option("db_network", "nebula", help = "The name of the Docker network to use for Nebula-related containers.")
 db_container = option("db_container", "nebula-db", help = "The name of the Docker container for Nebula's managed database.")
@@ -135,6 +134,31 @@ def cmake_task(name, desc = "", inputs = [], outputs = [], script = None, window
                 ("sh", resolve_path(script)),
             ],
         )
+
+def find_static_lib(names, display_name = None):
+    """A helper to find libxyz.a files on most distros.
+
+    Args:
+      names: a list of possible library names (i.e. ["libz", "zlib"])
+      display_name (optional): the name to use in log messages, defaults to the first item in names
+    Returns:
+      absolute path to the .a file
+    """
+    if OS not in ("linux", "darwin"):
+        error("find_static_lib() is only supported on Linux and macOS.")
+
+    if not display_name:
+        display_name = names[0]
+
+    for name in names:
+        so_path = lookup_lib(name + ".so")
+        if so_path:
+            a_path = so_path.replace(".so", ".a")
+            if isfile(a_path):
+                return a_path
+
+    error("Could not find %s! Please make sure it's installed." % display_name)
+    return None
 
 def configure():
     generator = generator_opt
@@ -472,6 +496,33 @@ def configure():
         unix_script = "packages/libarchive/unix-build.sh",
     )
 
+    libkn_ldflags = ""
+    if libkn_static == "true":
+        libkn_ldflags += "-static "
+
+    # platform specific filename for libarchive
+    if OS == "windows":
+        libkn_ldflags += str(resolve_path("build/libarchive/libarchive/libarchive_static.a"))
+    else:
+        libkn_ldflags += str(resolve_path("build/libarchive/libarchive/libarchive.a"))
+
+    if OS == "darwin":
+        # look for liblzma in the lib directory from homebrew's xz package
+        # darwin's ld doesn't understand --no-undefined so skip it there
+        libkn_ldflags += " -L/usr/local/opt/xz/lib"
+
+    if OS != "darwin":
+        libkn_ldflags += " -Wl,--no-undefined"
+
+    if OS != "linux":
+        libkn_ldflags += " -liconv -llzma -lzstd -lz"
+    else:
+        libkn_ldflags += " " + " ".join([
+            find_static_lib(["liblzma"]),
+            find_static_lib(["libzstd"]),
+            find_static_lib(["libz", "zlib"]),
+        ])
+
     task(
         "libknossos-build",
         desc = "Builds libknossos (client-side, non-UI logic)",
@@ -489,7 +540,7 @@ def configure():
         env = {
             # cgo only supports gcc, make sure it doesn't try to use a compiler meant for our other packages
             "CC": "gcc",
-            "CGO_LDFLAGS": "-static" if libkn_static == "true" and OS != "darwin" else "",
+            "CGO_LDFLAGS": libkn_ldflags,
         },
         cmds = [
             "go build -o ../../build/libknossos/libknossos%s -buildmode c-shared ./api" % libext,
