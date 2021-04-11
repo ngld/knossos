@@ -1,4 +1,4 @@
-load("helpers.star", "yarn", "find_static_lib", "cmake_task", "merge_compile_commands")
+load("helpers.star", "yarn", "find_library", "cmake_task", "merge_compile_commands")
 load("options.star", "build")
 
 kn_args = option("client_args", "", help = "The parameters to pass to Knossos in the client-run target")
@@ -57,9 +57,9 @@ def knossos_configure(binext, libext, generator):
         libkn_ldflags += " -liconv -llzma -lzstd -lz"
     else:
         libkn_ldflags += " " + " ".join([
-            find_static_lib(["liblzma"]),
-            find_static_lib(["libzstd"]),
-            find_static_lib(["libz", "zlib"]),
+            find_library(["liblzma"]),
+            find_library(["libzstd"]),
+            find_library(["libz", "zlib"], "zlib"),
         ])
 
     task(

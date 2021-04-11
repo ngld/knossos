@@ -1,5 +1,7 @@
 load("options.star", "msys2_path")
 
+static_deps = option("static_deps", "true", "whether to link against static dependency libs (only on Linux and macOS)")
+
 yarn_path = resolve_path(read_yaml("//.yarnrc.yml", "yarnPath"))
 
 def yarn(*args):
@@ -46,6 +48,25 @@ def cmake_task(name, desc = "", inputs = [], outputs = [], script = None, window
     if OS == "windows":
         if not script:
             script = windows_script
+
+        # Only declare this task if necessary
+        if not hastask("bootstrap-mingw64"):
+            task(
+                "bootstrap-mingw64",
+                desc = "Runs first-time setup for MSYS2",
+                deps = ["fetch-deps"],
+                base = msys2_path,
+                skip_if_exists = [
+                    "mingw64/bin/gcc.exe",
+                    "mingw64/bin/cmake.exe",
+                    "mingw64/bin/SDL2.dll",
+                ],
+                cmds = [
+                    'usr/bin/bash -lc true',
+                    'usr/bin/bash -lc "pacman --noconfirm -Syu"',
+                    'usr/bin/bash -lc "pacman --noconfirm -Syu --needed" < "%s"' % resolve_path('//msys2-packages.txt'),
+                ],
+            )
 
         task(
             name,
@@ -100,8 +121,27 @@ def find_static_lib(names, display_name = None):
             if isfile(a_path):
                 return a_path
 
-    error("Could not find %s! Please make sure it's installed." % display_name)
+    error("Could not find static library for %s! Please make sure it's installed." % display_name)
     return None
+
+def find_library(names, display_name = None):
+    """A helper which either calls find_static_lib() or returns -l<libname> depending on static_deps.
+
+    Args:
+      names: a list of possible library names (i.e. ["libz", "zlib"])
+      display_name (optional): the name to use in log messages, defaults to the first item in names
+    Returns:
+      absolute path to the .a file if static_deps else "-l<libname>"
+    """
+
+    if static_deps:
+        return find_static_lib(names, display_name)
+    else:
+        name = names[0]
+        if name.startswith("lib"):
+            name = name[3:]
+
+        return "-l" + name
 
 # This is necessary because VSCode's clangd extension only supports a single compile_commands.json at the root
 # of the project.
