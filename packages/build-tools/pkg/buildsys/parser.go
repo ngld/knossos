@@ -366,23 +366,35 @@ func RunScript(ctx context.Context, filename, projectRoot string, options map[st
 	}
 
 	builtins := starlark.StringDict{
-		"OS":           starlark.String(runtime.GOOS),
-		"ARCH":         starlark.String(runtime.GOARCH),
-		"info":         starlark.NewBuiltin("info", starInfo),
-		"warn":         starlark.NewBuiltin("warn", starWarn),
-		"error":        starlark.NewBuiltin("error", starError),
+		// global constants
+		"OS":   starlark.String(runtime.GOOS),
+		"ARCH": starlark.String(runtime.GOARCH),
+
+		// log outputs
+		"info":  starlark.NewBuiltin("info", starInfo),
+		"warn":  starlark.NewBuiltin("warn", starWarn),
+		"error": starlark.NewBuiltin("error", starError),
+
+		// FS helpers
 		"resolve_path": starlark.NewBuiltin("resolve_path", resolvePath),
 		"to_slashes":   starlark.NewBuiltin("to_slashes", toSlashes),
-		"option":       starlark.NewBuiltin("option", option),
+		"isdir":        starlark.NewBuiltin("isdir", starIsdir),
+		"isfile":       starlark.NewBuiltin("isfile", starIsfile),
+		"read_yaml":    starlark.NewBuiltin("read_yaml", readYaml),
+		"execute":      starlark.NewBuiltin("execute", starExec),
+
+		// env handling
 		"getenv":       starlark.NewBuiltin("getenv", getenv),
 		"setenv":       starlark.NewBuiltin("setenv", setenv),
 		"prepend_path": starlark.NewBuiltin("prepend_path", prependPathDir),
-		"read_yaml":    starlark.NewBuiltin("read_yaml", readYaml),
-		"isdir":        starlark.NewBuiltin("isdir", starIsdir),
-		"isfile":       starlark.NewBuiltin("isfile", starIsfile),
-		"execute":      starlark.NewBuiltin("execute", starExec),
-		"task":         starlark.NewBuiltin("task", task),
-		"load_vcvars":  starlark.NewBuiltin("load_vcvars", starLoadVcvars),
+
+		// buildsys stuff
+		"option": starlark.NewBuiltin("option", option),
+		"task":   starlark.NewBuiltin("task", task),
+
+		// OS / compiler helpers
+		"load_vcvars": starlark.NewBuiltin("load_vcvars", starLoadVcvars),
+		"lookup_lib":  starlark.NewBuiltin("lookup_lib", starLookupLib),
 	}
 
 	thread := &starlark.Thread{

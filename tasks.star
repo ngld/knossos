@@ -136,6 +136,31 @@ def cmake_task(name, desc = "", inputs = [], outputs = [], script = None, window
             ],
         )
 
+def find_static_lib(names, display_name = None):
+    """A helper to find libxyz.a files on most distros.
+
+    Args:
+      names: a list of possible library names (i.e. ["libz", "zlib"])
+      display_name (optional): the name to use in log messages, defaults to the first item in names
+    Returns:
+      absolute path to the .a file
+    """
+    if OS not in ("linux", "darwin"):
+        error("find_static_lib() is only supported on Linux and macOS.")
+
+    if not display_name:
+        display_name = names[0]
+
+    for name in names:
+        so_path = lookup_lib(name)
+        if so_path:
+            a_path = so_path.replace(".so", ".a")
+            if isfile(a_path):
+                return a_path
+
+    error("Could not find %s! Please make sure it's installed." % display_name)
+    return None
+
 def configure():
     generator = generator_opt
 
@@ -472,6 +497,33 @@ def configure():
         unix_script = "packages/libarchive/unix-build.sh",
     )
 
+    libkn_ldflags = ""
+    if libkn_static == "true" and OS != "darwin":
+        libkn_ldflags += "-static "
+
+    # platform specific filename for libarchive
+    if OS == "windows":
+        libkn_ldflags += str(resolve_path("build/libarchive/libarchive/libarchive_static.a"))
+    else:
+        libkn_ldflags += str(resolve_path("build/libarchive/libarchive/libarchive.a"))
+
+    if OS == "darwin":
+        # look for liblzma in the lib directory from homebrew's xz package
+        # darwin's ld doesn't understand --no-undefined so skip it there
+        libkn_ldflags += " -L/usr/local/opt/xz/lib"
+
+    if OS != "darwin":
+        libkn_ldflags += " -Wl,--no-undefined"
+
+    if OS != "linux":
+        libkn_ldflags += " -liconv -llzma -lzstd -lz"
+    else:
+        libkn_ldflags += " " + " ".join([
+            find_static_lib(["lzma"]),
+            find_static_lib(["zstd"]),
+            find_static_lib(["libz", "zlib"]),
+        ])
+
     task(
         "libknossos-build",
         desc = "Builds libknossos (client-side, non-UI logic)",
@@ -489,7 +541,7 @@ def configure():
         env = {
             # cgo only supports gcc, make sure it doesn't try to use a compiler meant for our other packages
             "CC": "gcc",
-            "CGO_LDFLAGS": "-static" if libkn_static == "true" and OS != "darwin" else "",
+            "CGO_LDFLAGS": libkn_ldflags,
         },
         cmds = [
             "go build -o ../../build/libknossos/libknossos%s -buildmode c-shared ./api" % libext,
