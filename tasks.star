@@ -40,7 +40,10 @@ Task help:
 """
 
 build = option("build", "Release", help = "Whether to build a Debug or Release build")
-libkn_static = option("static", "true", help = "Whether to statically or dynamically link libknossos")
+if OS == "windows":
+    libkn_static = option("static", "true", help = "Whether to statically or dynamically link libknossos")
+else:
+    libkn_static = ""
 
 msys2_path = option("msys2_path", "//third_party/msys64", help = "The path to your MSYS2 installation. Only used on Windows. " +
                                                                  "Defaults to the bundled MSYS2 directory")
@@ -498,7 +501,7 @@ def configure():
     )
 
     libkn_ldflags = ""
-    if libkn_static == "true" and OS != "darwin":
+    if libkn_static == "true":
         libkn_ldflags += "-static "
 
     # platform specific filename for libarchive
