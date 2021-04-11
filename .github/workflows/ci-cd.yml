@@ -14,6 +14,9 @@ jobs:
       short_sha: ${{ steps.sha.outputs.short_sha }}
       go_version: ${{ steps.read.outputs.go_version }}
       msys2_packages: ${{ steps.read.outputs.msys2_packages }}
+      nebula_changed: ${{ steps.changes.outputs.nebula_changed }}
+      knossos_changed: ${{ steps.changes.outputs.knossos_changed }}
+      updater_changed: ${{ steps.changes.outputs.updater_changed }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -32,10 +35,34 @@ jobs:
           echo "MSYS2 packages: ${msys2_packages}"
           echo "::set-output name=msys2_packages::${msys2_packages}"
 
+      - name: Detect changed files
+        if: ${{ github.event_name == 'pull_request' }}
+        run: git diff --name-only "${{ github.base_ref }}..HEAD" > _changed_files
+
+      - name: Detect changed files
+        if: ${{ github.event_name == 'push' }}
+        run: git diff --name-only "${{ github.event.before }}..HEAD" > _changed_files
+
+      - name: Detect changed packages
+        id: changes
+        run: |
+          if grep '^packages/(server|front|build-tools)' > /dev/null < _changed_files; then
+            echo "::set-output name=nebula_changed::1"
+          fi
+
+          if grep '^packages/(libarchive|libknossos|client|client-ui|build-tools)' > /dev/null < _changed_files; then
+            echo "::set-output name=knossos_changed::1"
+          fi
+
+          if grep '^packages/(libarchive|updater|build-tools)' > /dev/null < _changed_files; then
+            echo "::set-output name=updater_changed::1"
+          fi
+
   nebula:
     name: Nebula
     runs-on: ubuntu-20.04
     needs: setup
+    if: ${{ needs.setup.outputs.nebula_changed == '1' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -99,6 +126,7 @@ jobs:
     name: Knossos / ${{ matrix.os }}
     runs-on: ${{ matrix.runner }}
     needs: setup
+    if: ${{ needs.setup.outputs.knossos_changed == '1' }}
     strategy:
       matrix:
         os: [Windows, macOS, Ubuntu]
