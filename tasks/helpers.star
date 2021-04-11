@@ -2,7 +2,7 @@ load("options.star", "msys2_path")
 
 static_deps = option("static_deps", "true", "whether to link against static dependency libs (only on Linux and macOS)")
 
-yarn_path = resolve_path(read_yaml("//.yarnrc.yml", "yarnPath"))
+yarn_path = resolve_path("//", read_yaml("//.yarnrc.yml", "yarnPath"))
 
 def yarn(*args):
     if len(args) == 1 and type(args[0]) == "string":
@@ -134,7 +134,7 @@ def find_library(names, display_name = None):
       absolute path to the .a file if static_deps else "-l<libname>"
     """
 
-    if static_deps:
+    if static_deps == "true":
         return find_static_lib(names, display_name)
     else:
         name = names[0]
