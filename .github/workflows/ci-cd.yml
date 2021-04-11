@@ -41,7 +41,7 @@ jobs:
         id: changes
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            base_ref="${{ github.base_ref }}"
+            base_ref="origin/${{ github.base_ref }}"
           elif [ "${{ github.event_name }}" = "push" ]; then
             base_ref="${{ github.event.before }}"
           else
