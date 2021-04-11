@@ -6,6 +6,7 @@ vars:
   NODEJS: 14.16.0
   BROTLI: 1.0.9
   NINJA: 1.10.2
+  GOLANG_CI: 1.39.0
 
 update-checks:
   PROTOC:
@@ -33,6 +34,9 @@ update-checks:
   NINJA:
     github:
       project: ninja-build/ninja
+  GOLANG_CI:
+    github:
+      project: golangci/golangci-lint
 
 deps:
   protoc-linux:
@@ -149,3 +153,24 @@ deps:
     if: windows, amd64
     url: https://github.com/ninja-build/ninja/releases/download/v{NINJA}/ninja-win.zip
     dest: third_party/ninja
+
+  golangci-linux:
+    sha256: 3a73aa7468087caa62673c8adea99b4e4dff846dc72707222db85f8679b40cbf
+    if: linux, amd64
+    url: https://github.com/golangci/golangci-lint/releases/download/v{GOLANG_CI}/golangci-lint-{GOLANG_CI}-linux-amd64.tar.gz
+    strip: 1
+    dest: third_party/golangci
+
+  golangci-darwin:
+    sha256: 7e9a47ab540aa3e8472fbf8120d28bed3b9d9cf625b955818e8bc69628d7187c
+    if: darwin, amd64
+    url: https://github.com/golangci/golangci-lint/releases/download/v{GOLANG_CI}/golangci-lint-{GOLANG_CI}-darwin-amd64.tar.gz
+    strip: 1
+    dest: third_party/golangci
+
+  golangci-win64:
+    sha256: 52ec2e13a3cbb47147244dff8cfc35103563deb76e0459133058086fc35fb2c7
+    if: windows, amd64
+    url: https://github.com/golangci/golangci-lint/releases/download/v{GOLANG_CI}/golangci-lint-{GOLANG_CI}-windows-amd64.zip
+    strip: 1
+    dest: third_party/golangci

@@ -111,7 +111,7 @@ jobs:
             third_party
 
       - name: Configure build
-        run: ./task.sh configure build=Release
+        run: ./task.sh configure build=Release static_deps=false
 
       - name: Fetch managed dependencies
         run: ./task.sh fetch-deps
@@ -124,6 +124,10 @@ jobs:
 
       - name: Migrate database
         run: ./task.sh database-migrate
+
+      - name: Lint
+        if: ${{ github.event_name == 'pull_request' }}
+        run: ./task.sh server-lint
 
       - name: Build Nebula server
         run: ./task.sh server-build
@@ -226,6 +230,10 @@ jobs:
 
       - name: Build libarchive
         run: ${{ matrix.script }} libarchive-build
+
+      - name: Lint libknossos
+        if: ${{ github.event_name == 'pull_request' && matrix.os == 'Linux' }}
+        run: ./task.sh libknossos-lint
 
       - name: Build libknossos
         run: ${{ matrix.script }} libknossos-build

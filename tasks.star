@@ -42,8 +42,8 @@ Task help:
       task: a reference to another task which will be called at exactly this point
 """
 
-load("tasks/options.star", "build", "msys2_path", "generator_opt")
-load("tasks/helpers.star", "yarn", "protoc")
+load("tasks/options.star", "build", "generator_opt", "msys2_path")
+load("tasks/helpers.star", "protoc", "yarn")
 load("tasks/nebula.star", "nebula_configure")
 load("tasks/knossos.star", "knossos_configure")
 
@@ -122,6 +122,7 @@ def configure():
     prepend_path("third_party/go/bin")
     prepend_path("third_party/protoc-dist")
     prepend_path("third_party/nodejs" if OS == "windows" else "third_party/nodejs/bin")
+    prepend_path("third_party/golangci")
     prepend_path(".tools")
 
     tool_bin = resolve_path(".tools/tool%s" % binext)
@@ -215,20 +216,27 @@ def configure():
     )
 
     task(
+        "js-lint",
+        desc = "Check JS code for common issues",
+        deps = ["yarn-install"],
+        cmds = [yarn("lint")],
+    )
+
+    task(
         "proto-build",
         desc = "Generates TS and Go bindings from the .proto API definitions",
         deps = ["fetch-deps", "install-tools"],
         base = "packages/api",
         inputs = ["definitions/*.proto"],
         outputs = [
-            "api/**/*.{ts,go}",
+            "api/{api,client,common}/*.{ts,go}",
             "client/**/*.go",
         ],
         cmds = [
-            protoc("google/protobuf/timestamp.proto", ts="api"),
-            protoc("mod.proto", go="client", ts="api"),
-            protoc("client.proto", go="client", twirp="twirp", ts="api"),
-            protoc("service.proto", go="api", twirp="twirp", ts="api"),
+            protoc("google/protobuf/timestamp.proto", ts = "api"),
+            protoc("mod.proto", go = "common", ts = "api"),
+            protoc("client.proto", go = "client", twirp = "twirp", ts = "api"),
+            protoc("service.proto", go = "api", twirp = "twirp", ts = "api"),
             # twirp doesn't support go.mod paths so we have to move the generated files to the correct location
             "mv twirp/github.com/ngld/knossos/packages/api/api/*.go api",
             "mv twirp/github.com/ngld/knossos/packages/api/client/*.go client",
