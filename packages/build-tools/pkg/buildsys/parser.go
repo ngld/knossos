@@ -354,6 +354,23 @@ func task(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kw
 	return task, nil
 }
 
+func hasTask(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	var name string
+	err := starlark.UnpackPositionalArgs(fn.Name(), args, kwargs, 1, &name)
+	if err != nil {
+		return nil, err
+	}
+
+	ctx := getCtx(thread)
+	for _, task := range ctx.tasks {
+		if task.Short == name {
+			return starlark.True, nil
+		}
+	}
+
+	return starlark.False, nil
+}
+
 func loadModule(thread *starlark.Thread, module string) (starlark.StringDict, error) {
 	ctx := getCtx(thread)
 	module = normalizePath(ctx, module)
@@ -425,8 +442,9 @@ func RunScript(ctx context.Context, filename, projectRoot string, options map[st
 		"prepend_path": starlark.NewBuiltin("prepend_path", prependPathDir),
 
 		// buildsys stuff
-		"option": starlark.NewBuiltin("option", option),
-		"task":   starlark.NewBuiltin("task", task),
+		"option":  starlark.NewBuiltin("option", option),
+		"task":    starlark.NewBuiltin("task", task),
+		"hastask": starlark.NewBuiltin("hastask", hasTask),
 
 		// OS / compiler helpers
 		"load_vcvars": starlark.NewBuiltin("load_vcvars", starLoadVcvars),

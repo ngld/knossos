@@ -4,6 +4,9 @@ Build tasks for the Knossos / Nebula project
 This file is written in Starlark a subset of Python.
 A full specification can be found here: https://github.com/google/starlark-go/blob/master/doc/spec.md
 
+load() is the equivalent of Python's import
+  i.e. load("something.star", "a", b="c") is equivalent to "from something import a, c as b").
+
 Quick API reference:
   option(name, default): returns a command line option
   resolve_path(some, path, parts): joins the given path elements and resolves any special syntax (like "//")
@@ -210,24 +213,6 @@ def configure():
         deps = ["build-tool"],
         cmds = ["tool check-deps"],
     )
-
-    if OS == "windows":
-        task(
-            "bootstrap-mingw64",
-            desc = "Runs first-time setup for MSYS2",
-            deps = ["fetch-deps"],
-            base = msys2_path,
-            skip_if_exists = [
-                "mingw64/bin/gcc.exe",
-                "mingw64/bin/cmake.exe",
-                "mingw64/bin/SDL2.dll",
-            ],
-            cmds = [
-                'usr/bin/bash -lc true',
-                'usr/bin/bash -lc "pacman --noconfirm -Syu"',
-                'usr/bin/bash -lc "pacman --noconfirm -Syu --needed" < "%s"' % resolve_path('//msys2-packages.txt'),
-            ],
-        )
 
     task(
         "proto-build",
