@@ -17,9 +17,11 @@ import (
 
 type parserCtx struct {
 	ctx          context.Context
+	globals      starlark.StringDict
 	options      map[string]ScriptOption
 	optionValues map[string]string
 	envOverrides map[string]string
+	moduleCache  map[string]starlark.StringDict
 	yamlCache    map[string]interface{}
 	filepath     string
 	projectRoot  string
@@ -352,6 +354,40 @@ func task(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kw
 	return task, nil
 }
 
+func loadModule(thread *starlark.Thread, module string) (starlark.StringDict, error) {
+	ctx := getCtx(thread)
+	module = normalizePath(ctx, module)
+
+	result, found := ctx.moduleCache[module]
+	if !found {
+		shortModule := simplifyPath(ctx, module)
+
+		oldFilepath := ctx.filepath
+		ctx.filepath = module
+		modThread := &starlark.Thread{
+			Name:  shortModule,
+			Print: thread.Print,
+			Load:  thread.Load,
+		}
+		modThread.SetLocal("parserCtx", ctx)
+
+		script, err := ioutil.ReadFile(module)
+		if err != nil {
+			return nil, err
+		}
+
+		result, err = starlark.ExecFile(thread, shortModule, script, ctx.globals)
+		if err != nil {
+			return nil, err
+		}
+
+		ctx.moduleCache[module] = result
+		ctx.filepath = oldFilepath
+	}
+
+	return result, nil
+}
+
 // RunScript executes a starlake scripts and returns the declared options. If doConfigure is true, the script's
 // configure function is called and the declared tasks are collected and returned.
 func RunScript(ctx context.Context, filename, projectRoot string, options map[string]string, doConfigure bool) (TaskList, map[string]ScriptOption, error) {
@@ -402,15 +438,18 @@ func RunScript(ctx context.Context, filename, projectRoot string, options map[st
 		Print: func(thread *starlark.Thread, msg string) {
 			log(ctx).Info().Str("thread", thread.Name).Msg(msg)
 		},
+		Load: loadModule,
 	}
 	threadCtx := parserCtx{
 		ctx:          ctx,
+		globals:      builtins,
 		filepath:     filename,
 		projectRoot:  projectRoot,
 		options:      make(map[string]ScriptOption),
 		optionValues: options,
 		envOverrides: make(map[string]string, 0),
 		tasks:        make([]*Task, 0),
+		moduleCache:  make(map[string]starlark.StringDict),
 		yamlCache:    make(map[string]interface{}),
 		initPhase:    true,
 	}
