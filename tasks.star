@@ -40,7 +40,7 @@ Task help:
 """
 
 build = option("build", "Release", help = "Whether to build a Debug or Release build")
-libkn_static = option("static", "true", help = "Whether to statically or dynamically link libknossos (only Windows)")
+libkn_static = option("static", "true" if OS == "windows" else "false", help = "Whether to statically or dynamically link libknossos (only Windows)")
 msys2_path = option("msys2_path", "//third_party/msys64", help = "The path to your MSYS2 installation. Only used on Windows. " +
                                                                  "Defaults to the bundled MSYS2 directory")
 generator_opt = option("generator", "", help = "The CMake generator to use. Defaults to ninja if available. " +
@@ -151,7 +151,7 @@ def find_static_lib(names, display_name = None):
         display_name = names[0]
 
     for name in names:
-        so_path = lookup_lib(name)
+        so_path = lookup_lib(name + ".so")
         if so_path:
             a_path = so_path.replace(".so", ".a")
             if isfile(a_path):
@@ -518,8 +518,8 @@ def configure():
         libkn_ldflags += " -liconv -llzma -lzstd -lz"
     else:
         libkn_ldflags += " " + " ".join([
-            find_static_lib(["lzma"]),
-            find_static_lib(["zstd"]),
+            find_static_lib(["liblzma"]),
+            find_static_lib(["libzstd"]),
             find_static_lib(["libz", "zlib"]),
         ])
 
