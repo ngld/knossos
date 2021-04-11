@@ -154,8 +154,7 @@ def find_static_lib(names, display_name = None):
         so_path = lookup_lib(name + ".so")
         if so_path:
             a_path = so_path.replace(".so", ".a")
-            if isfile(a_path):
-                return a_path
+            return a_path if isfile(a_path) else so_path
 
     error("Could not find %s! Please make sure it's installed." % display_name)
     return None
