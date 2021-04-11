@@ -63,6 +63,19 @@ def knossos_configure(binext, libext, generator):
         ])
 
     task(
+        "libknossos-lint",
+        desc = "Lints libknossos with golangci-lint",
+        deps = ["fetch-deps", "proto-build", "libarchive-build"],
+        base = "packages/libknossos",
+        env = {
+            # cgo only supports gcc, make sure it doesn't try to use a compiler meant for our other packages
+            "CC": "gcc",
+            "CGO_LDFLAGS": libkn_ldflags,
+        },
+        cmds = ["golangci-lint run"],
+    )
+
+    task(
         "libknossos-build",
         desc = "Builds libknossos (client-side, non-UI logic)",
         deps = ["build-tool", "proto-build", "libarchive-build"],

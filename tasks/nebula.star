@@ -57,6 +57,17 @@ def nebula_configure(binext):
         ]
     )
 
+    task(
+        "server-lint",
+        desc = "Lints server with golangci-lint",
+        deps = ["fetch-deps", "proto-build", "database-migrate"],
+        base = "packages/server",
+        cmds = [
+            "go generate -x ./pkg/db/queries.go",
+            "golangci-lint run",
+        ],
+    )
+
     neb_bin = resolve_path("build/nebula%s" % binext)
 
     task(
