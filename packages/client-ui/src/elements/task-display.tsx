@@ -17,8 +17,8 @@ function getLogTime(task: TaskState, line: LogMessage): string {
   const minutes = Math.floor(duration / 60);
   const seconds = duration % 60;
 
-  let result = (minutes < 10 ? '0' : '') + minutes + ':';
-  result += (seconds < 10 ? '0' : '') + seconds;
+  let result = (minutes < 10 ? '0' : '') + String(minutes) + ':';
+  result += (seconds < 10 ? '0' : '') + String(seconds);
   return result;
 }
 
@@ -63,7 +63,7 @@ export default observer(function TaskDisplay(): React.ReactElement {
     gs.tasks.on('new', listener);
 
     return () => void gs.tasks.off('new', listener);
-  }, []);
+  }, [gs.tasks]);
 
   return (
     <div className="absolute bottom-0 right-40">

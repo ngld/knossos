@@ -100,24 +100,28 @@ export class TaskTracker extends EventEmitter {
         task.logMessages.push(ev.payload.message);
         break;
       case 'progress':
-        const info = ev.payload.progress;
-        if (info.progress >= 0) {
-          task.progress = info.progress;
+        {
+          const info = ev.payload.progress;
+          if (info.progress >= 0) {
+            task.progress = info.progress;
+          }
+          if (info.description !== '') {
+            task.status = info.description;
+          }
+          task.error = info.error;
+          task.indeterminate = info.indeterminate;
         }
-        if (info.description !== '') {
-          task.status = info.description;
-        }
-        task.error = info.error;
-        task.indeterminate = info.indeterminate;
         break;
       case 'result':
-        const taskResult = ev.payload.result;
-        task.indeterminate = false;
+        {
+          const taskResult = ev.payload.result;
+          task.indeterminate = false;
 
-        if (!taskResult.success) {
-          task.error = true;
-        } else {
-          task.progress = 1;
+          if (!taskResult.success) {
+            task.error = true;
+          } else {
+            task.progress = 1;
+          }
         }
         break;
     }
@@ -125,7 +129,7 @@ export class TaskTracker extends EventEmitter {
     this.taskMap[ev.ref] = task;
   }
 
-  removeTask(id: number) {
+  removeTask(id: number): void {
     let taskIdx = -1;
     for (let i = 0; i < this.tasks.length; i++) {
       if (this.tasks[i].id === id) {
@@ -149,7 +153,7 @@ export function useTaskTracker(): TaskTracker {
 
   useEffect(() => {
     return tracker.listen();
-  }, []);
+  }, [tracker]);
 
   return tracker;
 }

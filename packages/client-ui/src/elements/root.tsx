@@ -63,7 +63,9 @@ function TooltipButton(props: TooltipButtonProps): React.ReactElement {
         href="#"
         onClick={(e) => {
           e.preventDefault();
-          if (props.onClick) props.onClick();
+          if (props.onClick) {
+            props.onClick();
+          }
         }}
       >
         {props.children}
@@ -73,7 +75,6 @@ function TooltipButton(props: TooltipButtonProps): React.ReactElement {
 }
 
 const ModContainer = observer(function ModContainer(): React.ReactElement {
-  const gs = useGlobalState();
   const location = useLocation();
 
   return (

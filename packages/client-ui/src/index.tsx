@@ -5,7 +5,7 @@ import './blueprint.scss';
 import '@blueprintjs/popover2/lib/css/blueprint-popover2.css';
 import './resources/fonts/index.css';
 import './style.css';
-import { FocusStyleManager, H1 } from '@blueprintjs/core';
+import { FocusStyleManager } from '@blueprintjs/core';
 import { BrowserRouter } from 'react-router-dom';
 import { DefaultContext as IconConfig } from '@meronex/icons';
 
