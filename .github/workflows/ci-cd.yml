@@ -42,7 +42,7 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             base_ref="${{ github.base_ref }}"
-          else if [ "${{ github.event_name }}" = "push" ]; then
+          elif [ "${{ github.event_name }}" = "push" ]; then
             base_ref="${{ github.event.before }}"
           else
             echo "Unsupported event ${{ github.event_name }}"
