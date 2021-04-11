@@ -10,3 +10,17 @@ jobs:
         with:
           fetch-depth: 0
       - uses: wagoid/commitlint-github-action@v3
+
+  golangci:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [build-tools, libarchive, libknossos, server, updater]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: golangci/golangci-lint-action@v2
+        with:
+          version: v1.39.0
+          working-directory: packages/${{ matrix.package }}
+          only-new-issues: true
