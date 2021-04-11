@@ -40,15 +40,11 @@ Task help:
 """
 
 build = option("build", "Release", help = "Whether to build a Debug or Release build")
-if OS == "windows":
-    libkn_static = option("static", "true", help = "Whether to statically or dynamically link libknossos")
-else:
-    libkn_static = ""
-
+libkn_static = option("static", "true", help = "Whether to statically or dynamically link libknossos (only Windows)")
 msys2_path = option("msys2_path", "//third_party/msys64", help = "The path to your MSYS2 installation. Only used on Windows. " +
                                                                  "Defaults to the bundled MSYS2 directory")
 generator_opt = option("generator", "", help = "The CMake generator to use. Defaults to ninja if available. " +
-                                               "Please note that on Windows you'll  have to run the vcvarsall.bat if you don't choose a Visual Studio generator")
+                                               "Please note that on Windows you'll have to run the vcvarsall.bat if you don't choose a Visual Studio generator")
 
 db_network = option("db_network", "nebula", help = "The name of the Docker network to use for Nebula-related containers.")
 db_container = option("db_container", "nebula-db", help = "The name of the Docker container for Nebula's managed database.")
