@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"os"
+
 	"github.com/spf13/cobra"
 
 	"github.com/ngld/knossos/packages/build-tools/pkg/buildsys/cmd"
@@ -18,5 +20,8 @@ func init() {
 }
 
 func Execute() {
-	cobra.CheckErr(rootCmd.Execute())
+	err := rootCmd.Execute()
+	if err != nil {
+		os.Exit(1)
+	}
 }
