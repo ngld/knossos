@@ -38,10 +38,10 @@ jobs:
             !.yarn/plugins
 
       - name: Configure tasks
-        run: ./tasks.sh static_deps=false
+        run: ./task.sh static_deps=false
 
       - name: Fetch JS dependencies
         run: ./task.sh yarn-install
 
       - name: Run JS lint
-        run: ./tasks.sh js-lint
+        run: ./task.sh js-lint

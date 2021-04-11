@@ -13,6 +13,7 @@ import (
 
 	"github.com/aidarkhanov/nanoid"
 	"github.com/ngld/knossos/packages/api/client"
+	"github.com/ngld/knossos/packages/api/common"
 	"github.com/ngld/knossos/packages/libknossos/pkg/api"
 	"github.com/ngld/knossos/packages/libknossos/pkg/storage"
 	"github.com/rotisserie/eris"
@@ -98,27 +99,30 @@ type UserModSettings struct {
 	Exe         []string
 }
 
-func convertPath(ctx context.Context, modPath, input string) *client.FileRef {
+func convertPath(ctx context.Context, modPath, input string) *common.FileRef {
 	if input == "" {
 		return nil
 	}
 
-	ref := &client.FileRef{
+	ref := &common.FileRef{
 		Fileid: "local_" + nanoid.New(),
 		Urls:   []string{"file://" + filepath.ToSlash(filepath.Join(modPath, input))},
 	}
-	storage.ImportFile(ctx, ref)
+	err := storage.ImportFile(ctx, ref)
+	if err != nil {
+		api.Log(ctx, api.LogError, "Failed to import file %s from %s: %s", input, modPath, eris.ToString(err, true))
+	}
 
 	return ref
 }
 
-func convertChecksum(input KnChecksum) (*client.Checksum, error) {
+func convertChecksum(input KnChecksum) (*common.Checksum, error) {
 	digest, err := hex.DecodeString(input[1])
 	if err != nil {
 		return nil, err
 	}
 
-	return &client.Checksum{
+	return &common.Checksum{
 		Algo:   input[0],
 		Digest: digest,
 	}, nil
@@ -153,13 +157,13 @@ func cleanEmptyFolders(ctx context.Context, folder string) error {
 }
 
 func ImportMods(ctx context.Context, modFiles []string) error {
-	releases := make([]*client.Release, 0)
+	releases := make([]*common.Release, 0)
 
 	api.Log(ctx, api.LogInfo, "Parsing mod.json files")
 	api.SetProgress(ctx, 0, "Processing mods")
 	modCount := float32(len(modFiles))
 
-	err := storage.ImportMods(ctx, func(ctx context.Context, importMod func(*client.Release) error) error {
+	err := storage.ImportMods(ctx, func(ctx context.Context, importMod func(*common.Release) error) error {
 		done := float32(0)
 		for _, modFile := range modFiles {
 			data, err := ioutil.ReadFile(modFile)
@@ -271,7 +275,7 @@ func ImportMods(ctx context.Context, modFiles []string) error {
 				api.Log(ctx, api.LogInfo, "Folder conversion done")
 			}
 
-			item := new(client.Release)
+			item := new(common.Release)
 			item.Modid = mod.ID
 			item.Version = mod.Version
 			item.Folder = modPath
@@ -311,27 +315,27 @@ func ImportMods(ctx context.Context, modFiles []string) error {
 
 			switch mod.Type {
 			case "mod":
-				item.Type = client.ModType_MOD
+				item.Type = common.ModType_MOD
 			case "tc":
-				item.Type = client.ModType_TOTAL_CONVERSION
+				item.Type = common.ModType_TOTAL_CONVERSION
 			case "engine":
-				item.Type = client.ModType_ENGINE
+				item.Type = common.ModType_ENGINE
 			case "tool":
-				item.Type = client.ModType_TOOL
+				item.Type = common.ModType_TOOL
 			case "extension":
-				item.Type = client.ModType_EXTENSION
+				item.Type = common.ModType_EXTENSION
 			default:
-				item.Type = client.ModType_MOD
+				item.Type = common.ModType_MOD
 			}
 
-			if item.Type == client.ModType_ENGINE {
+			if item.Type == common.ModType_ENGINE {
 				switch mod.Stability {
 				case "stable":
-					item.Stability = client.ReleaseStability_STABLE
+					item.Stability = common.ReleaseStability_STABLE
 				case "rc":
-					item.Stability = client.ReleaseStability_RC
+					item.Stability = common.ReleaseStability_RC
 				case "nightly":
-					item.Stability = client.ReleaseStability_NIGHTLY
+					item.Stability = common.ReleaseStability_NIGHTLY
 				}
 			}
 
@@ -339,9 +343,9 @@ func ImportMods(ctx context.Context, modFiles []string) error {
 				item.Screenshots = append(item.Screenshots, convertPath(ctx, modPath, screen))
 			}
 
-			item.Packages = make([]*client.Package, len(mod.Packages))
+			item.Packages = make([]*common.Package, len(mod.Packages))
 			for pIdx, pkg := range mod.Packages {
-				pbPkg := new(client.Package)
+				pbPkg := new(common.Package)
 				pbPkg.Name = pkg.Name
 				pbPkg.Folder = pkg.Folder
 				pbPkg.Notes = pkg.Notes
@@ -349,27 +353,27 @@ func ImportMods(ctx context.Context, modFiles []string) error {
 
 				switch pkg.Status {
 				case "required":
-					pbPkg.Type = client.PackageType_REQUIRED
+					pbPkg.Type = common.PackageType_REQUIRED
 				case "recommended":
-					pbPkg.Type = client.PackageType_RECOMMENDED
+					pbPkg.Type = common.PackageType_RECOMMENDED
 				case "optional":
-					pbPkg.Type = client.PackageType_OPTIONAL
+					pbPkg.Type = common.PackageType_OPTIONAL
 				}
 
 				// TODO: CpuSpec
 
-				pbPkg.Dependencies = make([]*client.Dependency, len(pkg.Dependencies))
+				pbPkg.Dependencies = make([]*common.Dependency, len(pkg.Dependencies))
 				for dIdx, dep := range pkg.Dependencies {
-					pbDep := new(client.Dependency)
+					pbDep := new(common.Dependency)
 					pbDep.Modid = dep.ID
 					pbDep.Constraint = dep.Version
 					pbDep.Packages = dep.Packages
 					pbPkg.Dependencies[dIdx] = pbDep
 				}
 
-				pbPkg.Archives = make([]*client.PackageArchive, len(pkg.Files))
+				pbPkg.Archives = make([]*common.PackageArchive, len(pkg.Files))
 				for aIdx, archive := range pkg.Files {
-					pbArchive := new(client.PackageArchive)
+					pbArchive := new(common.PackageArchive)
 					pbArchive.Id = archive.Filename
 					pbArchive.Label = archive.Filename
 					pbArchive.Destination = archive.Dest
@@ -380,7 +384,7 @@ func ImportMods(ctx context.Context, modFiles []string) error {
 					}
 					pbArchive.Checksum = chk
 					pbArchive.Filesize = uint64(archive.FileSize)
-					pbArchive.Download = &client.FileRef{
+					pbArchive.Download = &common.FileRef{
 						Fileid: "local_" + nanoid.New(),
 						Urls:   archive.URLs,
 					}
@@ -388,9 +392,9 @@ func ImportMods(ctx context.Context, modFiles []string) error {
 					pbPkg.Archives[aIdx] = pbArchive
 				}
 
-				pbPkg.Files = make([]*client.PackageFile, len(pkg.Filelist))
+				pbPkg.Files = make([]*common.PackageFile, len(pkg.Filelist))
 				for fIdx, file := range pkg.Filelist {
-					pbFile := new(client.PackageFile)
+					pbFile := new(common.PackageFile)
 					pbFile.Path = file.Filename
 					pbFile.Archive = file.Archive
 					pbFile.ArchivePath = file.OrigName
@@ -403,9 +407,9 @@ func ImportMods(ctx context.Context, modFiles []string) error {
 					pbPkg.Files[fIdx] = pbFile
 				}
 
-				pbPkg.Executables = make([]*client.EngineExecutable, len(pkg.Executables))
+				pbPkg.Executables = make([]*common.EngineExecutable, len(pkg.Executables))
 				for eIdx, exe := range pkg.Executables {
-					pbExe := new(client.EngineExecutable)
+					pbExe := new(common.EngineExecutable)
 					pbExe.Path = exe.File
 					pbExe.Label = exe.Label
 
@@ -510,7 +514,10 @@ func ImportMods(ctx context.Context, modFiles []string) error {
 				}
 			}
 
-			importSettings(rel.Modid, rel.Version, newSettings)
+			err = importSettings(rel.Modid, rel.Version, newSettings)
+			if err != nil {
+				return err
+			}
 		}
 
 		return nil

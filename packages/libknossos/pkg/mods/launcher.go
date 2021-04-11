@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/ngld/knossos/packages/api/client"
+	"github.com/ngld/knossos/packages/api/common"
 	"github.com/ngld/knossos/packages/libknossos/pkg/api"
 	"github.com/ngld/knossos/packages/libknossos/pkg/storage"
 	"github.com/rotisserie/eris"
@@ -79,8 +80,8 @@ type jsonFlags struct {
 	PrefPath string `json:"pref_path"`
 }
 
-func getEngineForMod(ctx context.Context, mod *client.Release) (*client.Release, error) {
-	var engine *client.Release
+func getEngineForMod(ctx context.Context, mod *common.Release) (*common.Release, error) {
+	var engine *common.Release
 
 	for modid, version := range mod.DependencySnapshot {
 		dep, err := storage.GetMod(ctx, modid, version)
@@ -88,7 +89,7 @@ func getEngineForMod(ctx context.Context, mod *client.Release) (*client.Release,
 			return nil, eris.Wrapf(err, "failed to resolve dependency %s (%s)", modid, version)
 		}
 
-		if dep.Type == client.ModType_ENGINE {
+		if dep.Type == common.ModType_ENGINE {
 			if engine != nil {
 				return nil, eris.New("more than one engine dependency")
 			}
@@ -104,7 +105,7 @@ func getEngineForMod(ctx context.Context, mod *client.Release) (*client.Release,
 	return engine, nil
 }
 
-func getBinaryForEngine(ctx context.Context, engine *client.Release) (string, error) {
+func getBinaryForEngine(ctx context.Context, engine *common.Release) (string, error) {
 	binaryScore := uint32(0)
 	binaryPath := ""
 
@@ -169,7 +170,7 @@ func getJSONFlagsForBinary(ctx context.Context, binaryPath string) (*jsonFlags, 
 	return &flags, nil
 }
 
-func GetFlagsForMod(ctx context.Context, mod *client.Release) (map[string]*client.FlagInfo_Flag, error) {
+func GetFlagsForMod(ctx context.Context, mod *common.Release) (map[string]*client.FlagInfo_Flag, error) {
 	engine, err := getEngineForMod(ctx, mod)
 	if err != nil {
 		return nil, err
@@ -178,7 +179,7 @@ func GetFlagsForMod(ctx context.Context, mod *client.Release) (map[string]*clien
 	return GetFlagsForEngine(ctx, engine)
 }
 
-func GetFlagsForEngine(ctx context.Context, engine *client.Release) (map[string]*client.FlagInfo_Flag, error) {
+func GetFlagsForEngine(ctx context.Context, engine *common.Release) (map[string]*client.FlagInfo_Flag, error) {
 	result := make(map[string]*client.FlagInfo_Flag)
 
 	binaryPath, err := getBinaryForEngine(ctx, engine)
@@ -203,7 +204,7 @@ func GetFlagsForEngine(ctx context.Context, engine *client.Release) (map[string]
 	return result, nil
 }
 
-func LaunchMod(ctx context.Context, mod *client.Release, settings *client.UserSettings) error {
+func LaunchMod(ctx context.Context, mod *common.Release, settings *client.UserSettings) error {
 	// Resolve the engine by checking all relevant options in the following order:
 	//  1. custom build in the user settings (manual path to the binary)
 	//  2. custom engine version (reference to an engine-type Release)
@@ -213,7 +214,7 @@ func LaunchMod(ctx context.Context, mod *client.Release, settings *client.UserSe
 	binary := settings.GetCustomBuild()
 
 	if binary == "" {
-		var engine *client.Release
+		var engine *common.Release
 
 		engOpts := settings.GetEngineOptions()
 		if engOpts.GetModid() != "" {
@@ -254,7 +255,7 @@ func LaunchMod(ctx context.Context, mod *client.Release, settings *client.UserSe
 	// Build the -mod flag
 	modFlag := make([]string, 0, len(mod.DependencySnapshot))
 	for _, ID := range mod.ModOrder {
-		var rel *client.Release
+		var rel *common.Release
 
 		if ID == mod.Modid {
 			rel = mod
@@ -346,7 +347,7 @@ func LaunchMod(ctx context.Context, mod *client.Release, settings *client.UserSe
 	time.Sleep(3 * time.Second)
 
 	if !running {
-		code := "???"
+		var code string
 		if runtime.GOOS == "windows" {
 			code = fmt.Sprintf("%x", proc.ProcessState.ExitCode())
 		} else {

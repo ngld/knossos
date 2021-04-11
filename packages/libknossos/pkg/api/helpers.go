@@ -278,7 +278,7 @@ func RunTask(ctx context.Context, ref uint32, task func(context.Context) error) 
 			err := recover()
 			if err != nil {
 				TaskLog(ctx, client.LogMessage_FATAL, "Failed with panic: %+v", err)
-				UpdateTask(ctx, &client.TaskResult{
+				_ = UpdateTask(ctx, &client.TaskResult{
 					Success: false,
 					Error:   "Failed with panic",
 				})
@@ -288,12 +288,12 @@ func RunTask(ctx context.Context, ref uint32, task func(context.Context) error) 
 		err := task(ctx)
 		if err != nil {
 			TaskLog(ctx, client.LogMessage_ERROR, "Failed with error: %s", eris.ToString(err, true))
-			UpdateTask(ctx, &client.TaskResult{
+			_ = UpdateTask(ctx, &client.TaskResult{
 				Success: false,
 				Error:   err.Error(),
 			})
 		} else {
-			UpdateTask(ctx, &client.TaskResult{
+			_ = UpdateTask(ctx, &client.TaskResult{
 				Success: true,
 			})
 		}
