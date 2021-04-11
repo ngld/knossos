@@ -227,8 +227,18 @@ jobs:
       - name: Build Knossos UI
         run: ${{ matrix.script }} client-ui-build
 
+      - name: Compress artifacts
+        if: ${{ matrix.os == 'Windows' }}
+        run: cd build\client\launcher\Release && 7z a -o..\Knossos.7z .
+
+      - name: Compress artifacts
+        if: ${{ matrix.os != 'Windows' }}
+        run: |
+          cd build/client/launcher/Release
+          tar -cf - . | zstd > ../Knossos.tar.zstd
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v2
         with:
           name: Knossos-${{ matrix.os }}-${{ needs.setup.outputs.short_sha }}
-          path: build/client/launcher/Release/
+          path: build/client/launcher/Knossos.*
