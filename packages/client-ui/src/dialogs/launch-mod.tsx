@@ -49,7 +49,7 @@ const LaunchMod = observer(function LaunchMod(props: LaunchModProps): React.Reac
           </>
         ),
         fulfilled: () => <span>Done</span>,
-        rejected: (e) => (
+        rejected: (e: Error) => (
           <Callout intent="danger" title="Failed to launch FSO">
             <pre>{e.toString()}</pre>
           </Callout>

@@ -1,3 +1,5 @@
+/// <reference types="node" />
+/* globals module, require */
 /*
  * Copyright 2019 Palantir Technologies, Inc. All rights reserved.
  *
@@ -40,5 +42,5 @@ module.exports = {
     }
     content += '>\n<g><path fill="' + selector.getValue(0).getValue(0) + '" d="' + collection[name] + '"/></g></svg>';
     return new types.String('url("' + svgToDataUri(content.toString('UTF-8')) + '")');
-  }
+  },
 };

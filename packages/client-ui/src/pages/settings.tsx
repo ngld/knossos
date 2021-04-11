@@ -33,7 +33,7 @@ async function selectLibraryFolder(gs: GlobalState, formState: Settings): Promis
         formState.libraryPath = result;
       });
 
-      rescanLocalMods(gs);
+      void rescanLocalMods(gs);
     }
   } catch (e) {
     console.error(e);
@@ -64,7 +64,7 @@ export default function SettingsPage(): React.ReactElement {
       console.log('Settings changed...');
       void saveSettings(gs, formState);
     });
-  }, []);
+  }, [gs, formState]);
 
   return (
     <div className="text-white text-sm">
@@ -77,7 +77,7 @@ export default function SettingsPage(): React.ReactElement {
                 <FormInputGroup name="libraryPath" readOnly={true} />
                 <Button
                   onClick={() => {
-                    selectLibraryFolder(gs, formState);
+                    void selectLibraryFolder(gs, formState);
                   }}
                 >
                   Browse...
@@ -85,7 +85,7 @@ export default function SettingsPage(): React.ReactElement {
               </ControlGroup>
               <Button
                 onClick={() => {
-                  rescanLocalMods(gs);
+                  void rescanLocalMods(gs);
                 }}
               >
                 Rescan local mods
