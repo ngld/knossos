@@ -107,6 +107,7 @@ import (
 	"unsafe"
 
 	"github.com/ngld/knossos/packages/api/client"
+	"github.com/ngld/knossos/packages/api/common"
 	"github.com/ngld/knossos/packages/libarchive"
 	"github.com/ngld/knossos/packages/libknossos/pkg/api"
 	"github.com/ngld/knossos/packages/libknossos/pkg/storage"
@@ -221,7 +222,7 @@ func KnossosHandleRequest(urlPtr *C.char, urlLen C.int, bodyPtr unsafe.Pointer, 
 	if strings.HasPrefix(reqURL, "https://api.client.fsnebula.org/ref/") {
 		cancel()
 
-		var fileRef *client.FileRef
+		var fileRef *common.FileRef
 		fileId := reqURL[36:]
 		fileRef, err = storage.GetFile(ctx, fileId)
 		if err == nil {

@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/ngld/knossos/packages/api/client"
+	"github.com/ngld/knossos/packages/api/common"
 	"github.com/rotisserie/eris"
 	bolt "go.etcd.io/bbolt"
 	"google.golang.org/protobuf/proto"
@@ -13,7 +14,7 @@ import (
 
 type ModProvider interface {
 	GetVersionsForMod(string) ([]string, error)
-	GetModMetadata(string, string) (*client.Release, error)
+	GetModMetadata(string, string) (*common.Release, error)
 }
 
 var (
@@ -35,7 +36,7 @@ func modVersionSorter(_ string, versions []string) error {
 	return nil
 }
 
-func ImportMods(ctx context.Context, callback func(context.Context, func(*client.Release) error) error) error {
+func ImportMods(ctx context.Context, callback func(context.Context, func(*common.Release) error) error) error {
 	importMutex.Lock()
 	defer importMutex.Unlock()
 
@@ -60,7 +61,7 @@ func ImportMods(ctx context.Context, callback func(context.Context, func(*client
 		ctx = CtxWithTx(ctx, tx)
 
 		// Call the actual import function
-		err = callback(ctx, func(rel *client.Release) error {
+		err = callback(ctx, func(rel *common.Release) error {
 			encoded, err := proto.Marshal(rel)
 			if err != nil {
 				return err
@@ -119,7 +120,7 @@ func ImportUserSettings(ctx context.Context, callback func(context.Context, func
 	})
 }
 
-func SaveLocalMod(ctx context.Context, release *client.Release) error {
+func SaveLocalMod(ctx context.Context, release *common.Release) error {
 	tx := TxFromCtx(ctx)
 	if tx == nil {
 		return BatchUpdate(ctx, func(ctx context.Context) error {
@@ -172,21 +173,21 @@ func SaveLocalMod(ctx context.Context, release *client.Release) error {
 	return bucket.Put([]byte(release.Modid+"#"+release.Version), encoded)
 }
 
-func GetLocalMods(ctx context.Context, taskRef uint32) ([]*client.Release, error) {
-	var result []*client.Release
+func GetLocalMods(ctx context.Context, taskRef uint32) ([]*common.Release, error) {
+	var result []*common.Release
 
 	err := db.View(func(tx *bolt.Tx) error {
 		// Retrieve IDs and the latest version for all known local mods
 		bucket := tx.Bucket(localModsBucket)
-		result = make([]*client.Release, 0)
+		result = make([]*common.Release, 0)
 
-		localVersionIdx.ForEach(func(modID string, versions []string) error {
+		return localVersionIdx.ForEach(func(modID string, versions []string) error {
 			item := bucket.Get([]byte(modID + "#" + versions[len(versions)-1]))
 			if item == nil {
 				return eris.Errorf("Failed to find mod %s from index", modID+"#"+versions[len(versions)-1])
 			}
 
-			meta := new(client.Release)
+			meta := new(common.Release)
 			err := proto.Unmarshal(item, meta)
 			if err != nil {
 				return err
@@ -195,8 +196,6 @@ func GetLocalMods(ctx context.Context, taskRef uint32) ([]*client.Release, error
 			result = append(result, meta)
 			return nil
 		})
-
-		return nil
 	})
 	if err != nil {
 		return nil, err
@@ -205,8 +204,8 @@ func GetLocalMods(ctx context.Context, taskRef uint32) ([]*client.Release, error
 	return result, nil
 }
 
-func GetMod(ctx context.Context, id string, version string) (*client.Release, error) {
-	mod := new(client.Release)
+func GetMod(ctx context.Context, id string, version string) (*common.Release, error) {
+	mod := new(common.Release)
 	err := db.View(func(tx *bolt.Tx) error {
 		item := tx.Bucket(localModsBucket).Get([]byte(id + "#" + version))
 		if item == nil {
@@ -239,7 +238,7 @@ func (LocalMods) GetVersionsForMod(id string) ([]string, error) {
 	return GetVersionsForMod(context.Background(), id)
 }
 
-func (LocalMods) GetModMetadata(id, version string) (*client.Release, error) {
+func (LocalMods) GetModMetadata(id, version string) (*common.Release, error) {
 	return GetMod(context.Background(), id, version)
 }
 

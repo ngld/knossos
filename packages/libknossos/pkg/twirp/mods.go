@@ -11,6 +11,7 @@ import (
 	"github.com/rotisserie/eris"
 
 	"github.com/ngld/knossos/packages/api/client"
+	"github.com/ngld/knossos/packages/api/common"
 	"github.com/ngld/knossos/packages/libknossos/pkg/api"
 	"github.com/ngld/knossos/packages/libknossos/pkg/mods"
 	"github.com/ngld/knossos/packages/libknossos/pkg/storage"
@@ -79,8 +80,8 @@ func (kn *knossosServer) GetLocalMods(ctx context.Context, _ *client.NullMessage
 		"Teaser":  true,
 	}
 
-	// Look for fields in client.Release that are not listed above
-	typeDesc := reflect.ValueOf(client.Release{}).Type()
+	// Look for fields in common.Release that are not listed above
+	typeDesc := reflect.ValueOf(common.Release{}).Type()
 	toClear := make([]int, 0)
 	for idx := 0; idx < typeDesc.NumField(); idx++ {
 		field := typeDesc.Field(idx)
@@ -123,7 +124,7 @@ func (kn *knossosServer) GetModInfo(ctx context.Context, req *client.ModInfoRequ
 	}
 
 	mod.Folder = ""
-	mod.Packages = make([]*client.Package, 0)
+	mod.Packages = make([]*common.Package, 0)
 
 	return &client.ModInfoResponse{
 		Mod:      mod,
@@ -138,7 +139,7 @@ func (kn *knossosServer) GetModDependencies(ctx context.Context, req *client.Mod
 	}
 
 	versions := make(map[string]*client.ModDependencySnapshot_ModInfo)
-	for modID, _ := range mod.DependencySnapshot {
+	for modID := range mod.DependencySnapshot {
 		localVersions, err := storage.GetVersionsForMod(ctx, modID)
 		if err != nil {
 			return nil, err
