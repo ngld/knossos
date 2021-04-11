@@ -38,4 +38,6 @@ if (!(Test-Path -Path "${ToolRoot}\tool.exe" -ea 0)) {
 }
 
 Invoke-Expression "${ToolRoot}\tool.exe task ${Args}"
+$code = $LastExitCode
 Remove-Item -Path "${ToolRoot}\tool.exe.old.*"
+Exit $code
