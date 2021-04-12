@@ -64,7 +64,7 @@ def cmake_task(name, desc = "", inputs = [], outputs = [], script = None, window
                 cmds = [
                     'usr/bin/bash -lc true',
                     'usr/bin/bash -lc "pacman --noconfirm -Syu"',
-                    'usr/bin/bash -lc "pacman --noconfirm -Syu --needed" < "%s"' % resolve_path('//msys2-packages.txt'),
+                    'usr/bin/bash -lc \'pacman --noconfirm -Syu --needed $(cat "$(cygpath -w "%s")")\'' % resolve_path('//msys2-packages.txt'),
                 ],
             )
 
