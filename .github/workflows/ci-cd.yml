@@ -232,7 +232,7 @@ jobs:
         run: ${{ matrix.script }} libarchive-build
 
       - name: Lint libknossos
-        if: ${{ github.event_name == 'pull_request' && matrix.os == 'Linux' }}
+        if: ${{ github.event_name == 'pull_request' && runner.os == 'Linux' }}
         run: ./task.sh libknossos-lint
 
       - name: Build libknossos
