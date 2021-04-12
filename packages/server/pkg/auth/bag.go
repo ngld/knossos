@@ -30,7 +30,6 @@ func UnmarshalBag(data string, dest interface{}) error {
 				lastPos = idx + 1
 				state = 1
 			}
-			break
 		case 1:
 			if data[idx] == '#' {
 				ref, ok := fields[key]
@@ -55,7 +54,6 @@ func UnmarshalBag(data string, dest interface{}) error {
 				lastPos = idx + 1
 				state = 0
 			}
-			break
 		default:
 			panic("invalid state")
 		}
@@ -66,14 +64,12 @@ func UnmarshalBag(data string, dest interface{}) error {
 		if lastPos != dataLen {
 			panic("corrupted state")
 		}
-		break
 	case 1:
 		if lastPos < dataLen {
 			panic("corrupted end")
 		} else if lastPos > dataLen {
 			panic("corrupted last pos")
 		}
-		break
 	}
 
 	return nil
