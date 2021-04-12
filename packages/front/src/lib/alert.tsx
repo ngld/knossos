@@ -14,7 +14,7 @@ const alerts = observable([] as AlertProps[]);
 function AlertContainer_(): React.ReactElement {
   return (
     <>
-      {alerts.map((data, i) => (
+      {alerts.map((data) => (
         <Alert
           {...data}
           onClose={action((c, e) => {

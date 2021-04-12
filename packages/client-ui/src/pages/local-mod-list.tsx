@@ -5,7 +5,8 @@ import { fromPromise } from 'mobx-utils';
 import { History } from 'history';
 import { Release } from '@api/mod';
 import { GlobalState, useGlobalState } from '../lib/state';
-import {launchMod} from '../dialogs/launch-mod';
+import { launchMod } from '../dialogs/launch-mod';
+import ModstockImage from '../resources/modstock.jpg';
 
 async function fetchMods(gs: GlobalState): Promise<Release[]> {
   const result = await gs.client.getLocalMods({});
@@ -24,23 +25,35 @@ export default observer(function LocalModList(props: LocalModListProps): React.R
     <div className="text-white">
       {modList.case({
         pending: () => <NonIdealState icon={<Spinner />} title="Loading mods..." />,
-        rejected: (e) => <NonIdealState icon="error" title="Failed to load mods" description={e?.toString ? e.toString() : e} />,
-        fulfilled: (mods) => (
+        rejected: (e: Error) => (
+          <NonIdealState
+            icon="error"
+            title="Failed to load mods"
+            description={e?.toString ? e.toString() : String(e)}
+          />
+        ),
+        fulfilled: (mods: Release[]) => (
           <div className="flex flex-row flex-wrap justify-between gap-4">
             {mods.map((mod) => (
               <div key={mod.modid} className="mod-tile bg-important flex flex-col overflow-hidden">
-                {mod.teaser?.fileid ? 
-                  <img src={"https://api.client.fsnebula.org/ref/" + mod.teaser?.fileid} />
-                :
-                  <img src={require('../resources/modstock.jpg').default} />
-                }
+                {mod.teaser?.fileid ? (
+                  <img src={'https://api.client.fsnebula.org/ref/' + mod.teaser?.fileid} />
+                ) : (
+                  <img src={ModstockImage} />
+                )}
                 <div className="flex-1 flex flex-col justify-center text-white">
-                  <div className="flex-initial text-center overflow-ellipsis overflow-hidden">{mod.title}</div>
+                  <div className="flex-initial text-center overflow-ellipsis overflow-hidden">
+                    {mod.title}
+                  </div>
                 </div>
 
                 <div className="cover flex flex-col justify-center gap-2">
                   <Button onClick={() => launchMod(gs, mod.modid, mod.version)}>Play</Button>
-                  <Button onClick={() => props.history.push('/mod/' + mod.modid + '/' + mod.version)}>Details</Button>
+                  <Button
+                    onClick={() => props.history.push('/mod/' + mod.modid + '/' + mod.version)}
+                  >
+                    Details
+                  </Button>
                   <Button>Uninstall</Button>
                 </div>
               </div>

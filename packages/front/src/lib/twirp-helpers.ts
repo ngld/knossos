@@ -3,7 +3,7 @@ import { alert } from './alert';
 
 export function presentTwirpError(code: string | TwirpErrorCode): void {
   if (typeof code === 'string') {
-    code = parseInt(code) as TwirpErrorCode;
+    code = parseInt(code, 10) as TwirpErrorCode;
   }
 
   switch (code) {
@@ -17,7 +17,8 @@ export function presentTwirpError(code: string | TwirpErrorCode): void {
     case TwirpErrorCode.bad_route:
     case TwirpErrorCode.unimplemented:
       alert({
-        children: `The server didn't recognize our request. Please clear your cache and reload the page.`,
+        children:
+          "The server didn't recognize our request. Please clear your cache and reload the page.",
         confirmButtonText: 'OK',
       });
       return;
@@ -26,14 +27,14 @@ export function presentTwirpError(code: string | TwirpErrorCode): void {
     case TwirpErrorCode.unavailable:
       // transient error
       alert({
-        children: `The server ran into an issue while responding. Please try again.`,
+        children: 'The server ran into an issue while responding. Please try again.',
         confirmButtonText: 'OK',
       });
       return;
     case TwirpErrorCode.internal:
       // internal error
       alert({
-        children: `An internal error occurred. Please try again later.`,
+        children: 'An internal error occurred. Please try again later.',
         confirmButtonText: 'OK',
       });
       return;
@@ -41,7 +42,7 @@ export function presentTwirpError(code: string | TwirpErrorCode): void {
     default:
       // report
       alert({
-        children: `An unknown error occured. Please report it and try again.`,
+        children: 'An unknown error occured. Please report it and try again.',
         confirmButtonText: 'OK',
       });
       return;

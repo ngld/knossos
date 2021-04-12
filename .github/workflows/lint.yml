@@ -17,6 +17,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
+      - name: Read build settings from repository
+        id: setup
+        run: |
+          go_version=$(< .go-version)
+          echo "Go version: ${go_version}"
+          echo "::set-output name=go_version::${go_version}"
+
+      - name: Setup Go toolchain
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ steps.setup.outputs.go_version }}
+
       - name: Cache Go dependencies
         uses: actions/cache@v2
         with:
@@ -38,10 +50,10 @@ jobs:
             !.yarn/plugins
 
       - name: Configure tasks
-        run: ./tasks.sh static_deps=false
+        run: ./task.sh configure static_deps=false
 
       - name: Fetch JS dependencies
         run: ./task.sh yarn-install
 
       - name: Run JS lint
-        run: ./tasks.sh js-lint
+        run: ./task.sh js-lint

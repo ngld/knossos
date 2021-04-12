@@ -64,7 +64,7 @@ def cmake_task(name, desc = "", inputs = [], outputs = [], script = None, window
                 cmds = [
                     'usr/bin/bash -lc true',
                     'usr/bin/bash -lc "pacman --noconfirm -Syu"',
-                    'usr/bin/bash -lc "pacman --noconfirm -Syu --needed" < "%s"' % resolve_path('//msys2-packages.txt'),
+                    'usr/bin/bash -lc \'pacman --noconfirm -Syu --needed $(cat "$(cygpath -w "%s")")\'' % resolve_path('//msys2-packages.txt'),
                 ],
             )
 
@@ -143,11 +143,18 @@ def find_library(names, display_name = None):
 
         return "-l" + name
 
+def get_golangci_flags():
+    if getenv("CI") != "":
+        return " --out-format=github-actions"
+    else:
+        return ""
+
 # This is necessary because VSCode's clangd extension only supports a single compile_commands.json at the root
 # of the project.
 merge_compile_commands = task(
     "merge-compile-commands",
     desc = "Merges all compile_commands.json files into one",
     deps = ["build-tool"],
+    base = "//",
     cmds = ["tool merge-compile-commands compile_commands.json build/*/compile_commands.json"],
 )

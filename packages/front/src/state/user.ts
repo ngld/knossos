@@ -10,7 +10,7 @@ export class User extends Model({
 }) {
   _g?: GlobalState;
 
-  onAttachedToRootStore(root: GlobalState) {
+  onAttachedToRootStore(root: GlobalState): void {
     this._g = root;
 
     if (window.localStorage) {
@@ -31,7 +31,9 @@ export class User extends Model({
 
     this.token = token;
     try {
-      response = yield* _await(g.runTwirpRequest(g.client.checkToken, {}, undefined, true));
+      response = yield* _await(
+        g.runTwirpRequest(g.client.checkToken.bind(g.client), {}, undefined, true),
+      );
     } catch (e) {
       console.log(e);
       this.token = '';
@@ -52,7 +54,7 @@ export class User extends Model({
   });
 
   @modelAction
-  logout() {
+  logout(): void {
     this.token = '';
     this.username = '';
     this.loggedIn = false;

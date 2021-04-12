@@ -1,3 +1,5 @@
+/// <reference types="node" />
+
 import React from 'react';
 import ReactDOM from 'react-dom';
 import './style.css';
@@ -27,7 +29,7 @@ if (process.env.NODE_ENV === 'development') {
       console.log('[LR] Reloading...');
       location.reload();
     } else {
-      console.log(`[LR] ${e.data}`);
+      console.log(`[LR] ${String(e.data)}`);
     }
   });
 }

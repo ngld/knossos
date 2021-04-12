@@ -1,8 +1,8 @@
 package mods
 
-import "github.com/ngld/knossos/packages/api/client"
+import "github.com/ngld/knossos/packages/api/common"
 
-type ReleaseCollection []*client.Release
+type ReleaseCollection []*common.Release
 
 func (c ReleaseCollection) Len() int      { return len(c) }
 func (c ReleaseCollection) Swap(i, j int) { c[i], c[j] = c[j], c[i] }

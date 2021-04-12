@@ -1,18 +1,20 @@
+// It's hard to implement the debouncePromise helper without any.
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import React, { useState, useMemo } from 'react';
 import { observer } from 'mobx-react-lite';
 import { fromPromise } from 'mobx-utils';
 import type { RouteComponentProps } from 'react-router-dom';
-import { Spinner, Callout, NonIdealState, Card, FormGroup, InputGroup } from '@blueprintjs/core';
-import _debounce from 'lodash-es/debounce';
+import { Spinner, Callout, NonIdealState, InputGroup } from '@blueprintjs/core';
 import type { AsyncReturnType } from 'type-fest';
 
 import { useGlobalState, GlobalState } from '../../lib/state';
 
 function debouncePromise<T extends (...args: any) => any>(func: T, delay: number): T {
-  let timer: number | null = null;
+  let timer: NodeJS.Timeout | null = null;
   let callArgs: any[];
   let promise: Promise<AsyncReturnType<T>> | null = null;
-  return ((...args: any) => {
+  return ((...args: any[]) => {
     if (timer !== null) {
       clearTimeout(timer);
       timer = null;
@@ -32,7 +34,7 @@ function debouncePromise<T extends (...args: any) => any>(func: T, delay: number
 }
 
 const listMods = debouncePromise(async function listMods(gs: GlobalState, query: string) {
-  const response = await gs.runTwirpRequest(gs.client.getModList, {
+  const response = await gs.runTwirpRequest(gs.client.getModList.bind(gs.client), {
     limit: 300,
     offset: 0,
     query,
@@ -44,7 +46,7 @@ const listMods = debouncePromise(async function listMods(gs: GlobalState, query:
 export default observer(function ModListPage(props: RouteComponentProps): React.ReactElement {
   const gs = useGlobalState();
   const [query, setQuery] = useState('');
-  const modList = useMemo(() => fromPromise(listMods(gs, query) ?? Promise.resolve(null)), [query]);
+  const modList = useMemo(() => fromPromise(listMods(gs, query) ?? Promise.resolve(null)), [gs, query]);
 
   return (
     <div>
@@ -52,7 +54,7 @@ export default observer(function ModListPage(props: RouteComponentProps): React.
       <div>
         {modList.case({
           pending: () => <Spinner />,
-          rejected: (e) => (
+          rejected: () => (
             <Callout intent="danger" title="Failed to fetch mods">
               Unfortunately, the mod list request failed. Please try again.
             </Callout>

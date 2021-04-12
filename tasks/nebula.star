@@ -1,4 +1,4 @@
-load("helpers.star", "yarn")
+load("helpers.star", "yarn", "get_golangci_flags")
 
 neb_args = option("server_args", "", help = "The parameters to pass to Nebula in the server-run target")
 
@@ -63,8 +63,8 @@ def nebula_configure(binext):
         deps = ["fetch-deps", "proto-build", "database-migrate"],
         base = "packages/server",
         cmds = [
-            "go generate -x ./pkg/db/queries.go",
-            "golangci-lint run",
+            "go generate ./pkg/db/queries.go",
+            "golangci-lint run" + get_golangci_flags(),
         ],
     )
 

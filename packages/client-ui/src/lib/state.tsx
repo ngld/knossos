@@ -1,6 +1,5 @@
-import { createElement, createContext, useContext } from 'react';
+import { createContext, useContext } from 'react';
 import {makeAutoObservable} from 'mobx';
-import { RpcError, RpcOptions, UnaryCall } from '@protobuf-ts/runtime-rpc';
 import { TwirpFetchTransport } from '@protobuf-ts/twirp-transport';
 import { Toaster, IToaster } from '@blueprintjs/core';
 import { KnossosClient } from '@api/client.client';
@@ -31,11 +30,11 @@ export class GlobalState {
     makeAutoObservable(this);
   }
 
-  launchOverlay(component: React.FunctionComponent<OverlayProps> | React.ComponentClass<OverlayProps>, props: Record<string, unknown>) {
+  launchOverlay(component: React.FunctionComponent<OverlayProps> | React.ComponentClass<OverlayProps>, props: Record<string, unknown>): void {
     this.overlays.push([component, props]);
   }
 
-  removeOverlay(index: number) {
+  removeOverlay(index: number): void {
     this.overlays.splice(index, 1);
   }
 }

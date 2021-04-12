@@ -281,8 +281,15 @@ func main() {
 			Banner:        handleFile(ctx, q, mod.Banner),
 		}
 
-		modParams.Released.Set(relDate)
-		modParams.Updated.Set(updateDate)
+		err = modParams.Released.Set(relDate)
+		if err != nil {
+			log.Fatal().Err(err).Msgf("Failed to set release date %s for %s (%s)", relDate, mod.ID, mod.Version)
+		}
+
+		err = modParams.Updated.Set(updateDate)
+		if err != nil {
+			log.Fatal().Err(err).Msgf("Failed to set updated date %s for %s (%s)", updateDate, mod.ID, mod.Version)
+		}
 
 		rid, err := q.CreateRelease(ctx, modParams)
 		if err != nil {

@@ -1,4 +1,4 @@
-load("helpers.star", "yarn", "find_library", "cmake_task", "merge_compile_commands")
+load("helpers.star", "yarn", "find_library", "cmake_task", "merge_compile_commands", "get_golangci_flags")
 load("options.star", "build")
 
 kn_args = option("client_args", "", help = "The parameters to pass to Knossos in the client-run target")
@@ -72,7 +72,7 @@ def knossos_configure(binext, libext, generator):
             "CC": "gcc",
             "CGO_LDFLAGS": libkn_ldflags,
         },
-        cmds = ["golangci-lint run"],
+        cmds = ["golangci-lint run" + get_golangci_flags()],
     )
 
     task(

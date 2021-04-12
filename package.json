@@ -9,7 +9,7 @@
     "client:css": "cd packages/client-ui && postcss src/tw-index.css -o gen/tw-index.css",
     "client:prod": "cd packages/client-ui && NODE_ENV=production webpack --env production --color --progress",
     "client:watch": "cd packages/client-ui && NODE_ENV=development webpack serve",
-    "lint": "cd packages/front ; tsc --noEmit ; eslint src ; cd ../client-ui ; tsc --noEmit ; eslint src"
+    "lint": "cd packages/front ; tsc --noEmit ; eslint --format github src ; cd ../client-ui ; tsc --noEmit ; eslint --format github src"
   },
   "devDependencies": {
     "@babel/eslint-parser": "^7.13.14",
@@ -29,6 +29,7 @@
     "@typescript-eslint/parser": "^4.20.0",
     "@yarnpkg/pnpify": "^2.4.0",
     "eslint": "^7.23.0",
+    "eslint-formatter-github": "^1.0.11",
     "eslint-plugin-eslint-comments": "^3.2.0",
     "eslint-plugin-promise": "^5.1.0",
     "eslint-plugin-react": "^7.23.2",

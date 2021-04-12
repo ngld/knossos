@@ -3,7 +3,7 @@ package storage
 import (
 	"context"
 
-	"github.com/ngld/knossos/packages/api/client"
+	"github.com/ngld/knossos/packages/api/common"
 	"github.com/rotisserie/eris"
 	"go.etcd.io/bbolt"
 	"google.golang.org/protobuf/proto"
@@ -11,7 +11,7 @@ import (
 
 var fileBucket = []byte("files")
 
-func ImportFile(ctx context.Context, ref *client.FileRef) error {
+func ImportFile(ctx context.Context, ref *common.FileRef) error {
 	tx := TxFromCtx(ctx)
 	if tx == nil {
 		return db.Update(func(tx *bbolt.Tx) error {
@@ -27,10 +27,10 @@ func ImportFile(ctx context.Context, ref *client.FileRef) error {
 	return tx.Bucket(fileBucket).Put([]byte(ref.Fileid), encoded)
 }
 
-func GetFile(ctx context.Context, id string) (*client.FileRef, error) {
+func GetFile(ctx context.Context, id string) (*common.FileRef, error) {
 	tx := TxFromCtx(ctx)
 	if tx == nil {
-		var result *client.FileRef
+		var result *common.FileRef
 		var err error
 		err = db.View(func(tx *bbolt.Tx) error {
 			result, err = GetFile(CtxWithTx(ctx, tx), id)
@@ -42,7 +42,7 @@ func GetFile(ctx context.Context, id string) (*client.FileRef, error) {
 		return result, nil
 	}
 
-	ref := new(client.FileRef)
+	ref := new(common.FileRef)
 	item := tx.Bucket(fileBucket).Get([]byte(id))
 
 	if item == nil {

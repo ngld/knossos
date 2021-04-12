@@ -29,7 +29,7 @@ export default observer(function Field(props: Props): React.ReactElement {
   }
 
   const id = `${ctx.uid}-${props.name}`;
-  let info = props.required ? 'required' : '';
+  const info = props.required ? 'required' : '';
   let intent = props.intent;
   let helperText: React.ReactNode = props.helperText;
   const disabled = props.disabled ?? ctx.defaults.disabled;

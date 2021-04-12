@@ -216,13 +216,6 @@ def configure():
     )
 
     task(
-        "js-lint",
-        desc = "Check JS code for common issues",
-        deps = ["yarn-install"],
-        cmds = [yarn("lint")],
-    )
-
-    task(
         "proto-build",
         desc = "Generates TS and Go bindings from the .proto API definitions",
         deps = ["fetch-deps", "install-tools"],
@@ -242,6 +235,13 @@ def configure():
             "mv twirp/github.com/ngld/knossos/packages/api/client/*.go client",
             "rm -r twirp/github.com",
         ],
+    )
+
+    task(
+        "js-lint",
+        desc = "Check JS code for common issues",
+        deps = ["fetch-deps", "proto-build"],
+        cmds = [yarn("lint")],
     )
 
     nebula_configure(binext)

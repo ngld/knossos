@@ -1,11 +1,10 @@
 import React from 'react';
-import { Callout, Divider, Button, Toast } from '@blueprintjs/core';
+import { Callout, Divider } from '@blueprintjs/core';
 import type { RouteComponentProps } from 'react-router-dom';
 import type { History } from 'history';
-import { action } from 'mobx';
 import { RpcError } from '@protobuf-ts/runtime-rpc';
 
-import type { RegisterRequest, BoolResponse } from '@api/service';
+import type { BoolResponse } from '@api/service';
 import { useGlobalState, GlobalState } from '../lib/state';
 import { alert } from '../lib/alert';
 import { presentTwirpError } from '../lib/twirp-helpers';
@@ -28,7 +27,7 @@ function validate(state: FormState): Errors<FormState> {
 
   if (!errors.passwordRepeat) {
     if (state.password !== state.passwordRepeat) {
-      errors.passwordRepeat = `The entered password doesn't match the previous field.`;
+      errors.passwordRepeat = "The entered password doesn't match the previous field.";
     }
   }
 
@@ -45,11 +44,13 @@ async function submitForm(
   defaults.disabled = true;
   let response: BoolResponse | undefined;
   try {
-    response = (await gs.client.register({
-      email: state.email,
-      username: state.user,
-      password: state.password,
-    })).response;
+    response = (
+      await gs.client.register({
+        email: state.email,
+        username: state.user,
+        password: state.password,
+      })
+    ).response;
   } catch (e) {
     console.log(e);
 
@@ -66,17 +67,20 @@ async function submitForm(
 
   if (!response?.success) {
     alert({
-      children: `Failed to register. Most likely this username is already taken.`,
+      children: 'Failed to register. Most likely this username is already taken.',
       confirmButtonText: 'OK',
     });
 
     defaults.disabled = false;
     defaults.spinning = false;
   } else {
-    gs.toaster.show({
-      message: 'User account created. Please check your inbox for the verification mail.',
-      intent: 'success',
-    }, 'register-success');
+    gs.toaster.show(
+      {
+        message: 'User account created. Please check your inbox for the verification mail.',
+        intent: 'success',
+      },
+      'register-success',
+    );
 
     defaults.spinning = false;
     history.push('/');

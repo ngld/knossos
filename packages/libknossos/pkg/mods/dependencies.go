@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/ngld/knossos/packages/api/client"
+	"github.com/ngld/knossos/packages/api/common"
 	"github.com/ngld/knossos/packages/libknossos/pkg/api"
 	"github.com/ngld/knossos/packages/libknossos/pkg/storage"
 	"github.com/rotisserie/eris"
@@ -24,7 +24,7 @@ type (
 )
 
 type modRequest struct {
-	mod    *client.Release
+	mod    *common.Release
 	preReq map[string]string
 	source string
 }
@@ -56,7 +56,7 @@ func pickNaiveVersion(ctx context.Context, available []string, constraints *semv
 
 var noPreRelConstraintPattern = regexp.MustCompile(`[0-9]+\.[0-9]+\.[0-9]+(?:-)?`)
 
-func GetDependencySnapshot(ctx context.Context, mods storage.ModProvider, release *client.Release) (DependencySnapshot, error) {
+func GetDependencySnapshot(ctx context.Context, mods storage.ModProvider, release *common.Release) (DependencySnapshot, error) {
 	snapshot := make(DependencySnapshot)
 	constraints := make(map[string][]constraintItem)
 	queue := []modRequest{{

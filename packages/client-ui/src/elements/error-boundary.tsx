@@ -1,7 +1,9 @@
 import React from 'react';
 import { Callout } from '@blueprintjs/core';
 
-interface ErrorWrapperProps {}
+interface ErrorWrapperProps {
+  children: React.ReactNode[] | React.ReactNode;
+}
 interface ErrorWrapperState {
   error: Error | null;
   info: React.ErrorInfo | null;
@@ -13,15 +15,15 @@ export default class ErrorBoundary extends React.Component<ErrorWrapperProps, Er
     this.state = { error: null, info: null };
   }
 
-  static getDerivedStateFromError(error: Error) {
-    return { error };
+  static getDerivedStateFromError(error: Error): ErrorWrapperState {
+    return { error, info: null };
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
     this.setState({ info: errorInfo });
   }
 
-  render() {
+  render(): React.ReactElement {
     if (this.state.error) {
       return (
         <Callout intent="danger" title="Error">
@@ -40,7 +42,7 @@ export default class ErrorBoundary extends React.Component<ErrorWrapperProps, Er
         </Callout>
       );
     } else {
-      return this.props.children;
+      return <div>{this.props.children}</div>;
     }
   }
 }

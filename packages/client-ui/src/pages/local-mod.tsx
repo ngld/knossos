@@ -13,7 +13,7 @@ import {
   Tabs,
 } from '@blueprintjs/core';
 
-import { ModInfoResponse, ModDependencySnapshot, FlagInfo, FlagInfo_Flag } from '@api/client';
+import { ModInfoResponse, ModDependencySnapshot, FlagInfo_Flag } from '@api/client';
 import { Release } from '@api/mod';
 
 import RefImage from '../elements/ref-image';
@@ -62,14 +62,11 @@ interface DepInfoProps extends ModDetailsParams {
 
 const DepInfo = observer(function DepInfo(props: DepInfoProps): React.ReactElement {
   const gs = useGlobalState();
-  const deps = useMemo(() => fromPromise(getModDependencies(gs, props)), [
-    props.modid,
-    props.version,
-  ]);
+  const deps = useMemo(() => fromPromise(getModDependencies(gs, props)), [gs, props]);
 
   return deps.case({
     pending: () => <span>Loading...</span>,
-    rejected: (e) => (
+    rejected: (e: Error) => (
       <Callout intent="danger" title="Error">
         Could not resolve dependencies:
         <br />
@@ -87,12 +84,11 @@ const DepInfo = observer(function DepInfo(props: DepInfoProps): React.ReactEleme
           </tr>
         </thead>
         <tbody>
-          {Object.entries(response.dependencies).map(([modid, version]) => {
-            const current = props.release?.dependencySnapshot[modid] ?? '???';
+          {Object.entries(response.dependencies).map(([modid, current]) => {
             return (
               <tr key={modid}>
                 <td>{modid}</td>
-                <td>{version}</td>
+                <td>{current}</td>
                 <td>TBD</td>
                 <td>
                   <HTMLSelect>
@@ -129,12 +125,12 @@ function renderFlags(flags: FlagInfo_Flag[]): (React.ReactElement | null)[] {
 
 const FlagsInfo = observer(function FlagsInfo(props: DepInfoProps): React.ReactElement {
   const gs = useGlobalState();
-  const flags = useMemo(() => fromPromise(getFlagInfos(gs, props)), [props.modid, props.version]);
+  const flags = useMemo(() => fromPromise(getFlagInfos(gs, props)), [gs, props]);
   const [currentCat, setCurrentCat] = useState<string>('combined');
 
   return flags.case({
     pending: () => <span>Loading...</span>,
-    rejected: (e) => (
+    rejected: (e: Error) => (
       <Callout intent="danger" title="Error">
         Could not fetch flags:
         <br />
@@ -159,10 +155,10 @@ const FlagsInfo = observer(function FlagsInfo(props: DepInfoProps): React.ReactE
           </div>
           <div className="p-4 border-black border">
             {currentCat === 'combined'
-              ? Object.entries(mappedFlags).map(([cat, flags]) => (
+              ? Object.entries(mappedFlags).map(([cat, catFlags]) => (
                   <div key={cat}>
                     <div className="font-bold p-2">{cat}</div>
-                    {renderFlags(flags)}
+                    {renderFlags(catFlags)}
                   </div>
                 ))
               : renderFlags(mappedFlags[currentCat] ?? [])}
@@ -183,12 +179,12 @@ export default observer(function ModDetailsPage(
 ): React.ReactElement {
   const gs = useGlobalState();
   const modDetails = useMemo(() => fromPromise(getModDetails(gs, props.match.params)), [
-    props.match.params,
+    gs, props.match.params,
   ]);
 
   const rawDesc = (modDetails.value as ModInfoResponse)?.mod?.description;
   const description = useMemo(() => {
-    let desc = rawDesc ?? '';
+    const desc = rawDesc ?? '';
     return { __html: bbparser(desc === '' ? 'No description provided' : desc) };
   }, [rawDesc]);
 
@@ -196,7 +192,7 @@ export default observer(function ModDetailsPage(
     <div>
       {modDetails.case({
         pending: () => <Spinner />,
-        rejected: (e) => (
+        rejected: (_e: Error) => (
           <Callout intent="danger" title="Failed to fetch mod info">
             Unfortunately, the mod details request failed. Please try again.
           </Callout>

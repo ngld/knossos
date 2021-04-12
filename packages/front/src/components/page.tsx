@@ -6,7 +6,6 @@ import {
   NavbarHeading,
   NavbarDivider,
   Menu,
-  MenuDivider,
   MenuItem,
   Button,
 } from '@blueprintjs/core';

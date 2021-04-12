@@ -3,12 +3,16 @@ import { observer } from 'mobx-react-lite';
 import { fromPromise } from 'mobx-utils';
 import type { RouteComponentProps } from 'react-router-dom';
 import { Spinner, Callout, NonIdealState, HTMLSelect, Tab, Tabs, H3, UL } from '@blueprintjs/core';
+import { ModDetailsResponse } from '@api/service';
 
 import { useGlobalState, GlobalState } from '../../lib/state';
 import bbparser from '../../lib/bbparser';
 
-async function getModDetails(gs: GlobalState, params: ModDetailsParams) {
-  const response = await gs.runTwirpRequest(gs.client.getModDetails, {
+async function getModDetails(
+  gs: GlobalState,
+  params: ModDetailsParams,
+): Promise<ModDetailsResponse | undefined> {
+  const response = await gs.runTwirpRequest(gs.client.getModDetails.bind(gs.client), {
     latest: !params.version,
     modid: params.modid,
     version: params.version ?? '',
@@ -27,17 +31,22 @@ export default observer(function ModDetailsPage(
   props: RouteComponentProps<ModDetailsParams>,
 ): React.ReactElement {
   const gs = useGlobalState();
-  const modDetails = useMemo(() => fromPromise(getModDetails(gs, props.match.params)), [props.match.params]);
-  const [selectedVersion, setVersion] = useState('unknown');
-  const description = useMemo(() => ({ __html: bbparser(modDetails.value?.description ?? '') }), [
-    modDetails.value?.description,
+  const modDetails = useMemo(() => fromPromise(getModDetails(gs, props.match.params)), [
+    gs, props.match.params,
   ]);
+  const [selectedVersion, setVersion] = useState('unknown');
+  const description = useMemo(
+    () => ({
+      __html: bbparser(modDetails.state === 'fulfilled' ? modDetails.value?.description ?? '' : ''),
+    }),
+    [modDetails],
+  );
 
   return (
     <div>
       {modDetails.case({
         pending: () => <Spinner />,
-        rejected: (e) => (
+        rejected: () => (
           <Callout intent="danger" title="Failed to fetch mod info">
             Unfortunately, the mod details request failed. Please try again.
           </Callout>
@@ -78,7 +87,11 @@ export default observer(function ModDetailsPage(
                 </div>
               </div>
               <Tabs>
-                <Tab id="desc" title="Description" panel={<p dangerouslySetInnerHTML={description} />} />
+                <Tab
+                  id="desc"
+                  title="Description"
+                  panel={<p dangerouslySetInnerHTML={description} />}
+                />
                 <Tab
                   id="dl"
                   title="Downloads"
@@ -100,7 +113,7 @@ export default observer(function ModDetailsPage(
                                     </a>
                                   </>
                                 ))}
-                                <br/>
+                                <br />
                                 SHA256: {archive.checksum}
                               </li>
                             ))}
