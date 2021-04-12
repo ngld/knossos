@@ -1,70 +1,65 @@
-import React from 'react';
-import { Callout, Divider, Button, Toast } from '@blueprintjs/core';
+import React, { useMemo } from 'react';
+import { Callout, Spinner } from '@blueprintjs/core';
 import type { RouteComponentProps } from 'react-router-dom';
 import type { History } from 'history';
-import { action } from 'mobx';
-import { RpcError } from '@protobuf-ts/runtime-rpc';
+import { fromPromise } from 'mobx-utils';
+import { observer } from 'mobx-react-lite';
 
-import type { BoolResponse } from '@api/service';
 import { useGlobalState, GlobalState } from '../lib/state';
 import { alert } from '../lib/alert';
-import { presentTwirpError } from '../lib/twirp-helpers';
 
-interface VerifyMailParams {
-  token: string;
-}
-
-async function sendValidation(gs: GlobalState, history: History, token: string): Promise<void> {
-  const response = await gs.runTwirpRequest(gs.client.verifyAccount, {
+async function sendValidation(gs: GlobalState, history: History, token: string): Promise<boolean> {
+  const response = await gs.runTwirpRequest(gs.client.verifyAccount.bind(gs.client), {
     token,
   });
 
   if (response?.success) {
-    
+    gs.toaster.show({
+      message: 'Successfully verified mail. You can now login.',
+      icon: 'confirm',
+      intent: 'success',
+    });
+    return true;
+  } else {
+    alert({
+      icon: 'error',
+      intent: 'danger',
+      children: ['Failed to verify'],
+    });
+    return false;
   }
 }
 
-export default function RegisterPage(props: RouteComponentProps): React.ReactElement {
+interface Params {
+  token: string;
+}
+
+export default observer(function VerifyMailPage(
+  props: RouteComponentProps<Params>,
+): React.ReactElement {
   const gs = useGlobalState();
+  const validation = useMemo(
+    () => fromPromise(sendValidation(gs, props.history, props.match.params.token)),
+    [gs, props.history, props.match.params.token],
+  );
 
   return (
-    <div className="flex container gap-4">
-      <div className="flex-1">
-        <Form
-          initialState={
-            {
-              user: '',
-              email: '',
-              password: '',
-              passwordRepeat: '',
-            } as FormState
-          }
-          onValidate={validate}
-          onSubmit={(s, d) => submitForm(s, d, props.history, gs)}
-        >
-          <Field name="user" label="Username" required />
-          <Field name="email" label="E-Mail" type="email" required />
-          <Field name="password" label="Password" type="password" required />
-          <Field
-            name="passwordRepeat"
-            label="Password repeat"
-            type="password"
-            helperText="Just repeat the previous password to make sure that you entered it correctly."
-            required
-          />
-
-          <FormButton type="submit" intent="primary">
-            Register
-          </FormButton>
-        </Form>
-      </div>
-      <Divider className="flex-initial" />
-      <div className="flex-1">
-        <Callout title="Important note regarding the E-Mail field">
-          You have to specify a valid email address since we'll mail you a validation link to check
-          that this address actually belongs to you.
-        </Callout>
-      </div>
+    <div className="container">
+      {validation.case({
+        pending: () => <Spinner />,
+        rejected: () => (
+          <Callout intent="danger" title="Error">
+            Failed to contact the server. Please reload the page to try again.
+          </Callout>
+        ),
+        fulfilled: (result: boolean) => (
+          <Callout intent={result ? 'success' : 'danger'} title="Done">
+            {result
+              ? 'Sucessfully verified. You can login now.'
+              : "Failed to verify. Make sure you haven't used this link before. Try logging in, just in case."}
+          </Callout>
+        ),
+      })}
     </div>
   );
-}
+});

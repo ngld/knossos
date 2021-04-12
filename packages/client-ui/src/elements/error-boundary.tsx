@@ -1,7 +1,9 @@
 import React from 'react';
 import { Callout } from '@blueprintjs/core';
 
-type ErrorWrapperProps = Record<string, never>;
+interface ErrorWrapperProps {
+  children: React.ReactNode[] | React.ReactNode;
+}
 interface ErrorWrapperState {
   error: Error | null;
   info: React.ErrorInfo | null;
