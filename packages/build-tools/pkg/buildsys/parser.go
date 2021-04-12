@@ -17,9 +17,11 @@ import (
 
 type parserCtx struct {
 	ctx          context.Context
+	globals      starlark.StringDict
 	options      map[string]ScriptOption
 	optionValues map[string]string
 	envOverrides map[string]string
+	moduleCache  map[string]starlark.StringDict
 	yamlCache    map[string]interface{}
 	filepath     string
 	projectRoot  string
@@ -352,17 +354,68 @@ func task(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kw
 	return task, nil
 }
 
+func hasTask(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	var name string
+	err := starlark.UnpackPositionalArgs(fn.Name(), args, kwargs, 1, &name)
+	if err != nil {
+		return nil, err
+	}
+
+	ctx := getCtx(thread)
+	for _, task := range ctx.tasks {
+		if task.Short == name {
+			return starlark.True, nil
+		}
+	}
+
+	return starlark.False, nil
+}
+
+func loadModule(thread *starlark.Thread, module string) (starlark.StringDict, error) {
+	ctx := getCtx(thread)
+	module = normalizePath(ctx, module)
+
+	result, found := ctx.moduleCache[module]
+	if !found {
+		shortModule := simplifyPath(ctx, module)
+
+		oldFilepath := ctx.filepath
+		ctx.filepath = module
+		modThread := &starlark.Thread{
+			Name:  shortModule,
+			Print: thread.Print,
+			Load:  thread.Load,
+		}
+		modThread.SetLocal("parserCtx", ctx)
+
+		script, err := ioutil.ReadFile(module)
+		if err != nil {
+			return nil, err
+		}
+
+		result, err = starlark.ExecFile(thread, shortModule, script, ctx.globals)
+		if err != nil {
+			return nil, err
+		}
+
+		ctx.moduleCache[module] = result
+		ctx.filepath = oldFilepath
+	}
+
+	return result, nil
+}
+
 // RunScript executes a starlake scripts and returns the declared options. If doConfigure is true, the script's
 // configure function is called and the declared tasks are collected and returned.
-func RunScript(ctx context.Context, filename, projectRoot string, options map[string]string, doConfigure bool) (TaskList, map[string]ScriptOption, error) {
+func RunScript(ctx context.Context, filename, projectRoot string, options map[string]string, doConfigure bool) (TaskList, map[string]ScriptOption, []string, error) {
 	projectRoot, err := filepath.Abs(projectRoot)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	filename, err = filepath.Abs(filename)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	builtins := starlark.StringDict{
@@ -389,8 +442,9 @@ func RunScript(ctx context.Context, filename, projectRoot string, options map[st
 		"prepend_path": starlark.NewBuiltin("prepend_path", prependPathDir),
 
 		// buildsys stuff
-		"option": starlark.NewBuiltin("option", option),
-		"task":   starlark.NewBuiltin("task", task),
+		"option":  starlark.NewBuiltin("option", option),
+		"task":    starlark.NewBuiltin("task", task),
+		"hastask": starlark.NewBuiltin("hastask", hasTask),
 
 		// OS / compiler helpers
 		"load_vcvars": starlark.NewBuiltin("load_vcvars", starLoadVcvars),
@@ -402,15 +456,18 @@ func RunScript(ctx context.Context, filename, projectRoot string, options map[st
 		Print: func(thread *starlark.Thread, msg string) {
 			log(ctx).Info().Str("thread", thread.Name).Msg(msg)
 		},
+		Load: loadModule,
 	}
 	threadCtx := parserCtx{
 		ctx:          ctx,
+		globals:      builtins,
 		filepath:     filename,
 		projectRoot:  projectRoot,
 		options:      make(map[string]ScriptOption),
 		optionValues: options,
 		envOverrides: make(map[string]string, 0),
 		tasks:        make([]*Task, 0),
+		moduleCache:  make(map[string]starlark.StringDict),
 		yamlCache:    make(map[string]interface{}),
 		initPhase:    true,
 	}
@@ -418,37 +475,37 @@ func RunScript(ctx context.Context, filename, projectRoot string, options map[st
 
 	script, err := ioutil.ReadFile(filename)
 	if err != nil {
-		return nil, nil, eris.Wrapf(err, "failed to read file")
+		return nil, nil, nil, eris.Wrapf(err, "failed to read file")
 	}
 
 	// wrap the entire script in a function to work around the limitation that ifs are only allowed inside functions
 	globals, err := starlark.ExecFile(thread, simplifyPath(&threadCtx, filename), script, builtins)
 	if err != nil {
 		if evalError, ok := err.(*starlark.EvalError); ok {
-			return nil, nil, eris.Errorf("failed to execute %s:\n%s", simplifyPath(&threadCtx, filename), evalError.Backtrace())
+			return nil, nil, nil, eris.Errorf("failed to execute %s:\n%s", simplifyPath(&threadCtx, filename), evalError.Backtrace())
 		}
-		return nil, nil, eris.Wrap(err, "failed to execute")
+		return nil, nil, nil, eris.Wrap(err, "failed to execute")
 	}
 
 	tasks := TaskList{}
 	if doConfigure {
 		configure, ok := globals["configure"]
 		if !ok {
-			return nil, nil, eris.Errorf("%s did not declare a configure function", simplifyPath(&threadCtx, filename))
+			return nil, nil, nil, eris.Errorf("%s did not declare a configure function", simplifyPath(&threadCtx, filename))
 		}
 
 		configureFunc, ok := configure.(starlark.Callable)
 		if !ok {
-			return nil, nil, eris.Errorf("%s did declare a configure value but it's not a function", simplifyPath(&threadCtx, filename))
+			return nil, nil, nil, eris.Errorf("%s did declare a configure value but it's not a function", simplifyPath(&threadCtx, filename))
 		}
 
 		threadCtx.initPhase = false
 		_, err = starlark.Call(thread, configureFunc, make(starlark.Tuple, 0), make([]starlark.Tuple, 0))
 		if err != nil {
 			if evalError, ok := err.(*starlark.EvalError); ok {
-				return nil, nil, eris.New(evalError.Backtrace())
+				return nil, nil, nil, eris.New(evalError.Backtrace())
 			}
-			return nil, nil, eris.Wrapf(err, "failed configure call in %s", simplifyPath(&threadCtx, filename))
+			return nil, nil, nil, eris.Wrapf(err, "failed configure call in %s", simplifyPath(&threadCtx, filename))
 		}
 
 		for _, task := range threadCtx.tasks {
@@ -463,5 +520,10 @@ func RunScript(ctx context.Context, filename, projectRoot string, options map[st
 		}
 	}
 
-	return tasks, threadCtx.options, nil
+	scriptFiles := make([]string, 0, len(threadCtx.moduleCache))
+	for path, _ := range threadCtx.moduleCache {
+		scriptFiles = append(scriptFiles, path)
+	}
+
+	return tasks, threadCtx.options, scriptFiles, nil
 }

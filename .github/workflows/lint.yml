@@ -10,3 +10,38 @@ jobs:
         with:
           fetch-depth: 0
       - uses: wagoid/commitlint-github-action@v3
+
+  jslint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Cache Go dependencies
+        uses: actions/cache@v2
+        with:
+          key: golang-jslint-Linux-${{ hashFiles('**/go.sum') }}
+          restore-keys: golang-jslint-Linux-
+          path: |
+            ~/go/pkg
+            ~/.cache/go-build
+
+      - name: Cache Yarn dependencies
+        uses: actions/cache@v2
+        with:
+          key: yarn-Linux-${{ hashFiles('yarn.lock') }}
+          restore-keys: yarn-Linux-
+          path: |
+            .pnp.*
+            .yarn/
+            !.yarn/releases
+            !.yarn/plugins
+
+      - name: Configure tasks
+        run: ./tasks.sh static_deps=false
+
+      - name: Fetch JS dependencies
+        run: ./task.sh yarn-install
+
+      - name: Run JS lint
+        run: ./tasks.sh js-lint

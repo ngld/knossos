@@ -8,9 +8,11 @@
     "front:watch": "cd packages/front && webpack serve",
     "client:css": "cd packages/client-ui && postcss src/tw-index.css -o gen/tw-index.css",
     "client:prod": "cd packages/client-ui && NODE_ENV=production webpack --env production --color --progress",
-    "client:watch": "cd packages/client-ui && NODE_ENV=development webpack serve"
+    "client:watch": "cd packages/client-ui && NODE_ENV=development webpack serve",
+    "lint": "cd packages/front ; tsc --noEmit ; eslint src ; cd ../client-ui ; tsc --noEmit ; eslint src"
   },
   "devDependencies": {
+    "@babel/eslint-parser": "^7.13.14",
     "@protobuf-ts/plugin": "^2.0.0-alpha.17",
     "@tailwindcss/jit": "^0.1.18",
     "@tsconfig/recommended": "^1.0.1",
@@ -27,6 +29,10 @@
     "@typescript-eslint/parser": "^4.20.0",
     "@yarnpkg/pnpify": "^2.4.0",
     "eslint": "^7.23.0",
+    "eslint-plugin-eslint-comments": "^3.2.0",
+    "eslint-plugin-promise": "^5.1.0",
+    "eslint-plugin-react": "^7.23.2",
+    "eslint-plugin-react-hooks": "^4.2.0",
     "pino-pretty": "^4.7.1",
     "prettier": "^2.2.1",
     "typescript": "^4.2.3",

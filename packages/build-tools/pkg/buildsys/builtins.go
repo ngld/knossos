@@ -484,6 +484,10 @@ func starLookupLib(thread *starlark.Thread, fn *starlark.Builtin, args starlark.
 		lines := strings.Split(string(output), "\n")
 		libCache = make(map[string]string)
 		for _, line := range lines {
+			if line == "" {
+				continue
+			}
+
 			match := pattern.FindStringSubmatch(line)
 			if match == nil {
 				warn(thread, "Skipping unexpected line from ldconfig: %s", line)

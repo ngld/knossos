@@ -24,7 +24,7 @@ overrides:
     parser: '@babel/eslint-parser'
     parserOptions:
       babelOptions:
-        configFile: babel-dev.config.js
+        configFile: ./babel-dev.config.js
   - files: ['*.ts', '*.tsx']
     extends:
       - plugin:@typescript-eslint/recommended
@@ -33,7 +33,6 @@ overrides:
     parserOptions:
       project:
        - ./tsconfig.json
-       - ./server/tsconfig.json
     plugins: ['@typescript-eslint/eslint-plugin']
     rules:
       '@typescript-eslint/no-unused-vars':
