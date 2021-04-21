@@ -3,7 +3,9 @@ import {makeAutoObservable} from 'mobx';
 import { TwirpFetchTransport } from '@protobuf-ts/twirp-transport';
 import { Toaster, IToaster } from '@blueprintjs/core';
 import { KnossosClient } from '@api/client.client';
+import { NebulaClient } from '@api/service.client';
 import { TaskTracker } from './task-tracker';
+import { API_URL } from './constants';
 
 interface OverlayProps {
   onFinished: () => void;
@@ -12,6 +14,7 @@ interface OverlayProps {
 export class GlobalState {
   toaster: IToaster;
   client: KnossosClient;
+  nebula: NebulaClient;
   tasks: TaskTracker;
   overlays: [React.FunctionComponent<OverlayProps> | React.ComponentClass<OverlayProps>, Record<string, unknown>][];
 
@@ -19,7 +22,13 @@ export class GlobalState {
     this.toaster = Toaster.create({});
     this.client = new KnossosClient(
       new TwirpFetchTransport({
-        baseUrl: 'https://api.client.fsnebula.org/twirp',
+        baseUrl: API_URL + '/twirp',
+        deadline: 1000,
+      }),
+    );
+    this.nebula = new NebulaClient(
+      new TwirpFetchTransport({
+        baseUrl: process.env.NODE_ENV === 'production' ? 'https://nu.fsnebula.org/twirp' : 'http://localhost:8200/twirp',
         deadline: process.env.NODE_ENV === 'production' ? 10000 : 1000,
       }),
     );

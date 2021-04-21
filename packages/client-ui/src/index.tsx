@@ -15,6 +15,13 @@ import { GlobalState, StateProvider } from './lib/state';
 FocusStyleManager.onlyShowFocusOnTabs();
 IconConfig.className = 'icon';
 
+// @ts-expect-error We don't have type definitions for window.knIsApp
+if (process.env.NODE_ENV !== 'production' && !window.knIsApp) {
+  if (!window.knAddMessageListener && !window.knRemoveMessageListener) {
+    require('./lib/ws-dev-api');
+  }
+}
+
 ReactDOM.render(
   <StateProvider value={new GlobalState()}>
     <BrowserRouter>

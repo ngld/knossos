@@ -94,3 +94,18 @@ body {
 .max-h-300px {
     max-height: 300px;
 }
+
+.infinite-scroll-component {
+    overflow: visible !important;
+}
+
+#scroll-container::-webkit-scrollbar {
+    background: #1C1C1C;
+    width: 10px;
+}
+
+#scroll-container::-webkit-scrollbar-thumb {
+    background: #aaa;
+    border-radius: 5px;
+    width: 10px;
+}

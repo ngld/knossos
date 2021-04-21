@@ -17,6 +17,7 @@ import HoverLink from './hover-link';
 import { GlobalState, useGlobalState } from '../lib/state';
 import TaskDisplay from './task-display';
 import LocalModList from '../pages/local-mod-list';
+import RemoteModList from '../pages/remote-mod-list';
 import Settings from '../pages/settings';
 import LocalMod from '../pages/local-mod';
 
@@ -79,6 +80,7 @@ const ModContainer = observer(function ModContainer(): React.ReactElement {
 
   return (
     <div
+      id="scroll-container"
       className={cx(
         'flex-1',
         'mod-container',
@@ -86,13 +88,14 @@ const ModContainer = observer(function ModContainer(): React.ReactElement {
         'rounded-md',
         'm-3',
         'p-4',
-        'overflow-auto',
+        'overflow-y-scroll',
       )}
     >
       <ErrorBoundary>
         <Switch>
           <Redirect from="/" to="/play" exact />
           <Route path="/play" component={LocalModList} />
+          <Route path="/explore" component={RemoteModList} />
           <Route path="/settings">
             <Settings />
           </Route>

@@ -5,6 +5,7 @@ import { fromPromise } from 'mobx-utils';
 import { History } from 'history';
 import { Release } from '@api/mod';
 import { GlobalState, useGlobalState } from '../lib/state';
+import { API_URL } from '../lib/constants';
 import { launchMod } from '../dialogs/launch-mod';
 import ModstockImage from '../resources/modstock.jpg';
 
@@ -37,7 +38,7 @@ export default observer(function LocalModList(props: LocalModListProps): React.R
             {mods.map((mod) => (
               <div key={mod.modid} className="mod-tile bg-important flex flex-col overflow-hidden">
                 {mod.teaser?.fileid ? (
-                  <img src={'https://api.client.fsnebula.org/ref/' + mod.teaser?.fileid} />
+                  <img src={API_URL + '/ref/' + mod.teaser?.fileid} />
                 ) : (
                   <img src={ModstockImage} />
                 )}
