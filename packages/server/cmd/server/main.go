@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -49,6 +50,38 @@ func getConsoleWriter(out io.Writer) zerolog.ConsoleWriter {
 
 		return fmt.Sprintf("%s", value)
 	}
+
+	writer.FormatCaller = func(caller interface{}) string {
+		callerStr, ok := caller.(string)
+		if !ok {
+			return ""
+		}
+
+		parts := strings.SplitN(callerStr, ":", 3)
+		if len(parts) == 1 {
+			return parts[0]
+		}
+
+		if len(parts) == 3 {
+			parts[0] = parts[0] + ":" + parts[1]
+			parts[1] = parts[2]
+		}
+
+		wd, err := os.Getwd()
+		if err != nil {
+			fmt.Sprint(err)
+			return callerStr
+		}
+
+		rel, err := filepath.Rel(wd, parts[0])
+		if err != nil {
+			fmt.Sprint(err)
+			return callerStr
+		}
+
+		return fmt.Sprintf("\x1b[%dm%s:%s\x1b[0m \x1b[36m>\x1b[0m", 1, rel, parts[1])
+	}
+
 	return writer
 }
 

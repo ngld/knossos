@@ -123,6 +123,7 @@ module.exports = function (env, args) {
       new ReactRefreshPlugin(),
     ],
     devServer: {
+      port: 8090,
       publicPath: '/',
       hot: true,
       historyApiFallback: {

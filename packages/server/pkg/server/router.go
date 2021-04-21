@@ -2,6 +2,8 @@ package server
 
 import (
 	"net/http"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -15,6 +17,34 @@ import (
 	"github.com/ngld/knossos/packages/server/pkg/nblog"
 )
 
+func corsMiddleware(next http.Handler, origins []string) http.Handler {
+	sort.Strings(origins)
+
+	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		reqOrigin := strings.ToLower(r.Header.Get("origin"))
+
+		if r.Method == "OPTIONS" || reqOrigin != "" {
+			idx := sort.SearchStrings(origins, reqOrigin)
+			if idx >= len(origins) || origins[idx] != reqOrigin {
+				rw.WriteHeader(403)
+				return
+			}
+		}
+
+		if reqOrigin != "" {
+			rw.Header().Set("Access-Control-Allow-Origin", reqOrigin)
+			rw.Header().Set("Access-Control-Allow-Headers", "content-type")
+		}
+
+		if r.Method == "OPTIONS" {
+			rw.WriteHeader(200)
+			return
+		}
+
+		next.ServeHTTP(rw, r)
+	})
+}
+
 func startMux(pool *pgxpool.Pool, q *queries.DBQuerier, cfg *config.Config) error {
 	server := api.NewNebulaServer(nebula{
 		Pool: pool,
@@ -23,7 +53,7 @@ func startMux(pool *pgxpool.Pool, q *queries.DBQuerier, cfg *config.Config) erro
 	})
 
 	r := mux.NewRouter()
-	r.PathPrefix(server.PathPrefix()).Handler(server)
+	r.PathPrefix(server.PathPrefix()).Handler(corsMiddleware(server, []string{"https://files.client.fsnebula.org", "http://localhost:8080"}))
 
 	sm := secure.New(secure.Options{
 		// TODO: Figure out how to only enable in production
