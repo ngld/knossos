@@ -8430,6 +8430,7 @@ fsevents@~2.3.1:
     prettier: ^2.2.1
     react: ^17.0.2
     react-dom: ^17.0.2
+    react-infinite-scroll-component: ^6.1.0
     react-refresh: ^0.10.0
     react-router-dom: ^5.2.0
     resolve-url-loader: ^3.1.2
@@ -9483,6 +9484,17 @@ fsevents@~2.3.1:
   version: 3.2.0
   resolution: "react-fast-compare@npm:3.2.0"
   checksum: 6fe65c889eb4f326e97769135f97b3d63ac68737866f9c37f9625c9de4f5eaa9abed6f748eb3fd6a66808392118842916309cab7cfa99c67991f0c837433d6d2
+  languageName: node
+  linkType: hard
+
+"react-infinite-scroll-component@npm:^6.1.0":
+  version: 6.1.0
+  resolution: "react-infinite-scroll-component@npm:6.1.0"
+  dependencies:
+    throttle-debounce: ^2.1.0
+  peerDependencies:
+    react: ">=16.0.0"
+  checksum: e584abd04f20de5e00ee4b3ab8f9a4af6367d393e1ffa6c6bfb078914936610afa9e624fbee1e48c8b6fa00f41694b11d0b2c3d74b7b3fa7882804fa73e04ab4
   languageName: node
   linkType: hard
 
@@ -11115,6 +11127,13 @@ resolve@^2.0.0-next.3:
   version: 0.2.0
   resolution: "text-table@npm:0.2.0"
   checksum: 373904ce70524ba11ec7e1905c44fb92671132d5e0b0aba2fb48057161f8bf9cbf7f6178f0adf31810150cf44fb52c7b912dc722bff3fddf9688378596dbeb56
+  languageName: node
+  linkType: hard
+
+"throttle-debounce@npm:^2.1.0":
+  version: 2.3.0
+  resolution: "throttle-debounce@npm:2.3.0"
+  checksum: 1181acfa57488c87cc02d42e9249f0a304ad389d4a521af630fefc639b055a88a49debd62d86f41053c18fc743783c8020dd44a41b0a35d9d661b14237023255
   languageName: node
   linkType: hard
 
