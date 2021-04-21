@@ -186,6 +186,29 @@ func (kn *knossosServer) GetModFlags(ctx context.Context, req *client.ModInfoReq
 	}, nil
 }
 
+func (kn *knossosServer) SaveModFlags(ctx context.Context, req *client.SaveFlagsRequest) (*client.SuccessResponse, error) {
+	userSettings, err := storage.GetUserSettingsForMod(ctx, req.Modid, req.Version)
+	if err != nil {
+		return nil, err
+	}
+
+	cmdline := make([]string, 0, len(req.Flags)+1)
+	for flag, enabled := range req.Flags {
+		if enabled {
+			cmdline = append(cmdline, flag)
+		}
+	}
+
+	cmdline = append(cmdline, req.Freeform)
+	userSettings.Cmdline = strings.Join(cmdline, " ")
+	err = storage.SaveUserSettingsForMod(ctx, req.Modid, req.Version, userSettings)
+	if err != nil {
+		return nil, err
+	}
+
+	return &client.SuccessResponse{Success: true}, nil
+}
+
 func (kn *knossosServer) LaunchMod(ctx context.Context, req *client.LaunchModRequest) (*client.SuccessResponse, error) {
 	mod, err := storage.GetMod(ctx, req.Modid, req.Version)
 	if err != nil {

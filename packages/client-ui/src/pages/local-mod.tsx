@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { action, makeAutoObservable } from 'mobx';
 import { observer } from 'mobx-react-lite';
 import { fromPromise } from 'mobx-utils';
 import type { RouteComponentProps } from 'react-router-dom';
@@ -12,9 +13,10 @@ import {
   Tab,
   Tabs,
 } from '@blueprintjs/core';
+import styled from 'astroturf/react';
 
 import { ModInfoResponse, ModDependencySnapshot, FlagInfo_Flag } from '@api/client';
-import { Release } from '@api/mod';
+import { Release, ModType } from '@api/mod';
 
 import RefImage from '../elements/ref-image';
 import { useGlobalState, GlobalState } from '../lib/state';
@@ -42,7 +44,7 @@ async function getModDependencies(
 async function getFlagInfos(
   gs: GlobalState,
   params: ModDetailsParams,
-): Promise<Record<string, FlagInfo_Flag[]>> {
+): Promise<[Record<string, FlagInfo_Flag[]>, string]> {
   const response = await gs.client.getModFlags({ id: params.modid, version: params.version ?? '' });
 
   const mappedFlags = {} as Record<string, FlagInfo_Flag[]>;
@@ -53,7 +55,40 @@ async function getFlagInfos(
 
     mappedFlags[info.category].push(info);
   }
-  return mappedFlags;
+
+  const cats = Object.keys(mappedFlags);
+  cats.sort();
+
+  const sortedFlags = {} as Record<string, FlagInfo_Flag[]>;
+  for (const cat of cats) {
+    sortedFlags[cat] = mappedFlags[cat];
+  }
+
+  makeAutoObservable(sortedFlags);
+  return [sortedFlags, response.response.freeform];
+}
+
+async function saveFlagInfos(
+  gs: GlobalState,
+  params: ModDetailsParams,
+  flags: Record<string, boolean>,
+  freeform: string,
+): Promise<void> {
+  try {
+    void (await gs.client.saveModFlags({
+      modid: params.modid,
+      version: params.version ?? '',
+      flags,
+      freeform,
+    }));
+  } catch (e) {
+    console.error(e);
+    gs.toaster.show({
+      icon: 'error',
+      intent: 'danger',
+      message: 'Failed to save flags',
+    });
+  }
 }
 
 interface DepInfoProps extends ModDetailsParams {
@@ -91,9 +126,9 @@ const DepInfo = observer(function DepInfo(props: DepInfoProps): React.ReactEleme
                 <td>{current}</td>
                 <td>TBD</td>
                 <td>
-                  <HTMLSelect>
+                  <HTMLSelect defaultValue={current}>
                     {response.available[modid].versions.map((version) => (
-                      <option key={version} value={version} selected={current === version}>
+                      <option key={version} value={version}>
                         {version}
                       </option>
                     ))}
@@ -108,10 +143,26 @@ const DepInfo = observer(function DepInfo(props: DepInfoProps): React.ReactEleme
   });
 });
 
-function renderFlags(flags: FlagInfo_Flag[]): (React.ReactElement | null)[] {
+function renderFlags(
+  gs: GlobalState,
+  params: ModDetailsParams,
+  flags: FlagInfo_Flag[],
+  freeform: string,
+): (React.ReactElement | null)[] {
   return flags.map((flag) => (
     <div key={flag.flag}>
-      <Checkbox checked={flag.enabled}>
+      <Checkbox
+        checked={flag.enabled}
+        onChange={action((e) => {
+          flag.enabled = e.currentTarget.checked;
+          const flagMap: Record<string, boolean> = {};
+          for (const flag of flags) {
+            flagMap[flag.flag] = flag.enabled;
+          }
+
+          void saveFlagInfos(gs, params, flagMap, freeform);
+        })}
+      >
         {flag.label === '' ? flag.flag : flag.label}
         {flag.help && (
           <span className="float-right">
@@ -137,17 +188,17 @@ const FlagsInfo = observer(function FlagsInfo(props: DepInfoProps): React.ReactE
         <pre>{e.toString()}</pre>
       </Callout>
     ),
-    fulfilled: (mappedFlags) => {
+    fulfilled: ([mappedFlags, freeform]) => {
       return (
         <div>
           <div className="pb-2">
             <label className="text-sm pr-4">Category</label>
-            <HTMLSelect onChange={(e) => setCurrentCat(e.target.value)}>
+            <HTMLSelect defaultValue={currentCat} onChange={(e) => setCurrentCat(e.target.value)}>
               <option key="combined" value="combined">
                 All
               </option>
               {Object.keys(mappedFlags).map((cat) => (
-                <option key={cat} value={cat} selected={cat === currentCat}>
+                <option key={cat} value={cat}>
                   {cat}
                 </option>
               ))}
@@ -158,10 +209,10 @@ const FlagsInfo = observer(function FlagsInfo(props: DepInfoProps): React.ReactE
               ? Object.entries(mappedFlags).map(([cat, catFlags]) => (
                   <div key={cat}>
                     <div className="font-bold p-2">{cat}</div>
-                    {renderFlags(catFlags)}
+                    {renderFlags(gs, props, catFlags, freeform)}
                   </div>
                 ))
-              : renderFlags(mappedFlags[currentCat] ?? [])}
+              : renderFlags(gs, props, mappedFlags[currentCat] ?? [], freeform)}
           </div>
         </div>
       );
@@ -174,12 +225,19 @@ export interface ModDetailsParams {
   version?: string;
 }
 
+const ModPageContainer = styled.div`
+  > :global(.bp3-tabs) > :global(.bp3-tab-panel) {
+    margin-top: 10px;
+  }
+`;
+
 export default observer(function ModDetailsPage(
   props: RouteComponentProps<ModDetailsParams>,
 ): React.ReactElement {
   const gs = useGlobalState();
   const modDetails = useMemo(() => fromPromise(getModDetails(gs, props.match.params)), [
-    gs, props.match.params,
+    gs,
+    props.match.params,
   ]);
 
   const rawDesc = (modDetails.value as ModInfoResponse)?.mod?.description;
@@ -189,7 +247,7 @@ export default observer(function ModDetailsPage(
   }, [rawDesc]);
 
   return (
-    <div>
+    <ModPageContainer>
       {modDetails.case({
         pending: () => <Spinner />,
         rejected: (_e: Error) => (
@@ -218,11 +276,7 @@ export default observer(function ModDetailsPage(
                       }}
                     >
                       {mod.versions.map((version) => (
-                        <option
-                          key={version}
-                          value={version}
-                          selected={version === props.match.params.version}
-                        >
+                        <option key={version} value={version}>
                           {version}
                         </option>
                       ))}
@@ -254,23 +308,25 @@ export default observer(function ModDetailsPage(
                     </div>
                   }
                 />
-                <Tab
-                  id="flags"
-                  title="Flags"
-                  panel={
-                    <div className="bg-base p-2 rounded text-white">
-                      <FlagsInfo
-                        release={mod.mod}
-                        modid={props.match.params.modid}
-                        version={props.match.params.version}
-                      />
-                    </div>
-                  }
-                />
+                {(mod.mod?.type === ModType.MOD || mod.mod?.type === ModType.TOTAL_CONVERSION) && (
+                  <Tab
+                    id="flags"
+                    title="Flags"
+                    panel={
+                      <div className="bg-base p-2 rounded text-white">
+                        <FlagsInfo
+                          release={mod.mod}
+                          modid={props.match.params.modid}
+                          version={props.match.params.version}
+                        />
+                      </div>
+                    }
+                  />
+                )}
               </Tabs>
             </>
           ),
       })}
-    </div>
+    </ModPageContainer>
   );
 });

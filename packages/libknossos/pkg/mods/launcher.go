@@ -19,67 +19,6 @@ import (
 	"golang.org/x/sys/cpu"
 )
 
-type jsonFlags struct {
-	Version struct {
-		Full        string
-		Major       int
-		Minor       int
-		Build       int
-		HasRevision bool `json:"has_revision"`
-		Revision    int
-		RevisionStr string `json:"revision_str"`
-	}
-
-	// easy_flags skipped
-
-	Flags []struct {
-		Name        string
-		Description string
-		FsoOnly     bool `json:"fso_only"`
-		// on_flags and off_flags skipped
-		Type   string
-		WebURL string `json:"web_url"`
-	}
-
-	Caps     []string
-	Voices   []string
-	Displays []struct {
-		Index  int
-		Name   string
-		X      int
-		Y      int
-		Width  int
-		Height int
-		Modes  []struct {
-			X    int
-			Y    int
-			Bits int
-		}
-	}
-
-	Openal struct {
-		VersionMajor    int             `json:"version_major"`
-		VersionMinor    int             `json:"version_minor"`
-		DefaultPlayback string          `json:"default_playback"`
-		DefaultCapture  string          `json:"default_capture"`
-		PlaybackDevices []string        `json:"playback_devices"`
-		CaptureDevices  []string        `json:"capture_devices"`
-		EfxSupport      map[string]bool `json:"efx_support"`
-	}
-
-	Joysticks []struct {
-		Name       string
-		GUID       string
-		NumAxes    int  `json:"num_axes"`
-		NumBalls   int  `json:"num_balls"`
-		NumButtons int  `json:"num_buttons"`
-		NumHats    int  `json:"num_hats"`
-		IsHaptic   bool `json:"is_haptic"`
-	}
-
-	PrefPath string `json:"pref_path"`
-}
-
 func getEngineForMod(ctx context.Context, mod *common.Release) (*common.Release, error) {
 	var engine *common.Release
 
@@ -150,7 +89,16 @@ func getBinaryForEngine(ctx context.Context, engine *common.Release) (string, er
 	return binaryPath, nil
 }
 
-func getJSONFlagsForBinary(ctx context.Context, binaryPath string) (*jsonFlags, error) {
+func getJSONFlagsForBinary(ctx context.Context, binaryPath string) (*storage.JsonFlags, error) {
+	flags, err := storage.GetEngineFlags(ctx, binaryPath)
+	if err != nil {
+		return nil, err
+	}
+	if flags != nil {
+		api.Log(ctx, api.LogInfo, "Using cached flags for %s", binaryPath)
+		return flags, nil
+	}
+
 	api.Log(ctx, api.LogInfo, "Running \"%s -parse_cmdline_only -get_flags json_v1\"", binaryPath)
 	proc := exec.Command(binaryPath, "-parse_cmdline_only", "-get_flags", "json_v1")
 	proc.Env = append(proc.Env, "FSO_KEEP_STDOUT=1")
@@ -161,13 +109,18 @@ func getJSONFlagsForBinary(ctx context.Context, binaryPath string) (*jsonFlags, 
 	}
 
 	api.Log(ctx, api.LogInfo, "Got: %s", out)
-	flags := jsonFlags{}
-	err = json.Unmarshal(out, &flags)
+	flags = new(storage.JsonFlags)
+	err = json.Unmarshal(out, flags)
 	if err != nil {
 		return nil, eris.Wrapf(err, "failed to parse output from %s", binaryPath)
 	}
 
-	return &flags, nil
+	err = storage.SaveEngineFlags(ctx, binaryPath, flags)
+	if err != nil {
+		return nil, eris.Wrapf(err, "failed to save flags for %s", binaryPath)
+	}
+
+	return flags, nil
 }
 
 func GetFlagsForMod(ctx context.Context, mod *common.Release) (map[string]*client.FlagInfo_Flag, error) {

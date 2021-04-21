@@ -100,6 +100,13 @@ message FlagInfo {
   string freeform = 2;
 }
 
+message SaveFlagsRequest {
+  map<string, bool> flags = 1;
+  string freeform = 2;
+  string modid = 3;
+  string version = 4;
+}
+
 message UserSettings {
   message EngineOptions {
     string modid = 1;
@@ -163,5 +170,6 @@ service Knossos {
   rpc GetModInfo (ModInfoRequest) returns (ModInfoResponse) {};
   rpc GetModDependencies (ModInfoRequest) returns (ModDependencySnapshot) {};
   rpc GetModFlags (ModInfoRequest) returns (FlagInfo) {};
+  rpc SaveModFlags (SaveFlagsRequest) returns (SuccessResponse) {};
   rpc LaunchMod (LaunchModRequest) returns (SuccessResponse) {};
 }
