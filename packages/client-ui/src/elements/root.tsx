@@ -128,7 +128,7 @@ export default function Root(): React.ReactElement {
   return (
     <div className="flex flex-col h-full">
       <div className="flex-initial">
-        <div className="pt-5 pl-5 text-3xl text-white font-inria title-bar">
+        <div className="pt-5 pl-5 text-3xl text-white font-inria title-bar pb-1">
           <span>Knossos</span>
           <span className="ml-10">1.0.0</span>
           <span className="ml-1 text-sm align-top">+c3fa30</span>
@@ -156,7 +156,7 @@ export default function Root(): React.ReactElement {
           </HoverLink>
         </div>
 
-        <div className="mt-3 relative">
+        <div className="relative">
           <div className="bg-dim h-px" />
           <TaskDisplay />
         </div>

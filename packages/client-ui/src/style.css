@@ -29,6 +29,10 @@ body {
     display: inline-block;
 }
 
+.bp3-toast-container.bp3-toast-container-top {
+    top: 70px;
+}
+
 .large-dialog {
     width: 800px;
     max-width: 800px;

@@ -66,7 +66,7 @@ export default observer(function TaskDisplay(): React.ReactElement {
   }, [gs.tasks]);
 
   return (
-    <div className="absolute bottom-0 right-40">
+    <div className="absolute bottom-0 right-40 traffic-lights">
       <Tooltip2 content="Show active tasks">
         <div
           className={'cursor-pointer ' + (gs.tasks.active > 0 ? 'text-white' : 'text-dim')}
