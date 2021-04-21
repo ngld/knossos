@@ -37,34 +37,29 @@ func (neb nebula) GetModList(ctx context.Context, req *api.ModListRequest) (*api
 		limit = 300
 	}
 
-	var mods []queries.GetPublicModsRow
-	var err error
+	query := `SELECT m.modid, m.title, m.type, max(r.version), COUNT(r.*) AS release_count,
+		max(f.storage_key) AS storage_key, max(f.external) AS external
+		FROM mods AS m
+		LEFT JOIN (SELECT mod_aid, MAX(id) AS id FROM mod_releases WHERE private = false GROUP BY mod_aid) AS rm ON rm.mod_aid = m.aid
+		LEFT JOIN mod_releases AS r ON r.id = rm.id
+		LEFT OUTER JOIN files AS f ON f.id = r.teaser
+		WHERE m.private = false`
 
-	if req.Query == "" {
-		mods, err = neb.Q.GetPublicMods(ctx, limit, int(req.Offset))
-	} else {
-		sRes, sErr := neb.Q.SearchPublicMods(ctx, queries.SearchPublicModsParams{
-			Limit:  int(req.Limit),
-			Offset: int(req.Offset),
-			Query:  req.Query,
-		})
-
-		err = sErr
-		mods = make([]queries.GetPublicModsRow, len(sRes))
-		for idx, row := range sRes {
-			mods[idx] = queries.GetPublicModsRow{
-				Aid:          row.Aid,
-				Title:        row.Title,
-				Type:         row.Type,
-				ReleaseCount: row.ReleaseCount,
-				StorageKey:   row.StorageKey,
-				External:     row.External,
-			}
-		}
+	if req.Query != "" {
+		query += " AND m.normalized_title LIKE '%' || normalize_string($3) || '%'"
 	}
-	if err != nil {
-		nblog.Log(ctx).Error().Err(err).Msg("Failed to fetch public mod list")
-		return nil, twirp.InternalError("internal error")
+
+	query += " GROUP BY m.aid"
+
+	if req.Sort == api.ModListRequest_NAME {
+		query += " ORDER BY title"
+	}
+
+	query += " LIMIT $1 OFFSET $2"
+
+	args := []interface{}{limit, req.Offset}
+	if req.Query != "" {
+		args = append(args, req.Query)
 	}
 
 	modCount, err := neb.Q.GetPublicModCount(ctx)
@@ -73,23 +68,37 @@ func (neb nebula) GetModList(ctx context.Context, req *api.ModListRequest) (*api
 		return nil, twirp.InternalError("internal error")
 	}
 
-	modItems := make([]*api.ModListItem, len(mods))
-	for idx, mod := range mods {
+	result, err := neb.Pool.Query(ctx, query, args...)
+	if err != nil {
+		nblog.Log(ctx).Error().Err(err).Msg("Failed to fetch public mod list")
+		return nil, twirp.InternalError("internal error")
+	}
+	defer result.Close()
+
+	modItems := make([]*api.ModListItem, 0)
+	for result.Next() {
+		row := new(api.ModListItem)
+		var storageKey pgtype.Text
+		var modType pgtype.Int2
+		var external pgtype.TextArray
+
+		err = result.Scan(&row.Modid, &row.Title, &modType, &row.Version, &row.ReleaseCount, &storageKey, &external)
+		if err != nil {
+			nblog.Log(ctx).Error().Err(err).Msg("Failed to read mod row")
+			continue
+		}
+
 		teaserURL := ""
-		if mod.StorageKey.Status == pgtype.Present {
-			if mod.External.Status == pgtype.Present {
-				teaserURL = mod.External.Elements[0].String
+		if storageKey.Status == pgtype.Present {
+			if external.Status == pgtype.Present {
+				teaserURL = external.Elements[0].String
 			} else {
-				nblog.Log(ctx).Warn().Msgf("Generating teaser URLs is not yet supported (%s)", mod.StorageKey.String)
+				nblog.Log(ctx).Warn().Msgf("Generating teaser URLs is not yet supported (%s)", storageKey.String)
 			}
 		}
 
-		modItems[idx] = &api.ModListItem{
-			Modid:        mod.Modid.String,
-			Teaser:       teaserURL,
-			Title:        mod.Title.String,
-			ReleaseCount: uint32(mod.ReleaseCount.Int),
-		}
+		row.Teaser = teaserURL
+		modItems = append(modItems, row)
 	}
 
 	return &api.ModListResponse{

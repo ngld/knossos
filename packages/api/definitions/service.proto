@@ -63,16 +63,22 @@ message ResetPasswordRequest {
 }
 
 message ModListRequest {
+  enum SortType {
+    NAME = 0;
+  }
+
   // required
   int32 offset = 1;
   int32 limit = 2;
   string query = 3;
+  SortType sort = 4;
 }
 
 message ModListItem {
   string modid = 1;
   string teaser = 2;
   string title = 3;
+  string version = 5;
   uint32 release_count = 4;
 }
 
