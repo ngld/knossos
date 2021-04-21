@@ -150,6 +150,7 @@ std::map<int, KnJsPromise *> KnossosJsInterface::pending_promises_;
 
 void KnossosJsInterface::Init() {
   std::string extensionCode =
+      "var knIsApp = true;"
       "var knShowDevTools = null;"
       "var knAddMessageListener = null;"
       "var knRemoveMessageListener = null;"
