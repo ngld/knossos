@@ -1,4 +1,4 @@
-load("helpers.star", "yarn", "find_library", "cmake_task", "merge_compile_commands", "get_golangci_flags")
+load("helpers.star", "cmake_task", "find_library", "get_golangci_flags", "merge_compile_commands", "yarn")
 load("options.star", "build")
 
 kn_args = option("client_args", "", help = "The parameters to pass to Knossos in the client-run target")
@@ -39,6 +39,7 @@ def knossos_configure(binext, libext, generator):
     )
 
     libkn_ldflags = ""
+
     # platform specific filename for libarchive
     if OS == "windows":
         libkn_ldflags += str(resolve_path("build/libarchive/libarchive/libarchive_static.a"))
@@ -144,6 +145,36 @@ def knossos_configure(binext, libext, generator):
         base = "build/client",
         deps = ["client-build"],
         cmds = ['%s --url="http://localhost:8080/" --libkn="%s"' % (kn_bin, libkn_path)],
+    )
+
+    task(
+        "client-ws-build",
+        hidden = True,
+        deps = ["proto-build", "libarchive-build"],
+        base = "packages/libknossos",
+        inputs = [
+            "../../.tools/tool%s" % binext,
+            "**/*.go",
+            "../libarchive/**/*.go",
+        ],
+        outputs = [
+            "../../build/libknossos/dev-server%s" % binext,
+            "../../build/libknossos/dynknossos.{h,cc}",
+        ],
+        env = {
+            # cgo only supports gcc, make sure it doesn't try to use a compiler meant for our other packages
+            "CC": "gcc",
+            "CGO_LDFLAGS": libkn_ldflags,
+        },
+        cmds = [("go", "build", "-o", "../../build/libknossos/dev-server%s" % binext, "./dev-server")],
+    )
+
+    task(
+        "client-ws-run",
+        desc = "Launch Knossos WS server",
+        deps = ["client-ws-build"],
+        base = "packages/libknossos",
+        cmds = ["../../build/libknossos/dev-server"],
     )
 
     task(

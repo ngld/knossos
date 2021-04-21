@@ -1,13 +1,13 @@
-load("helpers.star", "yarn", "get_golangci_flags")
+load("helpers.star", "get_golangci_flags", "yarn")
 
 neb_args = option("server_args", "", help = "The parameters to pass to Nebula in the server-run target")
 
 db_network = option("db_network", "nebula", help = "The name of the Docker network to use for Nebula-related containers.")
 db_container = option("db_container", "nebula-db", help = "The name of the Docker container for Nebula's managed database.")
-db_port = option("db_port", "4142", help="The port to expose Nebula's managed database on.")
-db_user = option("db_user", "nebula", help="The username to use for Nebula's managed database.")
-db_pass = option("db_pass", "nebula", help="The password to use for Nebula's managed database.")
-db_name = option("db_name", "nebula", help="The name of the database used by Nebula.")
+db_port = option("db_port", "4142", help = "The port to expose Nebula's managed database on.")
+db_user = option("db_user", "nebula", help = "The username to use for Nebula's managed database.")
+db_pass = option("db_pass", "nebula", help = "The password to use for Nebula's managed database.")
+db_name = option("db_name", "nebula", help = "The name of the database used by Nebula.")
 
 def nebula_configure(binext):
     setenv("NEBULA_DATABASE", "postgres://%s:%s@localhost:%s/%s" % (db_user, db_pass, db_port, db_name))
@@ -42,7 +42,31 @@ def nebula_configure(binext):
         cmds = [
             "docker run --rm --network '%s' -v \"$PWD/db/migrations:/flyway/sql\" flyway/flyway:latest-alpine -url='jdbc:postgresql://%s/%s?user=%s&password=%s' migrate" % (db_network, db_container, db_name, db_user, db_pass),
             "touch .tools/db_migrated",
-        ]
+        ],
+    )
+
+    task(
+        "importer-build",
+        hidden = True,
+        deps = [],
+        base = "packages/server",
+        inputs = ["**/*.go"],
+        outputs = ["../../build/importer%s" % binext],
+        cmds = [
+            "cd packages/server",
+            ("go", "build", "-o", "../../build/importer%s" % binext, "./cmd/importer"),
+        ],
+    )
+
+    task(
+        "database-seed",
+        desc = "Fills the database with the currently available mods from Nebula",
+        deps = ["database-migrate", "importer-build"],
+        base = "build",
+        cmds = [
+            "curl -o repo.json https://cf.fsnebula.org/storage/repo.json",
+            "./importer",
+        ],
     )
 
     task(
@@ -54,7 +78,7 @@ def nebula_configure(binext):
             "docker rm -f '%s'" % db_container,
             "docker network rm '%s'" % db_network,
             "rm -f .tools/db_*",
-        ]
+        ],
     )
 
     task(
@@ -103,7 +127,14 @@ def nebula_configure(binext):
             "dist/prod/**/*.{html,css,js}",
         ],
         env = {
-            'NODE_ENV': 'production',
+            "NODE_ENV": "production",
         },
         cmds = [yarn("webpack --env production --color --progress")],
+    )
+
+    task(
+        "front-watch",
+        desc = "Launches webpack-dev-server for Nebula's frontend",
+        base = "packages/front",
+        cmds = [yarn("webpack serve")],
     )
