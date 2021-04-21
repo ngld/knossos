@@ -91,7 +91,7 @@ def nebula_configure(binext):
         desc = "Launches Nebula",
         deps = ["server-build", "front-build", "database-migrate"],
         base = "packages/server",
-        cmds = ["%s %s" % (neb_bin, neb_args)],
+        cmds = [(neb_bin, parse_shell_args(neb_args))],
     )
 
     task(
@@ -102,8 +102,8 @@ def nebula_configure(binext):
         outputs = [
             "dist/prod/**/*.{html,css,js}",
         ],
-        cmds = [
-            ("NODE_ENV=production",) + yarn("postcss src/tw-index.css -o gen/tw-index.css"),
-            yarn("webpack --env production --color --progress"),
-        ],
+        env = {
+            'NODE_ENV': 'production',
+        },
+        cmds = [yarn("webpack --env production --color --progress")],
     )
