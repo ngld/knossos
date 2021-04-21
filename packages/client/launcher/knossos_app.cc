@@ -218,6 +218,13 @@ void KnossosApp::InitializeSettings(CefSettings &settings, std::string appDataPa
 
   CefString cache_path(&settings.cache_path);
   cache_path = config_path + sep + "cache";
+
+  CefString user_data_path(&settings.user_data_path);
+  user_data_path = config_path + sep + "user_data";
+
+  CefString log_file(&settings.log_file);
+  log_file = config_path + sep + "debug.log";
+
   _settings_path = config_path;
 
   settings.background_color = CefColorSetARGB(0xff, 0x1c, 0x1c, 0x1c);
