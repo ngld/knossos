@@ -153,3 +153,80 @@ func (p StarlarkPath) Len() int {
 func (p StarlarkPath) Slice(start, end, step int) starlark.Value {
 	return starlark.String(p).Slice(start, end, step)
 }
+
+type StarlarkShellArgs []*syntax.Word
+
+var (
+	_ starlark.Comparable = (StarlarkShellArgs)(nil)
+	_ starlark.Sequence   = (StarlarkShellArgs)(nil)
+	_ starlark.Indexable  = (StarlarkShellArgs)(nil)
+)
+
+func (a StarlarkShellArgs) String() string {
+	printer := syntax.NewPrinter()
+	buffer := strings.Builder{}
+	err := printer.Print(&buffer, &syntax.CallExpr{Args: a})
+	if err != nil {
+		return "<error>"
+	}
+
+	return buffer.String()
+}
+
+func (a StarlarkShellArgs) Type() string          { return "shell args" }
+func (a StarlarkShellArgs) Freeze()               {}
+func (a StarlarkShellArgs) Truth() starlark.Bool  { return len(a) > 0 }
+func (a StarlarkShellArgs) Hash() (uint32, error) { return 0, eris.New("hashing is not supported") }
+
+// Comparable
+func (a StarlarkShellArgs) CompareSameType(op starsyntax.Token, y starlark.Value, depth int) (bool, error) {
+	other := y.(StarlarkShellArgs)
+
+	if len(a) != len(other) {
+		return false, nil
+	}
+
+	for idx, av := range a {
+		if av != other[idx] {
+			return false, nil
+		}
+	}
+
+	return true, nil
+}
+
+// Indexable
+func (a StarlarkShellArgs) Len() int { return len(a) }
+
+func (a StarlarkShellArgs) Index(i int) starlark.Value {
+	printer := syntax.NewPrinter()
+	buffer := strings.Builder{}
+	err := printer.Print(&buffer, a[i])
+	if err != nil {
+		return starlark.None
+	}
+
+	return starlark.String(buffer.String())
+}
+
+// Iterable
+type StarlarkShellArgsIterator struct {
+	args StarlarkShellArgs
+	pos  int
+}
+
+func (it *StarlarkShellArgsIterator) Next(p *starlark.Value) bool {
+	if it.pos >= len(it.args) {
+		return false
+	}
+
+	*p = it.args.Index(it.pos)
+	it.pos++
+	return true
+}
+
+func (it StarlarkShellArgsIterator) Done() {}
+
+func (a StarlarkShellArgs) Iterate() starlark.Iterator {
+	return &StarlarkShellArgsIterator{pos: 0, args: a}
+}

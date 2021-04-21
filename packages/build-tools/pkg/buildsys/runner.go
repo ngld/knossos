@@ -42,6 +42,8 @@ func execHandler(ctx context.Context, args []string) error {
 		case "mkdir":
 			fallthrough
 		case "touch":
+			fallthrough
+		case "sleep":
 			// always use our cross-platform implementation for these operations to make sure
 			// they behave consistently
 			args = append([]string{"tool"}, args...)

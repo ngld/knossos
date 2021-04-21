@@ -102,7 +102,8 @@ func interfaceToStarlark(thread *starlark.Thread, value interface{}) (starlark.V
 	}
 
 	refValue := reflect.ValueOf(value)
-	if refValue.IsNil() {
+	refType := refValue.Kind()
+	if (refType == reflect.Map || refType == reflect.Slice || refType == reflect.Ptr) && refValue.IsNil() {
 		return starlark.None, nil
 	}
 
@@ -141,6 +142,29 @@ func interfaceToStarlark(thread *starlark.Thread, value interface{}) (starlark.V
 		}
 
 		return dict, nil
+	case reflect.Struct:
+		rt := refValue.Type()
+		dict := starlark.NewDict(rt.NumField())
+		for i := 0; i < rt.NumField(); i++ {
+			key := rt.Field(i).Name
+
+			// Skip private / hidden fields
+			if strings.ToLower(key[0:1]) == key[0:1] {
+				continue
+			}
+
+			value, err := interfaceToStarlark(thread, refValue.Field(i).Interface())
+			if err != nil {
+				return nil, err
+			}
+
+			err = dict.SetKey(starlark.String(key), value)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		return dict, err
 	}
 
 	return nil, eris.Errorf("encountered unsupported type %v", refValue.Kind())

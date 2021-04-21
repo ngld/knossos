@@ -8,6 +8,7 @@ require (
 	github.com/containerd/containerd v1.4.4 // indirect
 	github.com/cortesi/modd v0.0.0-20210323234521-b35eddab86cc
 	github.com/cortesi/moddwatch v0.0.0-20210323234936-df014e95c743 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/docker/docker v20.10.5+incompatible // indirect
 	github.com/golang/protobuf v1.5.2
 	github.com/jackc/pgproto3/v2 v2.0.7 // indirect

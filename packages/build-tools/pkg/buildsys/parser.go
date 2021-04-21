@@ -110,10 +110,11 @@ func processCmdParts(parts starlark.Tuple, parser *syntax.Parser, base string) (
 	}
 
 	argCount := len(parts) - len(envVars)
-	cmd.Args = make([]*syntax.Word, argCount)
-	for a, arg := range parts[len(envVars):] {
+	cmd.Args = make([]*syntax.Word, 0, argCount)
+	for _, arg := range parts[len(envVars):] {
 		var encodedValue string
 
+		skip := false
 		switch value := arg.(type) {
 		case starlark.String:
 			encodedValue = value.GoString()
@@ -130,8 +131,18 @@ func processCmdParts(parts starlark.Tuple, parser *syntax.Parser, base string) (
 			}
 
 			encodedValue = filepath.ToSlash(encodedValue)
+		case StarlarkShellArgs:
+			for _, arg := range value {
+				cmd.Args = append(cmd.Args, arg)
+			}
+
+			skip = true
 		default:
 			return nil, eris.Errorf("found argument of type %s but only strings and paths are supported: %s", arg.Type(), arg.String())
+		}
+
+		if skip {
+			continue
 		}
 
 		var wordPart syntax.WordPart
@@ -152,8 +163,9 @@ func processCmdParts(parts starlark.Tuple, parser *syntax.Parser, base string) (
 			wordPart = syntax.WordPart(node)
 		}
 
-		cmd.Args[a] = new(syntax.Word)
-		cmd.Args[a].Parts = []syntax.WordPart{wordPart}
+		word := new(syntax.Word)
+		word.Parts = []syntax.WordPart{wordPart}
+		cmd.Args = append(cmd.Args, word)
 	}
 
 	return cmd, nil
@@ -338,7 +350,7 @@ func task(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kw
 		case *Task:
 			task.Cmds = append(task.Cmds, TaskCmdTaskRef{Task: value})
 		default:
-			return nil, eris.Errorf("%s: unexpected type %s. Only strings, tuples and lists are valid", fn.Name(), item.Type())
+			return nil, eris.Errorf("unexpected type %s. Only strings, tuples and lists are valid", item.Type())
 		}
 
 		idx++
@@ -346,7 +358,7 @@ func task(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kw
 	iter.Done()
 
 	if inputs != nil && inputs.Len() > 0 && (outputs == nil || outputs.Len() == 0) {
-		warn(thread, "%s: found inputs but no outputs", fn.Name())
+		warn(thread, "found inputs but no outputs")
 	}
 
 	ctx := getCtx(thread)
@@ -429,12 +441,13 @@ func RunScript(ctx context.Context, filename, projectRoot string, options map[st
 		"error": starlark.NewBuiltin("error", starError),
 
 		// FS helpers
-		"resolve_path": starlark.NewBuiltin("resolve_path", resolvePath),
-		"to_slashes":   starlark.NewBuiltin("to_slashes", toSlashes),
-		"isdir":        starlark.NewBuiltin("isdir", starIsdir),
-		"isfile":       starlark.NewBuiltin("isfile", starIsfile),
-		"read_yaml":    starlark.NewBuiltin("read_yaml", readYaml),
-		"execute":      starlark.NewBuiltin("execute", starExec),
+		"resolve_path":     starlark.NewBuiltin("resolve_path", resolvePath),
+		"to_slashes":       starlark.NewBuiltin("to_slashes", toSlashes),
+		"isdir":            starlark.NewBuiltin("isdir", starIsdir),
+		"isfile":           starlark.NewBuiltin("isfile", starIsfile),
+		"read_yaml":        starlark.NewBuiltin("read_yaml", readYaml),
+		"execute":          starlark.NewBuiltin("execute", starExec),
+		"parse_shell_args": starlark.NewBuiltin("parse_shell_args", starParseShellArgs),
 
 		// env handling
 		"getenv":       starlark.NewBuiltin("getenv", getenv),

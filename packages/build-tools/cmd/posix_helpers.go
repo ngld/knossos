@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"time"
 
 	"github.com/rotisserie/eris"
@@ -183,6 +184,24 @@ var touchCmd = &cobra.Command{
 	},
 }
 
+var sleepCmd = &cobra.Command{
+	Use:   "sleep",
+	Short: "A cross-platform implementation of the POSIX sleep command",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) != 1 {
+			return eris.Errorf("Expected 1 argument but got %d.", len(args))
+		}
+
+		seconds, err := strconv.Atoi(args[1])
+		if err != nil {
+			return err
+		}
+
+		time.Sleep(time.Duration(seconds) * time.Second)
+		return nil
+	},
+}
+
 func init() {
 	rmCmd.Flags().BoolP("recursive", "r", false, "recursively delete directories")
 	rmCmd.Flags().BoolP("force", "f", false, "suppresses errors caused by missing files/folders")
@@ -192,4 +211,5 @@ func init() {
 	rootCmd.AddCommand(rmCmd)
 	rootCmd.AddCommand(mkdirCmd)
 	rootCmd.AddCommand(touchCmd)
+	rootCmd.AddCommand(sleepCmd)
 }

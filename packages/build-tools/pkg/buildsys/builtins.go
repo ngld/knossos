@@ -22,6 +22,17 @@ import (
 	"mvdan.cc/sh/v3/syntax"
 )
 
+func path2string(thread *starlark.Thread, starPath starlark.Value) (string, error) {
+	switch value := starPath.(type) {
+	case starlark.String:
+		return value.GoString(), nil
+	case StarlarkPath:
+		return string(value), nil
+	default:
+		return "", eris.Errorf("only accepts string arguments but argument was a %s", value.Type())
+	}
+}
+
 func resolvePath(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	base := ""
 	ctx := getCtx(thread)
@@ -56,6 +67,8 @@ func resolvePath(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tu
 		switch value := path.(type) {
 		case starlark.String:
 			parts[idx] = value.GoString()
+		case StarlarkPath:
+			parts[idx] = string(value)
 		default:
 			return nil, eris.Errorf("only accepts string arguments but argument %d was a %s", idx, path.Type())
 		}
@@ -74,9 +87,14 @@ func resolvePath(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tu
 }
 
 func toSlashes(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	var path string
+	var starPath starlark.Value
 
-	err := starlark.UnpackPositionalArgs(fn.Name(), args, kwargs, 1, &path)
+	err := starlark.UnpackPositionalArgs(fn.Name(), args, kwargs, 1, &starPath)
+	if err != nil {
+		return nil, err
+	}
+
+	path, err := path2string(thread, starPath)
 	if err != nil {
 		return nil, err
 	}
@@ -179,11 +197,16 @@ func prependPathDir(thread *starlark.Thread, fn *starlark.Builtin, args starlark
 }
 
 func readYaml(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	var yamlFile string
+	var starYamlFile starlark.Value
 	var yamlKey string
 	var defaultValue starlark.Value
 
-	err := starlark.UnpackPositionalArgs(fn.Name(), args, kwargs, 2, &yamlFile, &yamlKey, &defaultValue)
+	err := starlark.UnpackPositionalArgs(fn.Name(), args, kwargs, 2, &starYamlFile, &yamlKey, &defaultValue)
+	if err != nil {
+		return nil, err
+	}
+
+	yamlFile, err := path2string(thread, starYamlFile)
 	if err != nil {
 		return nil, err
 	}
@@ -202,6 +225,8 @@ func readYaml(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple
 		if err != nil {
 			return nil, eris.Wrapf(err, "failed to parse file %s", yamlFile)
 		}
+
+		cache[yamlFile] = doc
 	}
 
 	// parse the key
@@ -233,23 +258,24 @@ endLoop:
 	if value.Kind() == reflect.Invalid || value.IsNil() {
 		return defaultValue, nil
 	} else {
-		switch value := value.Interface().(type) {
-		case string:
-			return starlark.String(value), nil
-		case int:
-			return starlark.MakeInt(value), nil
-		case bool:
-			return starlark.Bool(value), nil
-		default:
-			return nil, eris.Errorf("can't return value %v", value)
+		value, err := interfaceToStarlark(thread, value.Interface())
+		if err != nil {
+			return nil, eris.Wrap(err, fn.Name())
 		}
+
+		return value, nil
 	}
 }
 
 func starIsdir(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	var dirPath string
+	var starDirPath starlark.Value
 
-	err := starlark.UnpackPositionalArgs(fn.Name(), args, kwargs, 1, &dirPath)
+	err := starlark.UnpackPositionalArgs(fn.Name(), args, kwargs, 1, &starDirPath)
+	if err != nil {
+		return nil, err
+	}
+
+	dirPath, err := path2string(thread, starDirPath)
 	if err != nil {
 		return nil, err
 	}
@@ -264,9 +290,14 @@ func starIsdir(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tupl
 }
 
 func starIsfile(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	var filePath string
+	var starFilePath starlark.Value
 
-	err := starlark.UnpackPositionalArgs(fn.Name(), args, kwargs, 1, &filePath)
+	err := starlark.UnpackPositionalArgs(fn.Name(), args, kwargs, 1, &starFilePath)
+	if err != nil {
+		return nil, err
+	}
+
+	filePath, err := path2string(thread, starFilePath)
 	if err != nil {
 		return nil, err
 	}
@@ -504,4 +535,46 @@ func starLookupLib(thread *starlark.Thread, fn *starlark.Builtin, args starlark.
 	}
 
 	return starlark.String(path), nil
+}
+
+func starParseShellArgs(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	var argString string
+	err := starlark.UnpackPositionalArgs(fn.Name(), args, kwargs, 1, &argString)
+	if err != nil {
+		return nil, err
+	}
+
+	if argString == "" {
+		return make(StarlarkShellArgs, 0), nil
+	}
+
+	reader := strings.NewReader(argString)
+	parser := syntax.NewParser()
+	shellArgs, err := parser.Parse(reader, "shell args")
+	if err != nil {
+		return nil, err
+	}
+
+	if len(shellArgs.Stmts) != 1 {
+		return nil, eris.Errorf("expected 1 statement, found %d", len(shellArgs.Stmts))
+	}
+
+	if shellArgs.Stmts[0].Cmd == nil {
+		return nil, eris.New("could not parse shell args as a valid command")
+	}
+
+	if len(shellArgs.Stmts[0].Redirs) > 0 {
+		return nil, eris.New("redirects (i.e. > /dev/null) are not supported in shell args")
+	}
+
+	call, ok := shellArgs.Stmts[0].Cmd.(*syntax.CallExpr)
+	if !ok {
+		return nil, eris.New("passed arguments are a valid shell expression but not arguments")
+	}
+
+	if len(call.Assigns) > 0 {
+		return nil, eris.New("found variable assignments / env vars in shell args")
+	}
+
+	return StarlarkShellArgs(call.Args), nil
 }
