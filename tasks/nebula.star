@@ -102,6 +102,7 @@ def nebula_configure(binext):
         inputs = [
             "cmd/**/*.go",
             "pkg/**/*.go",
+            "pkg/db/queries/*.sql",
         ],
         outputs = [str(neb_bin)],
         cmds = [

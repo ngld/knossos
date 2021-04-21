@@ -2,13 +2,18 @@ import { useState, useEffect } from 'react';
 import { Button, NonIdealState, Spinner } from '@blueprintjs/core';
 import { History } from 'history';
 import InfiniteScroll from 'react-infinite-scroll-component';
-import { ModListResponse, ModListItem } from '@api/service';
+import { ModListResponse, ModListItem, ModListRequest_SortType } from '@api/service';
 import { GlobalState, useGlobalState } from '../lib/state';
 import { launchMod } from '../dialogs/launch-mod';
 import ModstockImage from '../resources/modstock.jpg';
 
 async function fetchMods(gs: GlobalState, offset: number): Promise<ModListResponse> {
-  const result = await gs.nebula.getModList({ offset, limit: 50, query: '' });
+  const result = await gs.nebula.getModList({
+    offset,
+    limit: 50,
+    query: '',
+    sort: ModListRequest_SortType.NAME,
+  });
   console.log(result);
   return result.response;
 }
@@ -87,10 +92,7 @@ export default function RemoteModList(props: RemoteModListProps): React.ReactEle
             scrollableTarget="scroll-container"
           >
             {state.mods.map((mod) => (
-              <div
-                key={mod.modid}
-                className="mod-tile bg-important flex flex-col overflow-hidden"
-              >
+              <div key={mod.modid} className="mod-tile bg-important flex flex-col overflow-hidden">
                 {mod.teaser ? <img src={mod.teaser} /> : <img src={ModstockImage} />}
                 <div className="flex-1 flex flex-col justify-center text-white">
                   <div className="flex-initial text-center overflow-ellipsis overflow-hidden">
@@ -99,11 +101,9 @@ export default function RemoteModList(props: RemoteModListProps): React.ReactEle
                 </div>
 
                 <div className="cover flex flex-col justify-center gap-2">
-                  <Button onClick={() => launchMod(gs, mod.modid, '')}>Play</Button>
-                  <Button onClick={() => props.history.push('/mod/' + mod.modid + '/' + '')}>
+                  <Button onClick={() => props.history.push('/rmod/' + mod.modid + '/' + mod.version)}>
                     Details
                   </Button>
-                  <Button>Uninstall</Button>
                 </div>
               </div>
             ))}{' '}

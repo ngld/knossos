@@ -20,6 +20,7 @@ import LocalModList from '../pages/local-mod-list';
 import RemoteModList from '../pages/remote-mod-list';
 import Settings from '../pages/settings';
 import LocalMod from '../pages/local-mod';
+import RemoteMod from '../pages/remote-mod';
 
 const NavTabs = function NavTabs(): React.ReactElement {
   const history = useHistory();
@@ -100,6 +101,7 @@ const ModContainer = observer(function ModContainer(): React.ReactElement {
             <Settings />
           </Route>
           <Route path="/mod/:modid/:version?" component={LocalMod} />
+          <Route path="/rmod/:modid/:version?" component={RemoteMod} />
           <Route path="/">
             <div className="text-white">Page not found</div>
           </Route>
