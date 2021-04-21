@@ -45,6 +45,8 @@
         "gopls": {
             "build.expandWorkspaceToModule": false
 		},
+        "go.lintTool": "golangci-lint",
+        "go.lintFlags": ["--fast"],
 		"C/C++ Include Guard.Prefix": "KNOSSOS_",
 		"C/C++ Include Guard.Macro Type": "Filepath",
         "cmake.configureOnOpen": false,
