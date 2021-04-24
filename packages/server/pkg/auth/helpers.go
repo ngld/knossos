@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	gojwt "github.com/dgrijalva/jwt-go/v4"
 	"github.com/rotisserie/eris"
 	guardian "github.com/shaj13/go-guardian/v2/auth"
 	"github.com/shaj13/go-guardian/v2/auth/strategies/jwt"
@@ -43,9 +42,9 @@ type authContext struct {
 func MakeAuthMiddleware(next http.Handler) http.Handler {
 	cache := libcache.LRU.New(0)
 	secrets := jwt.StaticSecret{
-		ID:     "test",
-		Method: gojwt.SigningMethodHS256,
-		Secret: []byte("TODO"),
+		ID:        "test",
+		Algorithm: jwt.HS256,
+		Secret:    []byte("TODO"),
 	}
 	auth := jwt.New(cache, secrets)
 
