@@ -208,6 +208,14 @@ func main() {
 		log.Fatal().Err(err).Msg("Failed to setup the transaction")
 	}
 
+	_, err = tx.Exec(ctx, `
+TRUNCATE mods CASCADE;
+TRUNCATE files CASCADE;
+`)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to truncate tables")
+	}
+
 	q := queries.NewQuerier(tx)
 
 	count := len(data.Mods)
@@ -279,6 +287,7 @@ func main() {
 			Screenshots:   screens,
 			Teaser:        handleFile(ctx, q, mod.Tile),
 			Banner:        handleFile(ctx, q, mod.Banner),
+			ModOrder:      mod.ModFlag,
 		}
 
 		err = modParams.Released.Set(relDate)

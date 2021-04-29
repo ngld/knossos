@@ -19,10 +19,10 @@ INSERT INTO mods (modid, title, type, private)
 
 -- name: CreateRelease :one
 INSERT INTO mod_releases (mod_aid, version, stability, description, release_thread, screenshots,
-        videos, released, updated, notes, cmdline, private, teaser, banner)
+        videos, released, updated, notes, cmdline, private, mod_order, teaser, banner)
     VALUES (pggen.arg('mod_aid'), pggen.arg('version'), pggen.arg('stability'), pggen.arg('description'),
         pggen.arg('release_thread'), pggen.arg('screenshots'), pggen.arg('videos'), pggen.arg('released'),
-        pggen.arg('updated'), pggen.arg('notes'), pggen.arg('cmdline'), pggen.arg('private'),
+        pggen.arg('updated'), pggen.arg('notes'), pggen.arg('cmdline'), pggen.arg('private'), pggen.arg('mod_order'),
             -- workaround since pggen forces us to pass int32 which can't be null
             CASE WHEN pggen.arg('teaser') = 0 THEN null
                  ELSE pggen.arg('teaser')
@@ -83,8 +83,8 @@ SELECT m.aid, m.modid, m.title, m.type, COUNT(r.*) AS release_count, max(f.stora
 SELECT COUNT(*) FROM mods WHERE private = false;
 
 -- name: GetPublicReleaseByModVersion :one
-SELECT m.aid, m.title, m.type, r.version, r.stability, r.description, r.banner, r.release_thread, r.screenshots, r.videos,
-    r.released, r.updated, r.id
+SELECT m.aid, m.title, m.type, r.version, r.stability, r.description, r.teaser, r.banner, r.release_thread, r.notes,
+    r.screenshots, r.videos, r.released, r.updated, r.install_count, r.dependency_snapshot, r.id, r.cmdline
     FROM mods AS m LEFT JOIN mod_releases AS r ON r.mod_aid = m.aid
     WHERE m.private = false AND r.private = false AND m.modid = pggen.arg('modid') AND r.version = pggen.arg('version')
     LIMIT 1;
@@ -102,3 +102,26 @@ SELECT a.label, a.checksum_digest, p.name AS package, p.notes AS package_notes, 
     LEFT JOIN mod_package_archives AS a ON a.package_id = p.id
     LEFT JOIN files AS f ON f.id = a.file_id
     WHERE f.public = true AND p.release_id = pggen.arg('release_id');
+
+-- name: GetPublicPackagesByModVersion :many
+SELECT p.* FROM mods AS m
+    LEFT JOIN mod_releases AS r ON r.mod_aid = m.aid
+    LEFT JOIN mod_packages AS p ON p.release_id = r.id
+    WHERE m.private = false AND m.modid = pggen.arg('modid') AND r.version = pggen.arg('version');
+
+-- name: IncReleaseInstallCount :exec
+UPDATE mod_releases SET install_count = install_count + 1 WHERE id = pggen.arg('rid');
+
+-- name: GetPublicPackageDependenciesByModVersion :many
+SELECT p.name, jsonb_agg(jsonb_build_object('modid', d.modid, 'version', d.version, 'packages', d.packages))
+    FROM mods AS m
+    LEFT JOIN mod_releases AS r ON r.mod_aid = m.aid
+    LEFT JOIN mod_packages AS p ON p.release_id = r.id
+    LEFT JOIN mod_package_dependencies AS d ON d.package_id = p.id
+    WHERE m.private = false AND m.modid = pggen.arg('modid') AND r.version = pggen.arg('version')
+    GROUP BY p.name;
+
+-- name: GetPublicVersionForMod :many
+SELECT r.version FROM mods AS m
+    LEFT JOIN mod_releases AS r ON r.mod_aid = m.aid
+    WHERE m.private = false AND m.modid = pggen.arg('modid');

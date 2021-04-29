@@ -52,10 +52,7 @@ def nebula_configure(binext):
         base = "packages/server",
         inputs = ["**/*.go"],
         outputs = ["../../build/importer%s" % binext],
-        cmds = [
-            "cd packages/server",
-            ("go", "build", "-o", "../../build/importer%s" % binext, "./cmd/importer"),
-        ],
+        cmds = [("go", "build", "-o", "../../build/importer%s" % binext, "./cmd/importer")],
     )
 
     task(

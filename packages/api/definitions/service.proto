@@ -3,6 +3,7 @@ option go_package = "github.com/ngld/knossos/packages/api/api";
 package ngld.knossos;
 
 import "google/protobuf/timestamp.proto";
+import "mod.proto";
 
 // General types
 
@@ -125,6 +126,17 @@ message ModDetailsResponse {
   repeated ModDownloadPackage downloads = 13;
 }
 
+message ModInstallRequest {
+  string modid = 1;
+  string version = 2;
+}
+
+message ModInstallResponse {
+  string error = 1;
+  // a list containing the requested mod and all dependencies
+  repeated Release releases = 2;
+}
+
 service Nebula {
   rpc Login (LoginRequest) returns (LoginResponse) {};
   rpc CheckToken (NullRequest) returns (SessionResponse) {};
@@ -136,4 +148,6 @@ service Nebula {
 
   rpc GetModList (ModListRequest) returns (ModListResponse) {};
   rpc GetModDetails (ModDetailsRequest) returns (ModDetailsResponse) {};
+
+  rpc RequestModInstall (ModInstallRequest) returns (ModInstallResponse) {};
 }
