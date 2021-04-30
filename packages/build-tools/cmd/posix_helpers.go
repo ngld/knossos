@@ -192,7 +192,7 @@ var sleepCmd = &cobra.Command{
 			return eris.Errorf("Expected 1 argument but got %d.", len(args))
 		}
 
-		seconds, err := strconv.Atoi(args[1])
+		seconds, err := strconv.Atoi(args[0])
 		if err != nil {
 			return err
 		}
