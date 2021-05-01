@@ -45,21 +45,22 @@ def nebula_configure(binext):
         ],
     )
 
+    importer_bin = resolve_path("//build/nebula/importer%s" % binext)
     task(
         "importer-build",
         hidden = True,
         deps = [],
         base = "packages/server",
         inputs = ["**/*.go"],
-        outputs = ["../../build/importer%s" % binext],
-        cmds = [("go", "build", "-o", "../../build/importer%s" % binext, "./cmd/importer")],
+        outputs = [str(importer_bin)],
+        cmds = [("go", "build", "-o", importer_bin, "./cmd/importer")],
     )
 
     task(
         "database-seed",
         desc = "Fills the database with the currently available mods from Nebula",
         deps = ["database-migrate", "importer-build"],
-        base = "build",
+        base = "build/nebula",
         cmds = [
             "curl -o repo.json https://cf.fsnebula.org/storage/repo.json",
             "./importer",
@@ -89,7 +90,7 @@ def nebula_configure(binext):
         ],
     )
 
-    neb_bin = resolve_path("build/nebula%s" % binext)
+    neb_bin = resolve_path("build/nebula/nebula%s" % binext)
 
     task(
         "server-build",
@@ -103,6 +104,7 @@ def nebula_configure(binext):
         ],
         outputs = [str(neb_bin)],
         cmds = [
+            "mkdir -p ../../build/nebula",
             "go generate -x ./pkg/db/queries.go",
             "go build -o '%s' ./cmd/server/main.go" % neb_bin,
         ],
@@ -135,4 +137,30 @@ def nebula_configure(binext):
         desc = "Launches webpack-dev-server for Nebula's frontend",
         base = "packages/front",
         cmds = [yarn("webpack serve")],
+    )
+
+    if OS == "linux":
+        container_bin_cmds = ["cp build/nebula/nebula build/nebula/nebula.linux"]
+    else:
+        container_bin_cmds = [
+            "cd packages/server",
+            ("GOOS=linux", "go", "build", "-o", "../../build/nebula/nebula.linux", "./cmd/server/main.go"),
+            "cd ../..",
+        ]
+
+    task(
+        "server-container",
+        desc = "Builds the docker container for Nebula",
+        deps = ["server-build", "front-build"],
+        inputs = [
+            str(neb_bin),
+            "packages/server/Dockerfile",
+        ],
+        cmds = container_bin_cmds + [
+            "cd build/nebula",
+            "rm -rf templates front",
+            "cp -r ../../packages/server/{Dockerfile,config.toml,templates} .",
+            "cp -r ../../packages/front/dist/prod front",
+            "docker build -tghcr.io/ngld/knossos/nebula:latest .",
+        ]
     )
