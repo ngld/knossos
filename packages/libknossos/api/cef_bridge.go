@@ -1,97 +1,98 @@
 package main
 
-// #include <stdlib.h>
-// #include <stdint.h>
-// #include <string.h>
+// //nolint:gocritic // inserting the space gocritic requests would be nice but breaks the cgo build
+//#include <stdlib.h>
+//#include <stdint.h>
+//#include <string.h>
 //
-// typedef void (*KnossosLogCallback)(uint8_t level, char* message, int length);
-// typedef void (*KnossosMessageCallback)(void* message, int length);
+//typedef void (*KnossosLogCallback)(uint8_t level, char* message, int length);
+//typedef void (*KnossosMessageCallback)(void* message, int length);
 //
-// typedef struct {
-//   const char* settings_path;
-//   const char* resource_path;
-//   int settings_len;
-//   int resource_len;
-//   KnossosLogCallback log_cb;
-//   KnossosMessageCallback message_cb;
-// } KnossosInitParams;
+//typedef struct {
+//  const char* settings_path;
+//  const char* resource_path;
+//  int settings_len;
+//  int resource_len;
+//  KnossosLogCallback log_cb;
+//  KnossosMessageCallback message_cb;
+//} KnossosInitParams;
 //
-// typedef struct {
-// 	char* header_name;
-//   char* value;
-//   size_t header_len;
-//   size_t value_len;
-// } KnossosHeader;
+//typedef struct {
+//	char* header_name;
+//  char* value;
+//  size_t header_len;
+//  size_t value_len;
+//} KnossosHeader;
 //
-// typedef struct {
-//   KnossosHeader* headers;
-// 	void* response_data;
-//   int status_code;
-//   uint8_t header_count;
-//   size_t response_length;
-// } KnossosResponse;
+//typedef struct {
+//  KnossosHeader* headers;
+//	void* response_data;
+//  int status_code;
+//  uint8_t header_count;
+//  size_t response_length;
+//} KnossosResponse;
 //
-// #ifndef GO_CGO_EXPORT_PROLOGUE_H
+//#ifndef GO_CGO_EXPORT_PROLOGUE_H
 //
-// #ifdef __MINGW32__
-// #define EXTERN extern __declspec(dllexport)
-// #else
-// #define EXTERN extern
-// #endif
+//#ifdef __MINGW32__
+//#define EXTERN extern __declspec(dllexport)
+//#else
+//#define EXTERN extern
+//#endif
 //
-// static void call_log_cb(KnossosLogCallback cb, uint8_t level, char* message, int length) {
-// 	cb(level, message, length);
-// }
+//static void call_log_cb(KnossosLogCallback cb, uint8_t level, char* message, int length) {
+//	cb(level, message, length);
+//}
 //
-// static void call_message_cb(KnossosMessageCallback cb, void* message, int length) {
-//   cb(message, length);
-// }
+//static void call_message_cb(KnossosMessageCallback cb, void* message, int length) {
+//  cb(message, length);
+//}
 //
-// static KnossosResponse* make_response() {
-//   return (KnossosResponse*) malloc(sizeof(KnossosResponse));
-// }
+//static KnossosResponse* make_response() {
+//  return (KnossosResponse*) malloc(sizeof(KnossosResponse));
+//}
 //
-// static KnossosHeader* make_header_array(uint8_t length) {
-//   return (KnossosHeader*) malloc(sizeof(KnossosHeader) * length);
-// }
+//static KnossosHeader* make_header_array(uint8_t length) {
+//  return (KnossosHeader*) malloc(sizeof(KnossosHeader) * length);
+//}
 //
-// static void set_header(KnossosHeader* harray, uint8_t idx, _GoString_ name, _GoString_ value) {
-//   KnossosHeader* hdr = &harray[idx];
-//   hdr->header_len = _GoStringLen(name);
-//   hdr->header_name = (char*)malloc(hdr->header_len);
-//   memcpy(hdr->header_name, _GoStringPtr(name), hdr->header_len);
+//static void set_header(KnossosHeader* harray, uint8_t idx, _GoString_ name, _GoString_ value) {
+//  KnossosHeader* hdr = &harray[idx];
+//  hdr->header_len = _GoStringLen(name);
+//  hdr->header_name = (char*)malloc(hdr->header_len);
+//  memcpy(hdr->header_name, _GoStringPtr(name), hdr->header_len);
 //
-//   hdr->value_len = _GoStringLen(value);
-//   hdr->value = (char*)malloc(hdr->value_len);
-//   memcpy(hdr->value, _GoStringPtr(value), hdr->value_len);
-// }
+//  hdr->value_len = _GoStringLen(value);
+//  hdr->value = (char*)malloc(hdr->value_len);
+//  memcpy(hdr->value, _GoStringPtr(value), hdr->value_len);
+//}
 //
-// static void set_body(KnossosResponse* response, _GoString_ body) {
-//   response->response_length = _GoStringLen(body);
-//   response->response_data = (void*)malloc(response->response_length);
-//   memcpy(response->response_data, _GoStringPtr(body), response->response_length);
-// }
+//static void set_body(KnossosResponse* response, _GoString_ body) {
+//  response->response_length = _GoStringLen(body);
+//  response->response_data = (void*)malloc(response->response_length);
+//  memcpy(response->response_data, _GoStringPtr(body), response->response_length);
+//}
 //
-// EXTERN void KnossosFreeKnossosResponse(KnossosResponse* response) {
-//   for (int i = 0; i < response->header_count; i++) {
-//     KnossosHeader *hdr = &response->headers[i];
-//     free(hdr->header_name);
-//     free(hdr->value);
-//   }
-//   if (response->header_count > 0) free(response->headers);
-//   if (response->response_length > 0) free(response->response_data);
-//   free(response);
-// }
+//EXTERN void KnossosFreeKnossosResponse(KnossosResponse* response) {
+//  for (int i = 0; i < response->header_count; i++) {
+//    KnossosHeader *hdr = &response->headers[i];
+//    free(hdr->header_name);
+//    free(hdr->value);
+//  }
+//  if (response->header_count > 0) free(response->headers);
+//  if (response->response_length > 0) free(response->response_data);
+//  free(response);
+//}
 //
-// #else
-// extern void KnossosFreeKnossosResponse(KnossosResponse* response);
-// #endif
+//#else
+//extern void KnossosFreeKnossosResponse(KnossosResponse* response);
+//#endif
 //
-// #define KNOSSOS_LOG_DEBUG 1
-// #define KNOSSOS_LOG_INFO 2
-// #define KNOSSOS_LOG_WARNING 3
-// #define KNOSSOS_LOG_ERROR 4
-// #define KNOSSOS_LOG_FATAL 5
+//#define KNOSSOS_LOG_DEBUG 1
+//#define KNOSSOS_LOG_INFO 2
+//#define KNOSSOS_LOG_WARNING 3
+//#define KNOSSOS_LOG_ERROR 4
+//#define KNOSSOS_LOG_FATAL 5
 import "C"
 
 import (
