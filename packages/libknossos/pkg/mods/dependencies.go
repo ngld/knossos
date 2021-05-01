@@ -8,10 +8,11 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/rotisserie/eris"
+
 	"github.com/ngld/knossos/packages/api/common"
 	"github.com/ngld/knossos/packages/libknossos/pkg/api"
 	"github.com/ngld/knossos/packages/libknossos/pkg/storage"
-	"github.com/rotisserie/eris"
 )
 
 type (
@@ -81,9 +82,8 @@ func GetDependencySnapshot(ctx context.Context, mods storage.ModProvider, releas
 				rawConstraint = noPreRelConstraintPattern.ReplaceAllStringFunc(rawConstraint, func(s string) string {
 					if !strings.HasSuffix(s, "-") {
 						return s + "-0"
-					} else {
-						return s
 					}
+					return s
 				})
 				con, err := semver.NewConstraint(rawConstraint)
 				if err != nil {

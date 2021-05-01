@@ -5,11 +5,12 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/ngld/knossos/packages/api/client"
-	"github.com/ngld/knossos/packages/api/common"
 	"github.com/rotisserie/eris"
 	bolt "go.etcd.io/bbolt"
 	"google.golang.org/protobuf/proto"
+
+	"github.com/ngld/knossos/packages/api/client"
+	"github.com/ngld/knossos/packages/api/common"
 )
 
 type ModProvider interface {
@@ -262,9 +263,8 @@ func GetUserSettingsForMod(ctx context.Context, id, version string) (*client.Use
 		encoded := bucket.Get([]byte(id + "#" + version))
 		if encoded != nil {
 			return proto.Unmarshal(encoded, result)
-		} else {
-			return nil
 		}
+		return nil
 	})
 	if err != nil {
 		return nil, err

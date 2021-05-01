@@ -8,9 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ngld/knossos/packages/api/client"
 	"github.com/rotisserie/eris"
 	"google.golang.org/protobuf/types/known/timestamppb"
+
+	"github.com/ngld/knossos/packages/api/client"
 )
 
 // LogLevel indicates the severity of a log message
@@ -242,7 +243,7 @@ func ProgressCopier(ctx context.Context, stepInfo TaskStep, length int64, input 
 	for {
 		read, err := input.Read(buffer)
 		if err != nil {
-			if err == io.EOF {
+			if eris.Is(err, io.EOF) {
 				SetProgress(ctx, stepInfo.To, stepInfo.Description)
 				passedSecs := int(time.Since(start).Seconds())
 				if passedSecs == 0 {

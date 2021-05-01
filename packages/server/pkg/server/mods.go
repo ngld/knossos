@@ -6,15 +6,16 @@ import (
 
 	"github.com/jackc/pgtype"
 	"github.com/jackc/pgx/v4"
+	"github.com/rotisserie/eris"
+	"github.com/twitchtv/twirp"
+	"google.golang.org/protobuf/types/known/timestamppb"
+
 	"github.com/ngld/knossos/packages/api/api"
 	"github.com/ngld/knossos/packages/api/common"
 	"github.com/ngld/knossos/packages/server/pkg/db"
 	"github.com/ngld/knossos/packages/server/pkg/db/queries"
 	"github.com/ngld/knossos/packages/server/pkg/mods"
 	"github.com/ngld/knossos/packages/server/pkg/nblog"
-	"github.com/rotisserie/eris"
-	"github.com/twitchtv/twirp"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func GetFileURLs(ctx context.Context, q *queries.DBQuerier, fid int) ([]string, error) {
@@ -31,10 +32,9 @@ func GetFileURLs(ctx context.Context, q *queries.DBQuerier, fid int) ([]string, 
 			}
 
 			return urls, nil
-		} else {
-			nblog.Log(ctx).Warn().Msgf("Generating teaser URLs is not yet supported (%s)", data.StorageKey.String)
-			return []string{}, nil
 		}
+		nblog.Log(ctx).Warn().Msgf("Generating teaser URLs is not yet supported (%s)", data.StorageKey.String)
+		return []string{}, nil
 	}
 	return []string{}, nil
 }

@@ -11,12 +11,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rotisserie/eris"
+	"golang.org/x/sys/cpu"
+
 	"github.com/ngld/knossos/packages/api/client"
 	"github.com/ngld/knossos/packages/api/common"
 	"github.com/ngld/knossos/packages/libknossos/pkg/api"
 	"github.com/ngld/knossos/packages/libknossos/pkg/storage"
-	"github.com/rotisserie/eris"
-	"golang.org/x/sys/cpu"
 )
 
 func getEngineForMod(ctx context.Context, mod *common.Release) (*common.Release, error) {
@@ -89,7 +90,7 @@ func getBinaryForEngine(ctx context.Context, engine *common.Release) (string, er
 	return binaryPath, nil
 }
 
-func getJSONFlagsForBinary(ctx context.Context, binaryPath string) (*storage.JsonFlags, error) {
+func getJSONFlagsForBinary(ctx context.Context, binaryPath string) (*storage.JSONFlags, error) {
 	flags, err := storage.GetEngineFlags(ctx, binaryPath)
 	if err != nil {
 		return nil, err
@@ -109,7 +110,7 @@ func getJSONFlagsForBinary(ctx context.Context, binaryPath string) (*storage.Jso
 	}
 
 	api.Log(ctx, api.LogInfo, "Got: %s", out)
-	flags = new(storage.JsonFlags)
+	flags = new(storage.JSONFlags)
 	err = json.Unmarshal(out, flags)
 	if err != nil {
 		return nil, eris.Wrapf(err, "failed to parse output from %s", binaryPath)
@@ -166,6 +167,8 @@ func LaunchMod(ctx context.Context, mod *common.Release, settings *client.UserSe
 	var err error
 	binary := settings.GetCustomBuild()
 
+	// TODO unnest
+	//nolint:nestif
 	if binary == "" {
 		var engine *common.Release
 

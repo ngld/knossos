@@ -26,8 +26,10 @@ type ResetMailParams struct {
 	BaseURL string
 }
 
-var resetText *tt.Template
-var resetHTML *ht.Template
+var (
+	resetText *tt.Template
+	resetHTML *ht.Template
+)
 
 func initReset(cfg *config.Config) error {
 	data, err := ioutil.ReadFile(cfg.Mail.Reset.Text)
@@ -83,11 +85,12 @@ func SendResetMail(ctx context.Context, cfg *config.Config, params ResetMailPara
 	auth := smtp.PlainAuth("", cfg.Mail.Username, cfg.Mail.Password, cfg.Mail.Server)
 	addr := fmt.Sprintf("%s:%d", cfg.Mail.Server, cfg.Mail.Port)
 
-	if cfg.Mail.Encryption == "STARTTLS" {
+	switch cfg.Mail.Encryption {
+	case "STARTTLS":
 		err = mail.SendWithStartTLS(addr, auth, nil)
-	} else if cfg.Mail.Encryption == "SSL" {
+	case "SSL":
 		err = mail.SendWithTLS(addr, auth, nil)
-	} else {
+	default:
 		err = mail.Send(addr, auth)
 	}
 

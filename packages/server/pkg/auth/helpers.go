@@ -9,11 +9,11 @@ import (
 	guardian "github.com/shaj13/go-guardian/v2/auth"
 	"github.com/shaj13/go-guardian/v2/auth/strategies/jwt"
 	"github.com/shaj13/libcache"
-	"github.com/twitchtv/twirp"
-	"github.com/zpatrick/rbac"
 
 	// Provides libcache.LRU
 	_ "github.com/shaj13/libcache/lru"
+	"github.com/twitchtv/twirp"
+	"github.com/zpatrick/rbac"
 )
 
 var (

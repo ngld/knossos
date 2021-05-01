@@ -8,9 +8,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ngld/knossos/packages/libknossos/pkg/api"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+
+	"github.com/ngld/knossos/packages/libknossos/pkg/api"
 )
 
 var logLevelMap = map[api.LogLevel]zerolog.Level{
@@ -74,13 +75,13 @@ func getConsoleWriter(out io.Writer) zerolog.ConsoleWriter {
 
 		wd, err := os.Getwd()
 		if err != nil {
-			fmt.Sprint(err)
+			fmt.Print(err)
 			return callerStr
 		}
 
 		rel, err := filepath.Rel(wd, parts[0])
 		if err != nil {
-			fmt.Sprint(err)
+			fmt.Print(err)
 			return callerStr
 		}
 

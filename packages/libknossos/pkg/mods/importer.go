@@ -12,12 +12,13 @@ import (
 	"time"
 
 	"github.com/aidarkhanov/nanoid"
+	"github.com/rotisserie/eris"
+	"google.golang.org/protobuf/types/known/timestamppb"
+
 	"github.com/ngld/knossos/packages/api/client"
 	"github.com/ngld/knossos/packages/api/common"
 	"github.com/ngld/knossos/packages/libknossos/pkg/api"
 	"github.com/ngld/knossos/packages/libknossos/pkg/storage"
-	"github.com/rotisserie/eris"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type KnDep struct {
@@ -185,6 +186,8 @@ func ImportMods(ctx context.Context, modFiles []string) error {
 			api.SetProgress(ctx, done/modCount, mod.Title+" "+mod.Version)
 			done++
 
+			// TODO unnest
+			//nolint:nestif
 			if !mod.DevMode {
 				api.Log(ctx, api.LogInfo, "Converting folder structure to dev mode for %s %s", mod.Title, mod.Version)
 				workPath := filepath.Join(modPath, "__dev_work")
