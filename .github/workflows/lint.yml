@@ -49,6 +49,15 @@ jobs:
             !.yarn/releases
             !.yarn/plugins
 
+      - name: Cache managed dependencies
+        uses: actions/cache@v2
+        with:
+          key: third_party-${{ runner.os }}-${{ hashFiles('packages/build-tools/DEPS.yml') }}
+          restore-keys: third_party-${{ runner.os }}-
+          path: |
+            packages/build-tools/DEPS.stamps
+            third_party
+
       - name: Configure tasks
         run: ./task.sh configure static_deps=false
 
