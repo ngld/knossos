@@ -135,19 +135,6 @@ jobs:
       - name: Build Nebula frontend
         run: ./task.sh front-build
 
-      - name: Build Nebula container
-        run: ./task.sh server-container
-
-      - name: Login to GitHub's Container Registry
-        uses: docker/login-action@v1
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Push docker container
-        run: docker push ghcr.io/ngld/knossos/nebula:latest
-
   knossos:
     name: Knossos / ${{ matrix.os }}
     runs-on: ${{ matrix.runner }}
