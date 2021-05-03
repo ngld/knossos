@@ -1,5 +1,6 @@
 package main
 
+// //nolint:gocritic // inserting the space gocritic requests would be nice but breaks the cgo build
 //#include <stdlib.h>
 //#include <stdint.h>
 //#include <string.h>
@@ -106,14 +107,15 @@ import (
 	"strings"
 	"unsafe"
 
+	"github.com/rotisserie/eris"
+	"google.golang.org/protobuf/proto"
+
 	"github.com/ngld/knossos/packages/api/client"
 	"github.com/ngld/knossos/packages/api/common"
 	"github.com/ngld/knossos/packages/libarchive"
 	"github.com/ngld/knossos/packages/libknossos/pkg/api"
 	"github.com/ngld/knossos/packages/libknossos/pkg/storage"
 	"github.com/ngld/knossos/packages/libknossos/pkg/twirp"
-	"github.com/rotisserie/eris"
-	"google.golang.org/protobuf/proto"
 )
 
 var (
@@ -200,8 +202,43 @@ func serveRequest(ctx context.Context, twirpResp *memoryResponse, req *http.Requ
 	server.ServeHTTP(twirpResp, req)
 }
 
+//nolint:golint // golint doesn't understand cgo
+func handleLocalFile(fileRef *common.FileRef) (*C.KnossosResponse, error) {
+	localPath := ""
+	for _, item := range fileRef.Urls {
+		if strings.HasPrefix(item, "file://") {
+			localPath = filepath.FromSlash(item[7:])
+			break
+		}
+	}
+
+	if localPath != "" {
+		data, err := ioutil.ReadFile(localPath)
+		if err != nil {
+			return nil, err
+		}
+
+		resp := C.make_response()
+		resp.status_code = C.int(200)
+		resp.header_count = C.uint8_t(0)
+
+		if len(data) > 0 {
+			resp.response_data = C.CBytes(data)
+		}
+		resp.response_length = C.size_t(len(data))
+		return resp, nil
+	} else {
+		resp := C.make_response()
+		resp.status_code = C.int(404)
+		resp.header_count = C.uint8_t(0)
+		resp.response_length = 0
+		return resp, nil
+	}
+}
+
 // KnossosHandleRequest handles an incoming request from CEF
 //export KnossosHandleRequest
+//nolint:golint // golint doesn't understand cgo
 func KnossosHandleRequest(urlPtr *C.char, urlLen C.int, bodyPtr unsafe.Pointer, bodyLen C.int) *C.KnossosResponse {
 	var body []byte
 	if bodyLen > 0 {
@@ -226,33 +263,9 @@ func KnossosHandleRequest(urlPtr *C.char, urlLen C.int, bodyPtr unsafe.Pointer, 
 		fileId := reqURL[36:]
 		fileRef, err = storage.GetFile(ctx, fileId)
 		if err == nil {
-			localPath := ""
-			for _, item := range fileRef.Urls {
-				if strings.HasPrefix(item, "file://") {
-					localPath = filepath.FromSlash(item[7:])
-					break
-				}
-			}
-
-			if localPath != "" {
-				var data []byte
-				data, err = ioutil.ReadFile(localPath)
-				if err == nil {
-					resp := C.make_response()
-					resp.status_code = C.int(200)
-					resp.header_count = C.uint8_t(0)
-
-					if len(data) > 0 {
-						resp.response_data = C.CBytes(data)
-					}
-					resp.response_length = C.size_t(len(data))
-					return resp
-				}
-			} else {
-				resp := C.make_response()
-				resp.status_code = C.int(404)
-				resp.header_count = C.uint8_t(0)
-				resp.response_length = 0
+			var resp *C.KnossosResponse
+			resp, err = handleLocalFile(fileRef)
+			if err == nil {
 				return resp
 			}
 		}

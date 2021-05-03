@@ -2,6 +2,7 @@ package server
 
 import (
 	"net/http"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -52,8 +53,26 @@ func startMux(pool *pgxpool.Pool, q *queries.DBQuerier, cfg *config.Config) erro
 		Cfg:  cfg,
 	})
 
+	staticRoot, err := filepath.Abs(cfg.HTTP.StaticRoot)
+	if err != nil {
+		return err
+	}
+	staticFS := http.Dir(staticRoot)
+
 	r := mux.NewRouter()
 	r.PathPrefix(server.PathPrefix()).Handler(corsMiddleware(server, []string{"https://files.client.fsnebula.org", "http://localhost:8080"}))
+	r.PathPrefix("/js/").Handler(http.FileServer(staticFS))
+	r.PathPrefix("/css/").Handler(http.FileServer(staticFS))
+	r.HandleFunc("/", func(rw http.ResponseWriter, r *http.Request) {
+		f, err := staticFS.Open("index.html")
+		if err != nil {
+			rw.WriteHeader(500)
+			return
+		}
+		defer f.Close()
+
+		http.ServeContent(rw, r, "index.html", time.Now(), f)
+	})
 
 	sm := secure.New(secure.Options{
 		// TODO: Figure out how to only enable in production

@@ -17,8 +17,9 @@ type Config struct {
 		JSON  bool `default:"false" usage:"Output JSONND instead of pretty console messages"`
 	}
 	HTTP struct {
-		Address string `default:"127.0.0.1:8080" usage:"Adress to listen on"`
-		BaseURL string `default:"http://example.com" usage:"Public URL for this server"`
+		Address    string `default:"127.0.0.1:8080" usage:"Adress to listen on"`
+		BaseURL    string `default:"http://example.com" usage:"Public URL for this server"`
+		StaticRoot string `default:"./front" usage:"Path to the directory containing the compiled front package"`
 	}
 	Argon2 struct {
 		Memory      uint32 `default:"65536"`

@@ -85,15 +85,16 @@ func SendRegistrationMail(ctx context.Context, cfg *config.Config, params RegMai
 	auth := smtp.PlainAuth("", cfg.Mail.Username, cfg.Mail.Password, cfg.Mail.Server)
 	addr := fmt.Sprintf("%s:%d", cfg.Mail.Server, cfg.Mail.Port)
 
-	if cfg.Mail.Encryption == "STARTTLS" {
+	switch cfg.Mail.Encryption {
+	case "STARTTLS":
 		err = mail.SendWithStartTLS(addr, auth, &tls.Config{
 			ServerName: cfg.Mail.Server,
 		})
-	} else if cfg.Mail.Encryption == "SSL" {
+	case "SSL":
 		err = mail.SendWithTLS(addr, auth, &tls.Config{
 			ServerName: cfg.Mail.Server,
 		})
-	} else {
+	default:
 		err = mail.Send(addr, auth)
 	}
 

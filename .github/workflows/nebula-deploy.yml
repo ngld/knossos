@@ -1,18 +1,18 @@
-name: Lint
+name: Deploy Nebula
 
-on: [pull_request]
+on:
+  push:
+    branches:
+      - deploy/nebula
+      - feat/nebula-container
 
 jobs:
-  commitlint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-      - uses: wagoid/commitlint-github-action@v3
-
-  jslint:
-    runs-on: ubuntu-latest
+  nebula-container:
+    runs-on: ubuntu-20.04
+    permissions:
+      packages: write
+      contents: read
+    environment: nu.fsnebula.org
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -61,8 +61,30 @@ jobs:
       - name: Configure tasks
         run: ./task.sh configure static_deps=false
 
-      - name: Fetch JS dependencies
-        run: ./task.sh yarn-install
+      - name: Fetch managed dependencies
+        run: ./task.sh fetch-deps
 
-      - name: Run JS lint
-        run: ./task.sh js-lint
+      - name: Migrate database
+        run: ./task.sh database-migrate
+
+      - name: Build Nebula server
+        run: ./task.sh server-build
+
+      - name: Build Nebula frontend
+        run: ./task.sh front-build
+
+      - name: Build Nebula container
+        run: ./task.sh server-container
+
+      - name: Login to GitHub's Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push docker container
+        run: docker push ghcr.io/ngld/knossos/nebula:latest
+
+      - name: Restart container
+        run: 'curl -H "Authorization: Bearer ${{ secrets.NEBULA_WATCH_TOKEN }}" https://infra.fsnebula.org/nebula-watch/v1/update'

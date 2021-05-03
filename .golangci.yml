@@ -10,9 +10,16 @@ linters:
     - errcheck
     - errorlint
     - exhaustive
-    - gci
     - nestif
     - goconst
     - gocritic
-    - gofumpt
     - nolintlint
+
+    # TODO add to build scripts
+    #- gofumpt
+    #- gci
+
+linters-settings:
+  goconst:
+    min-len: 10
+    min-occurrences: 3

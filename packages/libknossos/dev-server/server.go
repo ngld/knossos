@@ -13,14 +13,15 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
-	"github.com/ngld/knossos/packages/api/client"
-	"github.com/ngld/knossos/packages/libknossos/pkg/api"
-	"github.com/ngld/knossos/packages/libknossos/pkg/storage"
-	"github.com/ngld/knossos/packages/libknossos/pkg/twirp"
 	"github.com/rotisserie/eris"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/protobuf/proto"
+
+	"github.com/ngld/knossos/packages/api/client"
+	"github.com/ngld/knossos/packages/libknossos/pkg/api"
+	"github.com/ngld/knossos/packages/libknossos/pkg/storage"
+	"github.com/ngld/knossos/packages/libknossos/pkg/twirp"
 )
 
 var (
@@ -44,8 +45,7 @@ func main() {
 	log.Logger = log.Logger.With().Caller().Stack().Logger()
 
 	profilePath := ""
-	switch runtime.GOOS {
-	case "windows":
+	if runtime.GOOS == "windows" {
 		profilePath = filepath.Join(os.Getenv("AppData"), "Knossos")
 	}
 

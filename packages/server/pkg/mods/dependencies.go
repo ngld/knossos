@@ -9,9 +9,10 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/rotisserie/eris"
+
 	"github.com/ngld/knossos/packages/server/pkg/db/queries"
 	"github.com/ngld/knossos/packages/server/pkg/nblog"
-	"github.com/rotisserie/eris"
 )
 
 type (
@@ -63,7 +64,7 @@ func pickNaiveVersion(ctx context.Context, available []string, constraints *semv
 
 var noPreRelConstraintPattern = regexp.MustCompile(`[0-9]+\.[0-9]+\.[0-9]+(?:-)?`)
 
-func GetDependencySnapshot(ctx context.Context, Q *queries.DBQuerier, modid string, version string) (DependencySnapshot, error) {
+func GetDependencySnapshot(ctx context.Context, q *queries.DBQuerier, modid string, version string) (DependencySnapshot, error) {
 	snapshot := make(DependencySnapshot)
 	constraints := make(map[string][]constraintItem)
 	queue := []modRequest{{
@@ -78,7 +79,7 @@ func GetDependencySnapshot(ctx context.Context, Q *queries.DBQuerier, modid stri
 		modReq := queue[0]
 		queue = queue[1:]
 
-		pkgs, err := Q.GetPublicPackageDependenciesByModVersion(ctx, modReq.modid, modReq.version)
+		pkgs, err := q.GetPublicPackageDependenciesByModVersion(ctx, modReq.modid, modReq.version)
 		if err != nil {
 			return nil, err
 		}
@@ -100,9 +101,8 @@ func GetDependencySnapshot(ctx context.Context, Q *queries.DBQuerier, modid stri
 				rawConstraint = noPreRelConstraintPattern.ReplaceAllStringFunc(rawConstraint, func(s string) string {
 					if !strings.HasSuffix(s, "-") {
 						return s + "-0"
-					} else {
-						return s
 					}
+					return s
 				})
 				con, err := semver.NewConstraint(rawConstraint)
 				if err != nil {
@@ -111,7 +111,7 @@ func GetDependencySnapshot(ctx context.Context, Q *queries.DBQuerier, modid stri
 
 				_, present := constraints[dep.Modid]
 				if !present {
-					pgModVersions, err := Q.GetPublicVersionForMod(ctx, dep.Modid)
+					pgModVersions, err := q.GetPublicVersionForMod(ctx, dep.Modid)
 					if err != nil {
 						return nil, eris.Wrapf(err, "failed to retrieve versions for %s", dep.Modid)
 					}
@@ -162,7 +162,7 @@ func GetDependencySnapshot(ctx context.Context, Q *queries.DBQuerier, modid stri
 
 	nblog.Log(ctx).Debug().Msg("Resolving constraints")
 	for modid, cons := range constraints {
-		versions, err := Q.GetPublicVersionForMod(ctx, modid)
+		versions, err := q.GetPublicVersionForMod(ctx, modid)
 		if err != nil {
 			return nil, eris.Wrapf(err, "failed to look up versions for mod %s", modid)
 		}

@@ -69,13 +69,13 @@ func getConsoleWriter(out io.Writer) zerolog.ConsoleWriter {
 
 		wd, err := os.Getwd()
 		if err != nil {
-			fmt.Sprint(err)
+			fmt.Print(err)
 			return callerStr
 		}
 
 		rel, err := filepath.Rel(wd, parts[0])
 		if err != nil {
-			fmt.Sprint(err)
+			fmt.Print(err)
 			return callerStr
 		}
 

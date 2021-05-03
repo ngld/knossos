@@ -49,19 +49,19 @@ func (neb nebula) Login(ctx context.Context, req *api.LoginRequest) (*api.LoginR
 	}
 
 	err = argon2.CompareHashAndPassword(details.Password.Bytes, []byte(req.Password))
-	switch err {
-	case argon2.ErrMismatchedHashAndPassword:
+	switch {
+	case eris.Is(err, argon2.ErrMismatchedHashAndPassword):
 		return &api.LoginResponse{Success: false}, nil
 
-	case nil:
+	case eris.Is(err, nil):
 		break
 
-	case argon2.ErrInvalidHash:
-	case argon2.ErrIncompatibleVersion:
+	case eris.Is(err, argon2.ErrInvalidHash):
+	case eris.Is(err, argon2.ErrIncompatibleVersion):
 		nblog.Log(ctx).Error().Err(err).Msg("Failed to process login request")
 		return nil, twirp.InternalError("internal error")
 
-	case argon2.ErrInvalidParams:
+	case eris.Is(err, argon2.ErrInvalidParams):
 		nblog.Log(ctx).Error().Err(err).Msg("Failed to process login due to hashing misconfiguration")
 		return nil, twirp.InternalError("internal error")
 

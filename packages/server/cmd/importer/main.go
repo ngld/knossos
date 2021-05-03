@@ -163,7 +163,6 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to open repo.json")
 	}
-	defer inFile.Close()
 
 	jsonStr, err := ioutil.ReadAll(inFile)
 	if err != nil {
@@ -413,5 +412,6 @@ TRUNCATE files CASCADE;
 		log.Fatal().Err(err).Msg("Commit failed")
 	}
 
+	inFile.Close()
 	log.Info().Msg("Done")
 }

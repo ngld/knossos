@@ -90,6 +90,7 @@ func genLoader(headerFile, dynHeader string) error {
 	headerLines := strings.Split(string(headerContent), "\n")
 	inPreamble := false
 	for _, line := range headerLines {
+		line = strings.TrimLeft(line, " ")
 		if inPreamble && !strings.HasPrefix(line, "extern ") {
 			if line == "/* End of preamble from import \"C\" comments.  */" {
 				inPreamble = false

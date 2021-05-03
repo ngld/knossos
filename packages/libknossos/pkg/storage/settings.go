@@ -4,8 +4,9 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/ngld/knossos/packages/api/client"
 	bolt "go.etcd.io/bbolt"
+
+	"github.com/ngld/knossos/packages/api/client"
 )
 
 var settingsBucket = []byte("settings")

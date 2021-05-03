@@ -10,7 +10,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-type JsonFlags struct {
+type JSONFlags struct {
 	Version struct {
 		Full        string
 		Major       int
@@ -73,7 +73,7 @@ type JsonFlags struct {
 
 var engineFlagsBucket = []byte("engine-flags")
 
-func SaveEngineFlags(ctx context.Context, path string, flags *JsonFlags) error {
+func SaveEngineFlags(ctx context.Context, path string, flags *JSONFlags) error {
 	return update(ctx, func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(engineFlagsBucket)
 		encoded, err := json.Marshal(flags)
@@ -85,8 +85,8 @@ func SaveEngineFlags(ctx context.Context, path string, flags *JsonFlags) error {
 	})
 }
 
-func GetEngineFlags(ctx context.Context, path string) (*JsonFlags, error) {
-	var flags *JsonFlags = nil
+func GetEngineFlags(ctx context.Context, path string) (*JSONFlags, error) {
+	var flags *JSONFlags = nil
 	err := view(ctx, func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(engineFlagsBucket)
 		encoded := bucket.Get([]byte("file#" + path))
@@ -94,7 +94,7 @@ func GetEngineFlags(ctx context.Context, path string) (*JsonFlags, error) {
 			return nil
 		}
 
-		flags = new(JsonFlags)
+		flags = new(JSONFlags)
 		return json.Unmarshal(encoded, flags)
 	})
 	if err != nil {

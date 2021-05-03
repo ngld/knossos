@@ -1,10 +1,11 @@
 package auth
 
 import (
-	"github.com/ngld/knossos/packages/server/pkg/db"
-	"github.com/ngld/knossos/packages/server/pkg/db/queries"
 	"github.com/rotisserie/eris"
 	"github.com/zpatrick/rbac"
+
+	"github.com/ngld/knossos/packages/server/pkg/db"
+	"github.com/ngld/knossos/packages/server/pkg/db/queries"
 )
 
 // ErrInvalidRole is returned if the current user has an invalid role

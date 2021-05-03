@@ -5,8 +5,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/ngld/knossos/packages/libknossos/pkg/api"
 	bolt "go.etcd.io/bbolt"
+
+	"github.com/ngld/knossos/packages/libknossos/pkg/api"
 )
 
 type txCtxKey struct{}
@@ -55,7 +56,9 @@ func Open(ctx context.Context) error {
 
 func Clean(ctx context.Context) error {
 	// TODO This should delete all unknown keys and if possible unreferenced entries from the DB
-	return nil
+	return db.Update(func(tx *bolt.Tx) error {
+		return cleanEngineFlags(ctx, tx)
+	})
 }
 
 func Close(ctx context.Context) {

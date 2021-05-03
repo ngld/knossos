@@ -3,10 +3,11 @@ package storage
 import (
 	"context"
 
-	"github.com/ngld/knossos/packages/api/common"
 	"github.com/rotisserie/eris"
 	"go.etcd.io/bbolt"
 	"google.golang.org/protobuf/proto"
+
+	"github.com/ngld/knossos/packages/api/common"
 )
 
 var fileBucket = []byte("files")
