@@ -156,8 +156,8 @@ function renderFlags(
         onChange={action((e) => {
           flag.enabled = e.currentTarget.checked;
           const flagMap: Record<string, boolean> = {};
-          for (const flag of flags) {
-            flagMap[flag.flag] = flag.enabled;
+          for (const item of flags) {
+            flagMap[item.flag] = item.enabled;
           }
 
           void saveFlagInfos(gs, params, flagMap, freeform);

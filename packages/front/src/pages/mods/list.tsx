@@ -8,6 +8,7 @@ import type { RouteComponentProps } from 'react-router-dom';
 import { Spinner, Callout, NonIdealState, InputGroup } from '@blueprintjs/core';
 import type { AsyncReturnType } from 'type-fest';
 
+import { ModListRequest_SortType } from '@api/service';
 import { useGlobalState, GlobalState } from '../../lib/state';
 
 function debouncePromise<T extends (...args: any) => any>(func: T, delay: number): T {
@@ -38,6 +39,7 @@ const listMods = debouncePromise(async function listMods(gs: GlobalState, query:
     limit: 300,
     offset: 0,
     query,
+    sort: ModListRequest_SortType.NAME,
   });
 
   return response;

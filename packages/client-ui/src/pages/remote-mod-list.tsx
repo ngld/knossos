@@ -4,7 +4,6 @@ import { History } from 'history';
 import InfiniteScroll from 'react-infinite-scroll-component';
 import { ModListResponse, ModListItem, ModListRequest_SortType } from '@api/service';
 import { GlobalState, useGlobalState } from '../lib/state';
-import { launchMod } from '../dialogs/launch-mod';
 import ModstockImage from '../resources/modstock.jpg';
 
 async function fetchMods(gs: GlobalState, offset: number): Promise<ModListResponse> {
@@ -53,7 +52,7 @@ export default function RemoteModList(props: RemoteModListProps): React.ReactEle
         setState((prev) => ({
           ...prev,
           loading: false,
-          error: e.toString(),
+          error: e instanceof Error ? e.message : '',
         }));
       }
     })();
@@ -70,7 +69,7 @@ export default function RemoteModList(props: RemoteModListProps): React.ReactEle
       console.error(e);
       setState((prev) => ({
         ...prev,
-        error: e.toString(),
+        error: e instanceof Error ? e.message : '',
       }));
     }
   }

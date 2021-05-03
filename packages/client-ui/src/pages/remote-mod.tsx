@@ -1,24 +1,19 @@
-import React, { useState, useMemo } from 'react';
-import { action, makeAutoObservable } from 'mobx';
+import React, { useMemo } from 'react';
 import { observer } from 'mobx-react-lite';
 import { fromPromise } from 'mobx-utils';
 import type { RouteComponentProps } from 'react-router-dom';
 import {
   Spinner,
   Callout,
-  Checkbox,
   NonIdealState,
   HTMLSelect,
-  HTMLTable,
   Tab,
   Tabs,
 } from '@blueprintjs/core';
 import styled from 'astroturf/react';
 
 import { ModDetailsResponse } from '@api/service';
-import { Release, ModType } from '@api/mod';
 
-import RefImage from '../elements/ref-image';
 import { useGlobalState, GlobalState } from '../lib/state';
 import bbparser from '../lib/bbparser';
 
