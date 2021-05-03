@@ -52,6 +52,7 @@
         "cmake.configureOnOpen": false,
         "clangd.arguments": [
             "-header-insertion=never"
-        ]
+        ],
+        "eslint.nodePath": ".yarn/sdks"
 	}
 }

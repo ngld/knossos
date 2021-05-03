@@ -388,8 +388,6 @@ func downloadAndExtract(cmd *cobra.Command, cfg depConfig, cfgData string, stamp
 		stampToken := meta.URL + "#" + meta.Sha256
 		skip := !evalConditions(&meta, vars)
 		if skip && !update {
-			// Remember the hash and URL even for skipped dependencies
-			stamps[name] = "skip-" + stampToken
 			continue
 		}
 
@@ -447,7 +445,7 @@ func downloadAndExtract(cmd *cobra.Command, cfg depConfig, cfgData string, stamp
 		for {
 			n, err := resp.Body.Read(buf)
 			if err != nil && n < 1 {
-				if err == io.EOF {
+				if eris.Is(err, io.EOF) {
 					break
 				}
 				return eris.Wrapf(err, "Failed during download of %s", meta.URL)
@@ -479,7 +477,7 @@ func downloadAndExtract(cmd *cobra.Command, cfg depConfig, cfgData string, stamp
 			}
 		}
 
-		if skip {
+		if skip && update {
 			stamps[name] = "skip-" + stampToken
 			continue
 		}

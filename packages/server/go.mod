@@ -9,9 +9,11 @@ require (
 	github.com/cristalhq/aconfig v0.13.4
 	github.com/cristalhq/aconfig/aconfigtoml v0.12.0
 	github.com/davecgh/go-spew v1.1.1
+	github.com/gofrs/uuid v4.0.0+incompatible // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/gorilla/mux v1.8.0
 	github.com/jackc/pgconn v1.8.1
+	github.com/jackc/pgmock v0.0.0-20201204152224-4fe30f7445fd // indirect
 	github.com/jackc/pgproto3/v2 v2.0.7 // indirect
 	github.com/jackc/pgtype v1.7.0
 	github.com/jackc/pgx/v4 v4.11.0
@@ -24,11 +26,13 @@ require (
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/shaj13/go-guardian/v2 v2.11.3
 	github.com/shaj13/libcache v1.0.0
+	github.com/shopspring/decimal v1.2.0 // indirect
+	github.com/stretchr/testify v1.7.0 // indirect
 	github.com/twitchtv/twirp v7.2.0+incompatible
 	github.com/unrolled/secure v1.0.8
 	github.com/zpatrick/rbac v0.0.0-20180829190353-d2c4f050cf28
 	golang.org/x/crypto v0.0.0-20210421170649-83a5a9bb288b // indirect
-	golang.org/x/sys v0.0.0-20210403161142-5e06dd20ab57 // indirect
+	golang.org/x/sys v0.0.0-20210503173754-0981d6026fa6 // indirect
 	golang.org/x/text v0.3.6 // indirect
 	google.golang.org/protobuf v1.26.0
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
