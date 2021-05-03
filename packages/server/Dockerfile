@@ -1,4 +1,4 @@
-FROM alpine:3.7
+FROM debian:10
 
 ADD ./nebula.linux /app/nebula
 ADD ./config.toml /app/config.toml
