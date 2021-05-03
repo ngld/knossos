@@ -17,9 +17,9 @@
 #include "include/wrapper/cef_helpers.h"
 
 #include "browser/knossos_archive.h"
-#include "browser/knossos_file_result_handler.h"
 #include "browser/knossos_archive_handler.h"
 #include "browser/knossos_dev_tools.h"
+#include "browser/knossos_file_result_handler.h"
 #include "browser/knossos_resource_handler.h"
 
 namespace {
@@ -65,6 +65,8 @@ KnossosHandler::KnossosHandler(bool use_views, std::string settings_path)
 
     knossos_thread_ = CefThread::CreateThread("libknossos");
   }
+
+  PlatformInit();
 }
 
 KnossosHandler::~KnossosHandler() { g_instance = nullptr; }
@@ -179,31 +181,28 @@ bool KnossosHandler::OnProcessMessageReceived(
   } else if (message_name == "knOpenFileRequest") {
     auto args = message->GetArgumentList();
     auto accepted_list = args->GetList(2);
-    std::vector<CefString> accepted;
+    std::vector<std::string> accepted;
     for (size_t i = 0; i < accepted_list->GetSize(); i++) {
       accepted[i] = accepted_list->GetString(i);
     }
 
-    browser->GetHost()->RunFileDialog(
-        FILE_DIALOG_OPEN, args->GetString(0), args->GetString(1), accepted, 0,
-        new KnossosFileResultHandler(frame, args->GetInt(3), false));
+    OpenFileDialog(browser, args->GetString(0), args->GetString(1), accepted,
+                   new KnossosFileResultHandler(frame, args->GetInt(3), false));
   } else if (message_name == "knOpenFolderRequest") {
     auto args = message->GetArgumentList();
-    browser->GetHost()->RunFileDialog(
-        FILE_DIALOG_OPEN_FOLDER, args->GetString(0), args->GetString(1),
-        std::vector<CefString>(), 0,
+    OpenFolderDialog(
+        browser, args->GetString(0), args->GetString(1),
         new KnossosFileResultHandler(frame, args->GetInt(2), false));
   } else if (message_name == "knSaveFileRequest") {
     auto args = message->GetArgumentList();
     auto accepted_list = args->GetList(2);
-    std::vector<CefString> accepted;
+    std::vector<std::string> accepted;
     for (size_t i = 0; i < accepted_list->GetSize(); i++) {
       accepted[i] = accepted_list->GetString(i);
     }
 
-    browser->GetHost()->RunFileDialog(
-        FILE_DIALOG_SAVE, args->GetString(0), args->GetString(1), accepted, 0,
-        new KnossosFileResultHandler(frame, args->GetInt(3), false));
+    SaveFileDialog(browser, args->GetString(0), args->GetString(1), accepted,
+                   new KnossosFileResultHandler(frame, args->GetInt(3), false));
   } else if (message_name == "knMinimizeWindow") {
 #ifndef OS_MAC
     CefBrowserView::GetForBrowser(browser)->GetWindow()->Minimize();

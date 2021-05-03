@@ -113,19 +113,20 @@ private:
   friend class KnossosApp;
 
   // Platform-specific implementation.
+  void PlatformInit();
   void PlatformTitleChange(CefRefPtr<CefBrowser> browser,
                            const CefString &title);
   void SaveFileDialog(CefRefPtr<CefBrowser> browser, std::string title,
-                      std::string message, std::string default_filename,
-                      std::string folder,
-                      const base::Callback<void(bool, std::string)> callback);
+                      std::string default_filepath,
+                      std::vector<std::string> accepted,
+                      CefRefPtr<CefRunFileDialogCallback> callback);
   void OpenFileDialog(CefRefPtr<CefBrowser> browser, std::string title,
-                      std::string message, std::string default_filename,
-                      std::string folder,
-                      const base::Callback<void(bool, std::string)> callback);
+                      std::string default_filepath,
+                      std::vector<std::string> accepted,
+                      CefRefPtr<CefRunFileDialogCallback> callback);
   void OpenFolderDialog(CefRefPtr<CefBrowser> browser, std::string title,
-                        std::string message, std::string folder,
-                        const base::Callback<void(bool, std::string)> callback);
+                        std::string folder,
+                        CefRefPtr<CefRunFileDialogCallback> callback);
 
   // True if the application is using the Views framework.
   const bool use_views_;
