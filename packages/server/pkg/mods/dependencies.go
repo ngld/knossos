@@ -118,7 +118,7 @@ func GetDependencySnapshot(ctx context.Context, q *queries.DBQuerier, modid stri
 
 					modVersions := make([]string, len(pgModVersions))
 					for idx, ver := range pgModVersions {
-						modVersions[idx] = ver.String
+						modVersions[idx] = *ver
 					}
 
 					version, err := pickNaiveVersion(ctx, modVersions, con)
@@ -171,7 +171,7 @@ func GetDependencySnapshot(ctx context.Context, q *queries.DBQuerier, modid stri
 		// Check each version (starting with the latest) against our given constraints until we find one that satisfies
 		// them.
 		for idx := len(versions) - 1; idx >= 0; idx-- {
-			version, err := semver.StrictNewVersion(versions[idx].String)
+			version, err := semver.StrictNewVersion(*versions[idx])
 			if err != nil {
 				return nil, eris.Wrapf(err, "failed to parse versions for %s", modid)
 			}

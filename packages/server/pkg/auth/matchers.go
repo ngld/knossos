@@ -43,7 +43,7 @@ func publicMod(q *queries.DBQuerier) rbac.Matcher {
 			return false, eris.Wrapf(err, "failed to retrieve mod role")
 		}
 
-		return !private.Bool, nil
+		return !*private, nil
 	}
 }
 
@@ -62,7 +62,7 @@ func publicRelease(q *queries.DBQuerier) rbac.Matcher {
 			return false, eris.Wrapf(err, "failed to retrieve release visibility")
 		}
 
-		return !row.Mod.Bool && !row.Release.Bool, nil
+		return !*row.Mod && !*row.Release, nil
 	}
 }
 
@@ -81,7 +81,7 @@ func modRole(q *queries.DBQuerier, matchRoles []db.ModRole) rbac.Matcher {
 			return false, eris.Wrapf(err, "failed to retrieve mod role")
 		}
 
-		dbRole := db.ModRole(role.Int)
+		dbRole := db.ModRole(*role)
 		for _, match := range matchRoles {
 			if dbRole == match {
 				return true, nil

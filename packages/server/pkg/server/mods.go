@@ -24,16 +24,16 @@ func GetFileURLs(ctx context.Context, q *queries.DBQuerier, fid int) ([]string, 
 		return []string{}, eris.Wrapf(err, "failed to fetch file %d", fid)
 	}
 
-	if data.StorageKey.Status == pgtype.Present {
-		if data.External.Status == pgtype.Present {
-			urls := make([]string, len(data.External.Elements))
-			for idx, el := range data.External.Elements {
-				urls[idx] = el.String
+	if data.StorageKey != nil {
+		if len(data.External) > 0 {
+			urls := make([]string, len(data.External))
+			for idx, el := range data.External {
+				urls[idx] = el
 			}
 
 			return urls, nil
 		}
-		nblog.Log(ctx).Warn().Msgf("Generating teaser URLs is not yet supported (%s)", data.StorageKey.String)
+		nblog.Log(ctx).Warn().Msgf("Generating teaser URLs is not yet supported (%s)", *data.StorageKey)
 		return []string{}, nil
 	}
 	return []string{}, nil
@@ -110,7 +110,7 @@ func (neb nebula) GetModList(ctx context.Context, req *api.ModListRequest) (*api
 	}
 
 	return &api.ModListResponse{
-		Count: int32(modCount.Int),
+		Count: int32(*modCount),
 		Mods:  modItems,
 	}, nil
 }
@@ -135,7 +135,7 @@ func (neb nebula) GetModDetails(ctx context.Context, req *api.ModDetailsRequest)
 			return nil, twirp.InternalError("internal error")
 		}
 
-		req.Version = version.Version.String
+		req.Version = *version.Version
 	}
 
 	details, err := neb.Q.GetPublicReleaseByModVersion(ctx, req.Modid, req.Version)
@@ -148,14 +148,14 @@ func (neb nebula) GetModDetails(ctx context.Context, req *api.ModDetailsRequest)
 		return nil, twirp.InternalError("internal error")
 	}
 
-	bannerURL, err := GetFileURLs(ctx, neb.Q, int(details.Banner.Int))
+	bannerURL, err := GetFileURLs(ctx, neb.Q, int(*details.Banner))
 	if err != nil {
 		return nil, twirp.InternalError("internal error")
 	}
 
-	screenshotURLs := make([]string, len(details.Screenshots.Elements))
-	for idx, fid := range details.Screenshots.Elements {
-		urls, err := GetFileURLs(ctx, neb.Q, int(fid.Int))
+	screenshotURLs := make([]string, len(details.Screenshots))
+	for idx, fid := range details.Screenshots {
+		urls, err := GetFileURLs(ctx, neb.Q, int(*fid))
 		if err != nil {
 			return nil, twirp.InternalError("internal error")
 		}
@@ -163,33 +163,28 @@ func (neb nebula) GetModDetails(ctx context.Context, req *api.ModDetailsRequest)
 		screenshotURLs[idx] = urls[0]
 	}
 
-	videos := make([]string, len(details.Videos.Elements))
-	for idx, video := range details.Videos.Elements {
-		videos[idx] = video.String
-	}
-
 	result := &api.ModDetailsResponse{
-		Title:         details.Title.String,
-		Version:       details.Version.String,
-		Type:          uint32(details.Type.Int),
-		Stability:     uint32(details.Stability.Int),
-		Description:   details.Description.String,
+		Title:         *details.Title,
+		Version:       *details.Version,
+		Type:          uint32(*details.Type),
+		Stability:     uint32(*details.Stability),
+		Description:   *details.Description,
 		Banner:        bannerURL[0],
-		ReleaseThread: details.ReleaseThread.String,
+		ReleaseThread: *details.ReleaseThread,
 		Screenshots:   screenshotURLs,
-		Videos:        videos,
+		Videos:        details.Videos,
 		Released:      &timestamppb.Timestamp{Seconds: details.Released.Time.Unix()},
 		Updated:       &timestamppb.Timestamp{Seconds: details.Updated.Time.Unix()},
 	}
 
-	result.Versions, err = neb.Q.GetPublicModVersions(ctx, details.Aid.Int)
+	result.Versions, err = neb.Q.GetPublicModVersions(ctx, *details.Aid)
 	if err != nil {
-		nblog.Log(ctx).Error().Err(err).Msgf("Failed to fetch version list for mod %d", details.Aid.Int)
+		nblog.Log(ctx).Error().Err(err).Msgf("Failed to fetch version list for mod %d", *details.Aid)
 		return nil, twirp.InternalError("internal error")
 	}
 
 	if req.RequestDownloads {
-		dlInfos, err := neb.Q.GetPublicDownloadsByRID(ctx, details.ID.Int)
+		dlInfos, err := neb.Q.GetPublicDownloadsByRID(ctx, *details.ID)
 		if err != nil {
 			nblog.Log(ctx).Error().Err(err).Msg("Failed to fetch download info")
 		} else {
@@ -197,29 +192,25 @@ func (neb nebula) GetModDetails(ctx context.Context, req *api.ModDetailsRequest)
 			result.Downloads = make([]*api.ModDownloadPackage, 0)
 
 			for _, row := range dlInfos {
-				archives, found := packages[row.Package.String]
+				archives, found := packages[*row.Package]
 				if !found {
 					apiPkg := &api.ModDownloadPackage{
-						Name:     row.Package.String,
-						Notes:    row.PackageNotes.String,
+						Name:     *row.Package,
+						Notes:    *row.PackageNotes,
 						Archives: make([]*api.ModDownloadArchive, 0),
 					}
 
 					result.Downloads = append(result.Downloads, apiPkg)
-					packages[row.Package.String] = &apiPkg.Archives
+					packages[*row.Package] = &apiPkg.Archives
 					archives = &apiPkg.Archives
 				}
 
 				archive := &api.ModDownloadArchive{
-					Label:    row.Label.String,
+					Label:    *row.Label,
 					Checksum: hex.EncodeToString(row.ChecksumDigest.Bytes),
-					Size:     uint32(row.Filesize.Int),
+					Size:     uint32(*row.Filesize),
 					// TODO support internal links
-					Links: make([]string, len(row.External.Elements)),
-				}
-
-				for idx, link := range row.External.Elements {
-					archive.Links[idx] = link.String
+					Links: row.External,
 				}
 
 				*archives = append(*archives, archive)
@@ -253,16 +244,17 @@ func (neb nebula) RequestModInstall(ctx context.Context, req *api.ModInstallRequ
 		rel := &common.Release{
 			Modid:         req.Modid,
 			Version:       req.Version,
-			Title:         details.Title.String,
+			Title:         *details.Title,
 			Folder:        req.Modid + "-" + req.Version,
-			Description:   details.Description.String,
-			ReleaseThread: details.ReleaseThread.String,
+			Description:   *details.Description,
+			ReleaseThread: *details.ReleaseThread,
 			Released:      timestamppb.New(details.Released.Time),
 			Updated:       timestamppb.New(details.Updated.Time),
-			Notes:         details.Notes.String,
+			Notes:         *details.Notes,
+			Videos:        details.Videos,
 		}
 
-		switch db.EngineStability(details.Stability.Int) {
+		switch db.EngineStability(*details.Stability) {
 		case db.EngineStable:
 			rel.Stability = common.ReleaseStability_STABLE
 		case db.EngineRC:
@@ -272,7 +264,7 @@ func (neb nebula) RequestModInstall(ctx context.Context, req *api.ModInstallRequ
 		case db.EngineUnknown:
 		}
 
-		switch db.ModType(details.Type.Int) {
+		switch db.ModType(*details.Type) {
 		case db.TypeEngine:
 			rel.Type = common.ModType_ENGINE
 		case db.TypeExtension:
@@ -288,46 +280,41 @@ func (neb nebula) RequestModInstall(ctx context.Context, req *api.ModInstallRequ
 		// TODO: Properly support TCs
 		rel.Parent = "FS2"
 
-		if details.Teaser.Status == pgtype.Present {
-			urls, err := GetFileURLs(ctx, neb.Q, int(details.Teaser.Int))
+		if details.Teaser != nil {
+			urls, err := GetFileURLs(ctx, neb.Q, int(*details.Teaser))
 			if err != nil {
 				return nil, err
 			}
 
 			rel.Teaser = &common.FileRef{
-				Fileid: string(details.Teaser.Int),
+				Fileid: string(*details.Teaser),
 				Urls:   urls,
 			}
 		}
 
-		if details.Banner.Status == pgtype.Present {
-			urls, err := GetFileURLs(ctx, neb.Q, int(details.Banner.Int))
+		if details.Banner != nil {
+			urls, err := GetFileURLs(ctx, neb.Q, int(*details.Banner))
 			if err != nil {
 				return nil, err
 			}
 
 			rel.Banner = &common.FileRef{
-				Fileid: string(details.Banner.Int),
+				Fileid: string(*details.Banner),
 				Urls:   urls,
 			}
 		}
 
-		rel.Screenshots = make([]*common.FileRef, len(details.Screenshots.Elements))
-		for idx, el := range details.Screenshots.Elements {
-			urls, err := GetFileURLs(ctx, neb.Q, int(el.Int))
+		rel.Screenshots = make([]*common.FileRef, len(details.Screenshots))
+		for idx, el := range details.Screenshots {
+			urls, err := GetFileURLs(ctx, neb.Q, int(*el))
 			if err != nil {
 				return nil, err
 			}
 
 			rel.Screenshots[idx] = &common.FileRef{
-				Fileid: string(el.Int),
+				Fileid: string(*el),
 				Urls:   urls,
 			}
-		}
-
-		rel.Videos = make([]string, len(details.Videos.Elements))
-		for idx, el := range details.Videos.Elements {
-			rel.Videos[idx] = el.String
 		}
 
 		result.Releases = append(result.Releases, rel)

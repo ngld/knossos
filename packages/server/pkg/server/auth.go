@@ -70,7 +70,7 @@ func (neb nebula) Login(ctx context.Context, req *api.LoginRequest) (*api.LoginR
 		return nil, twirp.InternalError("internal error")
 	}
 
-	token, err := auth.IssueToken(ctx, req.Username, int(details.ID.Int), []string{roles[details.Role.Int]})
+	token, err := auth.IssueToken(ctx, req.Username, int(*details.ID), []string{roles[*details.Role]})
 	if err != nil {
 		return nil, err
 	}
@@ -161,12 +161,12 @@ func (neb nebula) VerifyAccount(ctx context.Context, req *api.TokenRequest) (*ap
 		return nil, twirp.InternalError("internal error")
 	}
 
-	if user.Validated.Bool {
+	if *user.Validated {
 		nblog.Log(ctx).Warn().Msgf("User for token %s has already been validated. Pretending this was succesful. This shouldn't happen!", req.Token)
 		return &api.BoolResponse{Success: true}, nil
 	}
 
-	_, err = neb.Q.ValidateUser(ctx, user.ID.Int)
+	_, err = neb.Q.ValidateUser(ctx, *user.ID)
 	if err != nil {
 		nblog.Log(ctx).Error().Err(err).Msgf("Failed to validate user for token %s", req.Token)
 		return &api.BoolResponse{Success: false}, nil
@@ -205,7 +205,7 @@ func (neb nebula) StartPasswordReset(ctx context.Context, req *api.StartPassword
 		return &api.BoolResponse{Success: true}, nil
 	}
 
-	_, err = neb.Q.SetResetToken(ctx, token, user.ID.Int)
+	_, err = neb.Q.SetResetToken(ctx, token, *user.ID)
 	if err != nil {
 		nblog.Log(ctx).Error().Err(err).Msgf("Failed to update reset token for %s", req.Email)
 		return nil, twirp.InternalError("internal error")
@@ -214,7 +214,7 @@ func (neb nebula) StartPasswordReset(ctx context.Context, req *api.StartPassword
 	err = mail.SendResetMail(ctx, neb.Cfg, mail.ResetMailParams{
 		To:       req.Email,
 		Found:    true,
-		Username: user.Username.String,
+		Username: *user.Username,
 		Token:    token,
 	})
 	if err != nil {
@@ -246,9 +246,9 @@ func (neb nebula) PreparePasswordReset(ctx context.Context, req *api.TokenReques
 		return nil, twirp.InternalError("internal error")
 	}
 
-	_, err = neb.Q.SetResetToken(ctx, token, user.ID.Int)
+	_, err = neb.Q.SetResetToken(ctx, token, *user.ID)
 	if err != nil {
-		nblog.Log(ctx).Error().Err(err).Msgf("Failed to update reset token for user %d", user.ID.Int)
+		nblog.Log(ctx).Error().Err(err).Msgf("Failed to update reset token for user %d", *user.ID)
 		return nil, twirp.InternalError("internal error")
 	}
 
