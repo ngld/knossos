@@ -56,7 +56,7 @@ INSERT INTO mod_package_archives (package_id, label, destination, checksum_algo,
     RETURNING (id);
 
 -- name: CreatePackageFile :one
-INSERT INTO mod_package_files (package_id, path, archive, archive_path, checksum_algo, checksum_digest)
+INSERT INTO mod_package_files (package_id, path, archive_id, archive_path, checksum_algo, checksum_digest)
     VALUES (pggen.arg('package_id'), pggen.arg('path'), pggen.arg('archive'), pggen.arg('archive_path'),
         pggen.arg('checksum_algo'), pggen.arg('checksum_digest'))
     RETURNING (id);

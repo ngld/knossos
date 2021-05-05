@@ -228,6 +228,7 @@ def configure():
         cmds = [
             protoc("google/protobuf/timestamp.proto", ts = "api"),
             protoc("mod.proto", go = "common", ts = "api"),
+            protoc("modsync.proto", go = "common", ts = "api"),
             protoc("client.proto", go = "client", twirp = "twirp", ts = "api"),
             protoc("service.proto", go = "api", twirp = "twirp", ts = "api"),
             # twirp doesn't support go.mod paths so we have to move the generated files to the correct location

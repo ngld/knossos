@@ -28,6 +28,15 @@ enum ModType {
   EXTENSION = 4;
 }
 
+message Mod {
+  string modid = 1;
+  string title = 2;
+  ModType type = 3;
+  string parent = 4;
+
+  repeated string tags = 5;
+}
+
 enum ReleaseStability {
   STABLE = 0;
   RC = 1;
@@ -38,11 +47,8 @@ message Release {
   // core meta
   string modid = 1;
   string version = 2;
-  string title = 5;
   string folder = 7;
   ReleaseStability stability = 3;
-  ModType type = 6;
-  string parent = 8;
 
   // mod page
   string description = 10;

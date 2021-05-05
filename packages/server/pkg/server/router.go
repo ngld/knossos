@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"net/http"
 	"path/filepath"
 	"sort"
@@ -9,12 +10,14 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/rs/zerolog/log"
 	"github.com/unrolled/secure"
 
 	"github.com/ngld/knossos/packages/api/api"
 	"github.com/ngld/knossos/packages/server/pkg/auth"
 	"github.com/ngld/knossos/packages/server/pkg/config"
 	"github.com/ngld/knossos/packages/server/pkg/db/queries"
+	"github.com/ngld/knossos/packages/server/pkg/exporter"
 	"github.com/ngld/knossos/packages/server/pkg/nblog"
 )
 
@@ -59,11 +62,18 @@ func startMux(pool *pgxpool.Pool, q *queries.DBQuerier, cfg *config.Config) erro
 	}
 	staticFS := http.Dir(staticRoot)
 
+	syncRoot, err := filepath.Abs(cfg.HTTP.SyncRoot)
+	if err != nil {
+		return err
+	}
+
 	r := mux.NewRouter()
 	r.PathPrefix(server.PathPrefix()).Handler(corsMiddleware(server, []string{"https://files.client.fsnebula.org", "http://localhost:8080"}))
+	r.PathPrefix("/sync/").Handler(http.StripPrefix("/sync/", http.FileServer(http.Dir(syncRoot))))
 	r.PathPrefix("/js/").Handler(http.FileServer(staticFS))
 	r.PathPrefix("/css/").Handler(http.FileServer(staticFS))
-	r.HandleFunc("/", func(rw http.ResponseWriter, r *http.Request) {
+
+	r.PathPrefix("/").HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 		f, err := staticFS.Open("index.html")
 		if err != nil {
 			rw.WriteHeader(500)
@@ -89,6 +99,16 @@ func startMux(pool *pgxpool.Pool, q *queries.DBQuerier, cfg *config.Config) erro
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 	}
+
+	go func() {
+		log.Info().Msg("Updating modsync files")
+		err := exporter.UpdateModsyncExport(context.Background(), q, syncRoot)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to update modsync files")
+		} else {
+			log.Info().Msg("modsync update finished")
+		}
+	}()
 
 	return muxServer.ListenAndServe()
 }

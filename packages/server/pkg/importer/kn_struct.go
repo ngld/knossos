@@ -28,10 +28,11 @@ type KnArchive struct {
 }
 
 type KnFile struct {
-	Filename string
-	Archive  string
-	OrigName string
-	Checksum KnChecksum
+	Filename  string
+	Archive   string
+	ArchiveID int32
+	OrigName  string
+	Checksum  KnChecksum
 }
 
 type KnPackage struct {

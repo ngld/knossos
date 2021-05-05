@@ -45,11 +45,11 @@ func handleFile(ctx context.Context, q *queries.DBQuerier, url string) int32 {
 }
 
 type FilesSource struct {
-	packageID int32
+	err       error
 	files     []importer.KnFile
 	curIdx    int
 	length    int
-	err       error
+	packageID int32
 }
 
 func (fs *FilesSource) Next() bool {
@@ -57,7 +57,7 @@ func (fs *FilesSource) Next() bool {
 	return fs.err == nil && fs.curIdx < fs.length
 }
 
-var filesSourceCols = []string{"package_id", "path", "archive", "archive_path", "checksum_algo", "checksum_digest"}
+var filesSourceCols = []string{"package_id", "path", "archive_id", "archive_path", "checksum_algo", "checksum_digest"}
 
 func (fs *FilesSource) Values() ([]interface{}, error) {
 	file := fs.files[fs.curIdx]
@@ -71,7 +71,7 @@ func (fs *FilesSource) Values() ([]interface{}, error) {
 	result := make([]interface{}, 6)
 	result[0] = fs.packageID
 	result[1] = file.Filename
-	result[2] = file.Archive
+	result[2] = file.ArchiveID
 	result[3] = file.OrigName
 	result[4] = file.Checksum[0]
 	result[5] = digest
@@ -151,7 +151,7 @@ func main() {
 	}
 
 	dbConfig.ConnConfig.Logger = nblog.PgxLogger{}
-	dbConfig.ConnConfig.LogLevel = pgx.LogLevelDebug
+	dbConfig.ConnConfig.LogLevel = pgx.LogLevelInfo
 	pool, err := pgxpool.ConnectConfig(context.Background(), dbConfig)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to open DB connection")
@@ -325,6 +325,7 @@ TRUNCATE files CASCADE;
 			}
 
 			pkgBatch := new(pgx.Batch)
+			archiveBatch := new(pgx.Batch)
 
 			for _, dep := range pkg.Dependencies {
 				q.CreatePackageDependencyBatch(pkgBatch, queries.CreatePackageDependencyParams{
@@ -377,7 +378,7 @@ TRUNCATE files CASCADE;
 					log.Fatal().Err(err).Msgf("Failed to index file for archive %s of %s for %s (%s)", archive.Filename, pkg.Name, mod.ID, mod.Version)
 				}
 
-				q.CreatePackageArchiveBatch(pkgBatch, queries.CreatePackageArchiveParams{
+				q.CreatePackageArchiveBatch(archiveBatch, queries.CreatePackageArchiveParams{
 					PackageID:      pid,
 					Label:          archive.Filename,
 					Destination:    archive.Dest,
@@ -385,14 +386,6 @@ TRUNCATE files CASCADE;
 					ChecksumDigest: digest,
 					FileID:         fid,
 				})
-			}
-
-			count, err := CopyFromFiles(ctx, tx, pid, pkg.Filelist)
-			if err != nil {
-				log.Fatal().Err(err).Msgf("Failed to process filelist on %s for %s (%s)", pkg.Name, mod.ID, mod.Version)
-			}
-			if count != int64(len(pkg.Filelist)) {
-				log.Fatal().Err(err).Msgf("Imported only %d of %d files on %s for %s (%s)", count, len(pkg.Filelist), pkg.Name, mod.ID, mod.Version)
 			}
 
 			batchResults := tx.SendBatch(ctx, pkgBatch)
@@ -403,6 +396,41 @@ TRUNCATE files CASCADE;
 				}
 			}
 			batchResults.Close()
+
+			archiveMap := make(map[string]int32)
+			archiveResults := tx.SendBatch(ctx, archiveBatch)
+			for idx := 0; idx < archiveBatch.Len(); idx++ {
+				rows, err := archiveResults.Query()
+				if err != nil {
+					log.Fatal().Err(err).Msgf("Failed to process archives for %s of %s (%s)", pkg.Name, mod.ID, mod.Version)
+				}
+
+				var archiveID int32
+				rowIdx := 0
+				for rows.Next() {
+					err = rows.Scan(&archiveID)
+					if err != nil {
+						log.Fatal().Err(err).Msgf("Failed to read archive IDs (insert IDs) for %s of %s (%s)", pkg.Name, mod.ID, mod.Version)
+					}
+
+					archiveMap[pkg.Files[rowIdx].Filename] = archiveID
+					rowIdx++
+				}
+				rows.Close()
+			}
+			archiveResults.Close()
+
+			for idx, item := range pkg.Filelist {
+				pkg.Filelist[idx].ArchiveID = archiveMap[item.Archive]
+			}
+
+			count, err := CopyFromFiles(ctx, tx, pid, pkg.Filelist)
+			if err != nil {
+				log.Fatal().Err(err).Msgf("Failed to process filelist on %s for %s (%s)", pkg.Name, mod.ID, mod.Version)
+			}
+			if count != int64(len(pkg.Filelist)) {
+				log.Fatal().Err(err).Msgf("Imported only %d of %d files on %s for %s (%s)", count, len(pkg.Filelist), pkg.Name, mod.ID, mod.Version)
+			}
 		}
 	}
 

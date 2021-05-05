@@ -13,31 +13,10 @@ import (
 	"github.com/ngld/knossos/packages/api/api"
 	"github.com/ngld/knossos/packages/api/common"
 	"github.com/ngld/knossos/packages/server/pkg/db"
-	"github.com/ngld/knossos/packages/server/pkg/db/queries"
+	"github.com/ngld/knossos/packages/server/pkg/exporter"
 	"github.com/ngld/knossos/packages/server/pkg/mods"
 	"github.com/ngld/knossos/packages/server/pkg/nblog"
 )
-
-func GetFileURLs(ctx context.Context, q *queries.DBQuerier, fid int) ([]string, error) {
-	data, err := q.GetPublicFileByID(ctx, int32(fid))
-	if err != nil {
-		return []string{}, eris.Wrapf(err, "failed to fetch file %d", fid)
-	}
-
-	if data.StorageKey != nil {
-		if len(data.External) > 0 {
-			urls := make([]string, len(data.External))
-			for idx, el := range data.External {
-				urls[idx] = el
-			}
-
-			return urls, nil
-		}
-		nblog.Log(ctx).Warn().Msgf("Generating teaser URLs is not yet supported (%s)", *data.StorageKey)
-		return []string{}, nil
-	}
-	return []string{}, nil
-}
 
 func (neb nebula) GetModList(ctx context.Context, req *api.ModListRequest) (*api.ModListResponse, error) {
 	limit := int(req.Limit)
@@ -148,14 +127,14 @@ func (neb nebula) GetModDetails(ctx context.Context, req *api.ModDetailsRequest)
 		return nil, twirp.InternalError("internal error")
 	}
 
-	bannerURL, err := GetFileURLs(ctx, neb.Q, int(*details.Banner))
+	bannerURL, err := exporter.GetFileURLs(ctx, neb.Q, int(*details.Banner))
 	if err != nil {
 		return nil, twirp.InternalError("internal error")
 	}
 
 	screenshotURLs := make([]string, len(details.Screenshots))
 	for idx, fid := range details.Screenshots {
-		urls, err := GetFileURLs(ctx, neb.Q, int(*fid))
+		urls, err := exporter.GetFileURLs(ctx, neb.Q, int(*fid))
 		if err != nil {
 			return nil, twirp.InternalError("internal error")
 		}
@@ -244,7 +223,6 @@ func (neb nebula) RequestModInstall(ctx context.Context, req *api.ModInstallRequ
 		rel := &common.Release{
 			Modid:         req.Modid,
 			Version:       req.Version,
-			Title:         *details.Title,
 			Folder:        req.Modid + "-" + req.Version,
 			Description:   *details.Description,
 			ReleaseThread: *details.ReleaseThread,
@@ -264,24 +242,8 @@ func (neb nebula) RequestModInstall(ctx context.Context, req *api.ModInstallRequ
 		case db.EngineUnknown:
 		}
 
-		switch db.ModType(*details.Type) {
-		case db.TypeEngine:
-			rel.Type = common.ModType_ENGINE
-		case db.TypeExtension:
-			rel.Type = common.ModType_EXTENSION
-		case db.TypeMod:
-			rel.Type = common.ModType_MOD
-		case db.TypeTool:
-			rel.Type = common.ModType_TOOL
-		case db.TypeTotalConversion:
-			rel.Type = common.ModType_TOTAL_CONVERSION
-		}
-
-		// TODO: Properly support TCs
-		rel.Parent = "FS2"
-
 		if details.Teaser != nil {
-			urls, err := GetFileURLs(ctx, neb.Q, int(*details.Teaser))
+			urls, err := exporter.GetFileURLs(ctx, neb.Q, int(*details.Teaser))
 			if err != nil {
 				return nil, err
 			}
@@ -293,7 +255,7 @@ func (neb nebula) RequestModInstall(ctx context.Context, req *api.ModInstallRequ
 		}
 
 		if details.Banner != nil {
-			urls, err := GetFileURLs(ctx, neb.Q, int(*details.Banner))
+			urls, err := exporter.GetFileURLs(ctx, neb.Q, int(*details.Banner))
 			if err != nil {
 				return nil, err
 			}
@@ -306,7 +268,7 @@ func (neb nebula) RequestModInstall(ctx context.Context, req *api.ModInstallRequ
 
 		rel.Screenshots = make([]*common.FileRef, len(details.Screenshots))
 		for idx, el := range details.Screenshots {
-			urls, err := GetFileURLs(ctx, neb.Q, int(*el))
+			urls, err := exporter.GetFileURLs(ctx, neb.Q, int(*el))
 			if err != nil {
 				return nil, err
 			}
