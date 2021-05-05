@@ -11,6 +11,7 @@ dist/
 *.star.cache
 packages/api/api/*.ts
 packages/api/api/**/*.ts
+packages/server/sync/*
 gen/
 third_party/
 DEPS.stamps
