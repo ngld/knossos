@@ -20,7 +20,7 @@ import (
 
 const packSize = 10
 
-func buildReleaseFromRow(ctx context.Context, q queries.Querier, row queries.GetPublicModReleasesByAidRow) (*common.Release, error) {
+func buildReleaseFromRow(ctx context.Context, q queries.Querier, row queries.GetPublicModReleasesByAidRow, storagePath string) (*common.Release, error) {
 	rel := &common.Release{
 		Modid:         *row.Modid,
 		Version:       *row.Version,
@@ -165,11 +165,6 @@ func buildReleaseFromRow(ctx context.Context, q queries.Querier, row queries.Get
 		archives := archiveMap[*pkg.ID]
 		relPkg.Archives = make([]*common.PackageArchive, len(archives))
 		for idx, archive := range archives {
-			urls, err := GetFileURLsFromValues(ctx, int(*archive.FileID), *archive.StorageKey, archive.External)
-			if err != nil {
-				return nil, eris.Wrapf(err, "failed to construct URLs for archive %d", *archive.ID)
-			}
-
 			relPkg.Archives[idx] = &common.PackageArchive{
 				Id:          string(*archive.ID),
 				Label:       *archive.Label,
@@ -179,19 +174,62 @@ func buildReleaseFromRow(ctx context.Context, q queries.Querier, row queries.Get
 					Digest: archive.ChecksumDigest.Bytes,
 				},
 				Filesize: uint64(*archive.Filesize),
-				Download: &common.FileRef{
-					Fileid: string(*archive.FileID),
-					Urls:   urls,
-				},
 			}
 		}
+	}
+
+	checksums, err := q.GetChecksumsByReleaseID(ctx, *row.ID)
+	if err != nil {
+		return nil, eris.Wrapf(err, "failed to fetch checksums for release %d", *row.ID)
+	}
+
+	pack := &common.ChecksumPack{
+		Archives: make(map[string]*common.ChecksumPack_Archive),
+	}
+	for _, archive := range checksums {
+		mirrors, err := GetFileURLsFromValues(ctx, int(*archive.Fid), *archive.StorageKey, archive.External)
+		if err != nil {
+			return nil, eris.Wrapf(err, "failed to fetch mirrors for archive %d of release %d", *archive.ID, *row.ID)
+		}
+
+		files := make(map[string]string)
+		err = archive.Files.AssignTo(&files)
+		if err != nil {
+			return nil, eris.Wrapf(err, "failed to decode filelist for archive %d of release %d", *archive.ID, *row.ID)
+		}
+
+		ar := &common.ChecksumPack_Archive{
+			Checksum: archive.ChecksumDigest.Bytes,
+			Size:     uint32(*archive.Filesize),
+			Mirrors:  mirrors,
+			Files:    make([]*common.ChecksumPack_Archive_File, len(files)),
+		}
+
+		for fpath, chksum := range files {
+			ar.Files = append(ar.Files, &common.ChecksumPack_Archive_File{
+				Filename: fpath,
+				Checksum: []byte(chksum),
+			})
+		}
+
+		pack.Archives[*archive.Label] = ar
+	}
+
+	encoded, err := proto.Marshal(pack)
+	if err != nil {
+		return nil, eris.Wrapf(err, "failed to serialise checksum pack for release %d", *row.ID)
+	}
+
+	err = ioutil.WriteFile(filepath.Join(storagePath, fmt.Sprintf("c.%s.%s", *row.Modid, *row.Version)), encoded, 0660)
+	if err != nil {
+		return nil, eris.Wrapf(err, "failed to write checksum pack for release %d", *row.ID)
 	}
 
 	return rel, nil
 }
 
 func writePack(ctx context.Context, modID string, storagePath string, packnum uint32, relID int, pack []*common.Release) error {
-	modpack := &common.ModPack{
+	modpack := &common.ReleasePack{
 		Modid:    modID,
 		Packnum:  packnum,
 		Releases: pack,
@@ -223,7 +261,7 @@ func buildModIndex(ctx context.Context, q queries.Querier, modID string, aID int
 	pack := make([]*common.Release, 0, packSize)
 	current := uint32(0)
 	for _, release := range releases {
-		pbRel, err := buildReleaseFromRow(ctx, q, release)
+		pbRel, err := buildReleaseFromRow(ctx, q, release, storagePath)
 		if err != nil {
 			return nil, eris.Wrapf(err, "failed to process release %d", *release.ID)
 		}
@@ -276,7 +314,7 @@ func updateModIndex(ctx context.Context, q queries.Querier, entry *common.ModInd
 		if *release.Deleted {
 			deletedRels = append(deletedRels, *release.Version)
 		} else {
-			pbRel, err := buildReleaseFromRow(ctx, q, queries.GetPublicModReleasesByAidRow(release))
+			pbRel, err := buildReleaseFromRow(ctx, q, queries.GetPublicModReleasesByAidRow(release), storagePath)
 			if err != nil {
 				return err
 			}
@@ -288,7 +326,7 @@ func updateModIndex(ctx context.Context, q queries.Querier, entry *common.ModInd
 	sort.Strings(deletedRels)
 
 	// update / remove existing entries
-	var pack common.ModPack
+	var pack common.ReleasePack
 	for packnum := range entry.LastModified {
 		packPath := filepath.Join(storagePath, fmt.Sprintf("m.%s.%03d", entry.Modid, packnum))
 		encoded, err := ioutil.ReadFile(packPath)
@@ -404,6 +442,23 @@ func UpdateModsyncExport(ctx context.Context, q queries.Querier, storagePath str
 	dbModIDs := make([]string, len(modlist))
 	for idx, mod := range modlist {
 		dbModIDs[idx] = *mod.Modid
+
+		// We always update the mod metadata files since they're small and fast to write and we don't have a marker
+		// to check for updates.
+		modMeta := &common.ModMeta{
+			Modid: *mod.Modid,
+			Title: *mod.Title,
+			Tags:  mod.Tags,
+		}
+		encoded, err := proto.Marshal(modMeta)
+		if err != nil {
+			return eris.Wrapf(err, "failed to serialise metadata for mod %s", *mod.Modid)
+		}
+
+		err = ioutil.WriteFile(filepath.Join(storagePath, fmt.Sprintf("m.%s", *mod.Modid)), encoded, 0660)
+		if err != nil {
+			return eris.Wrapf(err, "failed to write mod metadata file for mod %s", *mod.Modid)
+		}
 
 		idxEntry, found := modMap[*mod.Modid]
 		if !found {

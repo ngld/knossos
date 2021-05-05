@@ -14,31 +14,30 @@ message ModIndex {
 	repeated Mod mods = 1;
 }
 
-message ModPack {
+message ModMeta {
+  string modid = 1;
+  string title = 2;
+  repeated string tags = 3;
+}
+
+message ReleasePack {
 	string modid = 1;
 	uint32 packnum = 2;
 	repeated Release releases = 3;
 }
 
 message ChecksumPack {
-	message Release {
-		message Archive {
-			message File {
-				string filename = 1;
-				bytes checksum = 2;
-				uint32 size = 3;
-			}
+	message Archive {
+    message File {
+      string filename = 1;
+      bytes checksum = 2;
+    }
 
-			repeated File files = 1;
-			bytes checksum = 2;
-			uint32 size = 3;
-			repeated string mirrors = 4;
-		}
+    repeated File files = 1;
+    bytes checksum = 2;
+    uint32 size = 3;
+    repeated string mirrors = 4;
+  }
 
-		map<string,Archive> archives = 4;
-	}
-
-	string modid = 1;
-	uint32 packnum = 2;
-	map<string,Release> releases = 3;
+  map<string,Archive> archives = 4;
 }
