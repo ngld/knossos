@@ -8,16 +8,20 @@ def knossos_configure(binext, libext, generator):
     if OS == "darwin":
         res_dir = "Knossos.app/Contents/Frameworks/Chromium Embedded Framework.framework/Resources/"
 
+    # Always build as release because the perfomance hit for debug CEF builds is pretty noticable
+    # and often pointless since we usually don't touch the C++ code.
+    cef_build = "Release"
+
     task(
         "client-ui-build",
         desc = "Builds the assets for Nebula's client UI",
         deps = ["build-tool", "fetch-deps"],
         base = "packages/client-ui",
         inputs = ["src/**/*.{ts,tsx,js,css}"],
-        outputs = ["../../build/client/launcher/%s/%sui.kar" % (build, res_dir)],
+        outputs = ["../../build/client/launcher/%s/%sui.kar" % (cef_build, res_dir)],
         cmds = [
             yarn("webpack --env production --color --progress"),
-            'tool pack-kar "../../build/client/launcher/%s/%sui.kar" dist/prod' % (build, res_dir),
+            'tool pack-kar "../../build/client/launcher/%s/%sui.kar" dist/prod' % (cef_build, res_dir),
         ],
     )
 
@@ -76,6 +80,22 @@ def knossos_configure(binext, libext, generator):
         cmds = ["golangci-lint run" + get_golangci_flags()],
     )
 
+    libkn_flags = ""
+    libkn_goldflags = ""
+    libkn_defines = {}
+    if build == "Release":
+        libkn_flags += " -tags release -trimpath"
+        libkn_goldflags += " -s -w"
+        libkn_defines["releaseBuild"] = "true"
+    else:
+        libkn_defines["TwirpEndpoint"] = "http://localhost:8200/twirp"
+        libkn_defines["SyncEndpoint"] = "http://localhost:8200/sync"
+
+    for k, v in libkn_defines.items():
+        libkn_goldflags += " -X github.com/ngld/knossos/packages/libknossos/pkg/api.%s=%s" % (k, v)
+
+    libkn_flags += " -ldflags '%s'" % libkn_goldflags
+
     task(
         "libknossos-build",
         desc = "Builds libknossos (client-side, non-UI logic)",
@@ -96,7 +116,7 @@ def knossos_configure(binext, libext, generator):
             "CGO_LDFLAGS": libkn_ldflags,
         },
         cmds = [
-            "go build -o ../../build/libknossos/libknossos%s -buildmode c-shared ./api" % libext,
+            "go build %s -o ../../build/libknossos/libknossos%s -buildmode c-shared ./api" % (libkn_flags, libext),
             "tool gen-dyn-loader ../../build/libknossos/libknossos.h ../../build/libknossos/dynknossos.h",
         ],
     )
@@ -117,18 +137,18 @@ def knossos_configure(binext, libext, generator):
             "cd build/client",
             """
     if [ ! -f CMakeCache.txt ] || [ ! -f compile_commands.json ]; then
-        cmake -G"{generator}" -DCMAKE_BUILD_TYPE={build} -DCMAKE_EXPORT_COMPILE_COMMANDS=1 ../../packages/client
+        cmake -G"{generator}" -DCMAKE_BUILD_TYPE={cef_build} -DCMAKE_EXPORT_COMPILE_COMMANDS=1 ../../packages/client
     fi
-    """.format(generator = generator, build = build),
+    """.format(generator = generator, cef_build = cef_build),
             merge_compile_commands,
             build_cmd,
         ],
     )
 
     if OS == "darwin":
-        kn_bin = "./launcher/%s/Knossos.app/Contents/MacOS/knossos" % build
+        kn_bin = "./launcher/%s/Knossos.app/Contents/MacOS/knossos" % cef_build
     else:
-        kn_bin = "./launcher/%s/knossos" % build
+        kn_bin = "./launcher/%s/knossos" % cef_build
 
     task(
         "client-run",

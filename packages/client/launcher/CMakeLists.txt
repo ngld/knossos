@@ -153,6 +153,16 @@ if(OS_LINUX)
     DEPENDS "${libknossos}"
   )
 
+  if(${CMAKE_BUILD_TYPE} STREQUAL "Release")
+    # Strip the libcef.so library on release builds to save a *lot* of space.
+    add_custom_command(
+      TARGET ${CEF_TARGET}
+      POST_BUILD
+      COMMAND strip "${CEF_TARGET_OUT_DIR}/libcef.so"
+      VERBATIM
+    )
+  endif()
+
   # Set SUID permissions on the chrome-sandbox target.
   SET_LINUX_SUID_PERMISSIONS("${CEF_TARGET}" "${CEF_TARGET_OUT_DIR}/chrome-sandbox")
 endif()
