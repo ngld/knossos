@@ -58,24 +58,22 @@ func karWalkDirectory(writer *pkg.KarWriter, dir string) error {
 	for _, info := range infos {
 		itemPath := filepath.Join(dir, info.Name())
 		if info.IsDir() {
-			writer.OpenDirectory(info.Name())
+			err = writer.OpenDirectory(info.Name())
+			if err != nil {
+				return err
+			}
+
 			err = karWalkDirectory(writer, itemPath)
 			if err != nil {
 				return err
 			}
-			writer.CloseDirectory()
-		} else {
-			f, err = os.Open(itemPath)
-			if err != nil {
-				return eris.Wrapf(err, "Failed to open file %s", itemPath)
-			}
 
-			err = writer.WriteFile(info.Name(), f)
+			err = writer.CloseDirectory()
 			if err != nil {
-				f.Close()
-				return eris.Wrapf(err, "Failed to pack file %s", itemPath)
+				return err
 			}
-			f.Close()
+		} else {
+			writer.WriteFile(info.Name(), itemPath)
 		}
 	}
 

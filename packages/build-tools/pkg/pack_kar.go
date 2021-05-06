@@ -1,9 +1,12 @@
 package pkg
 
 import (
+	"bytes"
 	"encoding/binary"
 	"io"
 	"os"
+	"runtime"
+	"sync"
 
 	"github.com/andybalholm/brotli"
 	"github.com/rotisserie/eris"
@@ -24,11 +27,16 @@ type KarFolder struct {
 
 // KarWriter can write . Kar archives
 type KarWriter struct {
-	hdl      *os.File
-	root     *KarFolder
-	dirStack []*KarFolder
-	current  *KarFolder
-	buffer   []byte
+	hdl        *os.File
+	root       *KarFolder
+	dirStack   []*KarFolder
+	current    *KarFolder
+	buffer     []byte
+	routines   int
+	writeLock  sync.Mutex
+	bgWaitLock sync.Mutex
+	bgWaitCond *sync.Cond
+	err        error
 }
 
 // NewKarWriter creates a new KarWriter instance and opens it for writing
@@ -52,13 +60,17 @@ func NewKarWriter(filename string) (*KarWriter, error) {
 		return nil, err
 	}
 
-	return &KarWriter{
+	w := &KarWriter{
 		hdl:      hdl,
 		root:     root,
 		dirStack: dirStack,
 		current:  root,
 		buffer:   make([]byte, 4096),
-	}, nil
+		routines: 0,
+	}
+	w.bgWaitCond = sync.NewCond(&w.bgWaitLock)
+
+	return w, nil
 }
 
 // OpenDirectory creates a new directory entry. Anything created until the next CloseDirectory() call will be created
@@ -88,36 +100,76 @@ func (w *KarWriter) CloseDirectory() error {
 }
 
 // WriteFile creates a new file in the current archive directory
-func (w *KarWriter) WriteFile(filename string, reader *os.File) error {
-	item := new(KarFile)
-	offset, err := w.hdl.Seek(0, io.SeekCurrent)
-	if err != nil {
-		return err
+func (w *KarWriter) WriteFile(filename string, realpath string) {
+	folder := w.current
+
+	w.bgWaitLock.Lock()
+	if w.routines >= runtime.NumCPU() {
+		w.bgWaitCond.Wait()
+	}
+	w.routines++
+	w.bgWaitLock.Unlock()
+
+	cleanup := func() {
+		w.bgWaitLock.Lock()
+		w.routines--
+		w.bgWaitCond.Signal()
+		w.bgWaitLock.Unlock()
 	}
 
-	item.offset = int32(offset)
-	brw := brotli.NewWriterLevel(w.hdl, brotli.BestCompression)
+	go func() {
+		f, err := os.Open(realpath)
+		if err != nil {
+			w.err = nil
+			cleanup()
+			return
+		}
 
-	decSize, err := io.CopyBuffer(brw, reader, w.buffer)
-	if err != nil {
-		return err
-	}
+		buffer := new(bytes.Buffer)
+		brw := brotli.NewWriterLevel(buffer, brotli.BestCompression)
 
-	err = brw.Close()
-	if err != nil {
-		return err
-	}
+		decSize, err := io.CopyBuffer(brw, f, make([]byte, 4096))
+		if err != nil {
+			w.err = err
+			cleanup()
+			return
+		}
 
-	newPos, err := w.hdl.Seek(0, io.SeekCurrent)
-	if err != nil {
-		return err
-	}
+		err = brw.Close()
+		if err != nil {
+			w.err = err
+			cleanup()
+			return
+		}
 
-	item.size = int32(newPos - offset)
-	item.decSize = int32(decSize)
-	w.current.files[filename] = item
+		f.Close()
 
-	return nil
+		w.writeLock.Lock()
+		offset, err := w.hdl.Seek(0, io.SeekCurrent)
+		if err != nil {
+			w.err = err
+			w.writeLock.Unlock()
+			cleanup()
+			return
+		}
+
+		size, err := io.CopyBuffer(w.hdl, buffer, w.buffer)
+		if err != nil {
+			w.err = err
+			w.writeLock.Unlock()
+			cleanup()
+			return
+		}
+
+		folder.files[filename] = &KarFile{
+			offset:  int32(offset),
+			size:    int32(size),
+			decSize: int32(decSize),
+		}
+		w.writeLock.Unlock()
+
+		cleanup()
+	}()
 }
 
 // Close writes the central index and closes the archive
@@ -126,6 +178,18 @@ func (w *KarWriter) Close() error {
 		w.hdl.Close()
 		return eris.New("Open directories left over!")
 	}
+
+	if w.err != nil {
+		return w.err
+	}
+
+	w.bgWaitLock.Lock()
+	for w.routines > 0 {
+		w.bgWaitCond.Wait()
+	}
+	w.bgWaitLock.Unlock()
+	w.writeLock.Lock()
+	defer w.writeLock.Unlock()
 
 	items := int32(0)
 	buffer := make([]byte, 48)
