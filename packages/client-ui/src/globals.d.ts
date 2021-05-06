@@ -1,4 +1,4 @@
-type MessageReceiver = (msg: ArrayBuffer) => void;
+type MessageReceiver = (msg: ArrayBuffer[]) => void;
 declare function knShowDevTools(): void;
 declare function knAddMessageListener(cb: MessageReceiver): void;
 declare function knRemoveMessageListener(cb: MessageReceiver): void;

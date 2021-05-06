@@ -29,12 +29,28 @@ function LogBox({ task }: LogBoxProps): React.ReactElement {
   const boxRef = useRef<HTMLDivElement>(null);
   const isBottom = useRef<boolean>(true);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     const box = boxRef.current;
-    if (box && isBottom.current) {
-      box.scrollTop = box.scrollHeight;
+    if (box) {
+      box.appendChild(task.logContainer);
+
+      const obs = new MutationObserver(() => {
+        if (box && isBottom.current) {
+          box.scrollTop = box.scrollHeight;
+        }
+      });
+      obs.observe(box, {
+        childList: true,
+        attributes: false,
+        characterData: false,
+        subtree: true,
+      });
+
+      return () => obs.disconnect();
     }
-  });
+
+    return () => void 0;
+  }, [boxRef.current]);
 
   const scrollHandler = () => {
     const box = boxRef.current;
@@ -44,14 +60,10 @@ function LogBox({ task }: LogBoxProps): React.ReactElement {
     }
   };
 
+  // Make sure TailwindCSS includes this class
+  const _ = 'font-mono';
   return (
-    <div ref={boxRef} className="overflow-y-auto max-h-56 bg-base text-xs" onScroll={scrollHandler}>
-      {task.logMessages.map((item, idx) => (
-        <div key={idx} title={item.sender} className={'log-' + (logLevelMap[item.level].toLowerCase() ?? 'info')}>
-          <span className="font-mono">[{getLogTime(task, item)}]:</span> {item.message}
-        </div>
-      ))}
-    </div>
+    <div ref={boxRef} className="overflow-y-auto max-h-56 bg-base text-xs" onScroll={scrollHandler}></div>
   );
 }
 

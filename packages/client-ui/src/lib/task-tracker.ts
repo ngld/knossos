@@ -12,6 +12,7 @@ export interface TaskState {
   indeterminate: boolean;
   started: number;
   logMessages: LogMessage[];
+  logContainer: HTMLDivElement,
 }
 
 export const logLevelMap: Record<LogMessage_LogLevel, string> = {} as Record<
@@ -20,6 +21,21 @@ export const logLevelMap: Record<LogMessage_LogLevel, string> = {} as Record<
 >;
 for (const [name, level] of Object.entries(LogMessage_LogLevel)) {
   logLevelMap[level as LogMessage_LogLevel] = name;
+}
+
+function getLogTime(task: TaskState, line: LogMessage): string {
+  const time = line.time;
+  if (!time) {
+    return '00:00';
+  }
+
+  const duration = time.seconds - task.started;
+  const minutes = Math.floor(duration / 60);
+  const seconds = duration % 60;
+
+  let result = (minutes < 10 ? '0' : '') + String(minutes) + ':';
+  result += (seconds < 10 ? '0' : '') + String(seconds);
+  return result;
 }
 
 export class TaskTracker extends EventEmitter {
@@ -55,14 +71,19 @@ export class TaskTracker extends EventEmitter {
   }
 
   listen(): () => void {
-    const listener = (msg: ArrayBuffer) => {
+    const listener = action((queue: ArrayBuffer[]) => {
+      if (!Array.isArray(queue)) {
+        console.error('Invalid queue passed to listener()!');
+      }
       try {
-        const ev = ClientSentEvent.fromBinary(new Uint8Array(msg));
-        this.updateTask(ev);
+        for (const msg of queue) {
+          const ev = ClientSentEvent.fromBinary(new Uint8Array(msg));
+          this.updateTask(ev);
+        }
       } catch (e) {
         console.error(e);
       }
-    };
+    });
 
     knAddMessageListener(listener);
     return () => knRemoveMessageListener(listener);
@@ -79,6 +100,7 @@ export class TaskTracker extends EventEmitter {
       indeterminate: true,
       started: Math.floor(Date.now() / 1000),
       logMessages: [],
+      logContainer: document.createElement('div'),
     } as TaskState;
 
     this.taskMap[id] = task;
@@ -97,7 +119,19 @@ export class TaskTracker extends EventEmitter {
 
     switch (ev.payload.oneofKind) {
       case 'message':
-        task.logMessages.push(ev.payload.message);
+        // task.logMessages.push(ev.payload.message);
+        const msg = ev.payload.message;
+        const line = document.createElement('div');
+        line.setAttribute('title', msg.sender);
+        line.setAttribute('class', 'log-' + (logLevelMap[msg.level] ?? 'info').toLowerCase());
+
+        const lineText = document.createElement('span');
+        lineText.setAttribute('class', 'font-mono');
+        lineText.innerText = `[${getLogTime(task, msg)}]:`;
+
+        line.appendChild(lineText);
+        line.appendChild(document.createTextNode(' ' + msg.message));
+        task.logContainer.appendChild(line);
         break;
       case 'progress':
         {
