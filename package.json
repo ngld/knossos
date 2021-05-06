@@ -106,6 +106,9 @@
     "@blueprintjs/core@3.42.0": {
       "unplugged": true
     },
+    "@blueprintjs/core@3.44.1": {
+      "unplugged": true
+    },
     "@blueprintjs/icons@3.26.0": {
       "unplugged": true
     }
