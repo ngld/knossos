@@ -166,5 +166,5 @@ void KnossosHandler::OpenFolderDialog(
     CefRefPtr<CefBrowser> browser, std::string title, std::string folder,
     CefRefPtr<CefRunFileDialogCallback> callback) {
   InternalOpenFileDialog(title.c_str(), GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER,
-                         folder.c_str(), callback);
+                         folder.c_str(), {}, callback);
 }
