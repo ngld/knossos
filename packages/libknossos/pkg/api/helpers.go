@@ -276,9 +276,15 @@ func RunTask(ctx context.Context, ref uint32, task func(context.Context) error) 
 	go func() {
 		ctx = WithTaskContext(ctx, TaskCtxParams{Ref: ref})
 		defer func() {
-			err := recover()
-			if err != nil {
-				TaskLog(ctx, client.LogMessage_FATAL, "Failed with panic: %+v", err)
+			cause := recover()
+			if cause != nil {
+				err, ok := cause.(error)
+				if !ok {
+					err = fmt.Errorf("%+v", cause)
+				}
+				err = eris.Wrap(err, "Most recent call last:\n")
+
+				TaskLog(ctx, client.LogMessage_FATAL, "Failed with panic: %s", eris.ToString(err, true))
 				_ = UpdateTask(ctx, &client.TaskResult{
 					Success: false,
 					Error:   "Failed with panic",

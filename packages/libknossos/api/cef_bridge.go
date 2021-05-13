@@ -114,6 +114,7 @@ import (
 	"github.com/ngld/knossos/packages/api/common"
 	"github.com/ngld/knossos/packages/libarchive"
 	"github.com/ngld/knossos/packages/libknossos/pkg/api"
+	"github.com/ngld/knossos/packages/libknossos/pkg/helpers"
 	"github.com/ngld/knossos/packages/libknossos/pkg/storage"
 	"github.com/ngld/knossos/packages/libknossos/pkg/twirp"
 )
@@ -167,6 +168,11 @@ func KnossosInit(params *C.KnossosInitParams) bool {
 	err = storage.Open(ctx)
 	if err != nil {
 		Log(api.LogError, "Failed to open the DB: %+v", err)
+	}
+
+	err = helpers.Init(ctx)
+	if err != nil {
+		Log(api.LogError, "Failed to init runtime: %+v", err)
 	}
 
 	Log(api.LogInfo, "LibArchive version: %d", libarchive.Version())

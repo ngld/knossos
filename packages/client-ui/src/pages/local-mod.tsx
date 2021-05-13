@@ -240,7 +240,7 @@ export default observer(function ModDetailsPage(
     props.match.params,
   ]);
 
-  const rawDesc = (modDetails.value as ModInfoResponse)?.mod?.description;
+  const rawDesc = (modDetails.value as ModInfoResponse)?.release?.description;
   const description = useMemo(() => {
     const desc = rawDesc ?? '';
     return { __html: bbparser(desc === '' ? 'No description provided' : desc) };
@@ -255,8 +255,8 @@ export default observer(function ModDetailsPage(
             Unfortunately, the mod details request failed. Please try again.
           </Callout>
         ),
-        fulfilled: (mod) =>
-          !mod ? (
+        fulfilled: (response) =>
+          !response ? (
             <NonIdealState
               icon="warning-sign"
               title="Mod not found"
@@ -267,15 +267,15 @@ export default observer(function ModDetailsPage(
               <div className="relative">
                 <div>
                   <h1 className="mb-2 text-white mod-title">
-                    <span className="text-3xl">{mod.mod?.title}</span>
+                    <span className="text-3xl">{response.mod?.title}</span>
                     <HTMLSelect
                       className="ml-2 -mt-2"
-                      value={props.match.params.version ?? mod.versions[0]}
+                      value={props.match.params.version ?? response.versions[0]}
                       onChange={(e) => {
                         props.history.push(`/mod/${props.match.params.modid}/${e.target.value}`);
                       }}
                     >
-                      {mod.versions.map((version) => (
+                      {response.versions.map((version) => (
                         <option key={version} value={version}>
                           {version}
                         </option>
@@ -283,7 +283,7 @@ export default observer(function ModDetailsPage(
                     </HTMLSelect>
                   </h1>
                 </div>
-                <RefImage className="object-contain w-full max-h-300px" src={mod.mod?.banner} />
+                <RefImage className="object-contain w-full max-h-300px" src={response.release?.banner} />
               </div>
               <Tabs renderActiveTabPanelOnly={true}>
                 <Tab
@@ -301,21 +301,21 @@ export default observer(function ModDetailsPage(
                   panel={
                     <div className="bg-base p-2 rounded text-white">
                       <DepInfo
-                        release={mod.mod}
+                        release={response.release}
                         modid={props.match.params.modid}
                         version={props.match.params.version}
                       />
                     </div>
                   }
                 />
-                {(mod.mod?.type === ModType.MOD || mod.mod?.type === ModType.TOTAL_CONVERSION) && (
+                {(response.mod?.type === ModType.MOD || response.mod?.type === ModType.TOTAL_CONVERSION) && (
                   <Tab
                     id="flags"
                     title="Flags"
                     panel={
                       <div className="bg-base p-2 rounded text-white">
                         <FlagsInfo
-                          release={mod.mod}
+                          release={response.release}
                           modid={props.match.params.modid}
                           version={props.match.params.version}
                         />

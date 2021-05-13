@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"reflect"
 	"sort"
 	"strings"
 
@@ -13,6 +12,7 @@ import (
 	"github.com/ngld/knossos/packages/api/client"
 	"github.com/ngld/knossos/packages/api/common"
 	"github.com/ngld/knossos/packages/libknossos/pkg/api"
+	"github.com/ngld/knossos/packages/libknossos/pkg/helpers"
 	"github.com/ngld/knossos/packages/libknossos/pkg/mods"
 	"github.com/ngld/knossos/packages/libknossos/pkg/storage"
 )
@@ -67,53 +67,47 @@ func (kn *knossosServer) ScanLocalMods(ctx context.Context, task *client.TaskReq
 }
 
 func (kn *knossosServer) GetLocalMods(ctx context.Context, _ *client.NullMessage) (*client.SimpleModList, error) {
-	modMeta, err := storage.GetLocalMods(ctx, 0)
+	releases, err := storage.GetLocalMods(ctx, 0)
 	if err != nil {
 		return nil, err
 	}
 
-	allowedFields := map[string]bool{
-		"Modid":   true,
-		"Title":   true,
-		"Version": true,
-		"Type":    true,
-		"Teaser":  true,
-	}
+	modList := make([]*client.SimpleModList_Item, len(releases))
+	modMap := make(map[string]*common.ModMeta)
 
-	// Look for fields in common.Release that are not listed above
-	typeDesc := reflect.ValueOf(common.Release{}).Type()
-	toClear := make([]int, 0)
-	for idx := 0; idx < typeDesc.NumField(); idx++ {
-		field := typeDesc.Field(idx)
-		if field.PkgPath != "" {
-			// Skip unexported fields
-			continue
+	for idx, rel := range releases {
+		modInfo, found := modMap[rel.Modid]
+		if !found {
+			modInfo, err = storage.GetMod(ctx, rel.Modid)
+			if err != nil {
+				return nil, err
+			}
+
+			modMap[rel.Modid] = modInfo
 		}
 
-		_, good := allowedFields[field.Name]
-		if !good {
-			toClear = append(toClear, idx)
+		modList[idx] = &client.SimpleModList_Item{
+			Modid:   rel.Modid,
+			Title:   modInfo.Title,
+			Teaser:  rel.Teaser,
+			Version: rel.Version,
 		}
 	}
 
-	for _, mod := range modMeta {
-		// Clear all fields listed in toClear to reduce the size of the result
-		ref := reflect.ValueOf(mod).Elem()
-		for _, fieldIdx := range toClear {
-			field := ref.Field(fieldIdx)
-			field.Set(reflect.Zero(field.Type()))
-		}
-	}
-
-	sort.Sort(mods.SortByTitle{ReleaseCollection: modMeta})
+	sort.Sort(helpers.SimpleModListItemsByTitle(modList))
 
 	return &client.SimpleModList{
-		Mods: modMeta,
+		Mods: modList,
 	}, nil
 }
 
 func (kn *knossosServer) GetModInfo(ctx context.Context, req *client.ModInfoRequest) (*client.ModInfoResponse, error) {
-	mod, err := storage.GetMod(ctx, req.Id, req.Version)
+	mod, err := storage.GetMod(ctx, req.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	release, err := storage.GetModRelease(ctx, req.Id, req.Version)
 	if err != nil {
 		return nil, err
 	}
@@ -123,17 +117,18 @@ func (kn *knossosServer) GetModInfo(ctx context.Context, req *client.ModInfoRequ
 		return nil, err
 	}
 
-	mod.Folder = ""
-	mod.Packages = make([]*common.Package, 0)
+	release.Folder = ""
+	release.Packages = make([]*common.Package, 0)
 
 	return &client.ModInfoResponse{
 		Mod:      mod,
+		Release:  release,
 		Versions: versions,
 	}, nil
 }
 
 func (kn *knossosServer) GetModDependencies(ctx context.Context, req *client.ModInfoRequest) (*client.ModDependencySnapshot, error) {
-	mod, err := storage.GetMod(ctx, req.Id, req.Version)
+	mod, err := storage.GetModRelease(ctx, req.Id, req.Version)
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +152,7 @@ func (kn *knossosServer) GetModDependencies(ctx context.Context, req *client.Mod
 }
 
 func (kn *knossosServer) GetModFlags(ctx context.Context, req *client.ModInfoRequest) (*client.FlagInfo, error) {
-	mod, err := storage.GetMod(ctx, req.Id, req.Version)
+	mod, err := storage.GetModRelease(ctx, req.Id, req.Version)
 	if err != nil {
 		return nil, err
 	}
@@ -210,7 +205,7 @@ func (kn *knossosServer) SaveModFlags(ctx context.Context, req *client.SaveFlags
 }
 
 func (kn *knossosServer) LaunchMod(ctx context.Context, req *client.LaunchModRequest) (*client.SuccessResponse, error) {
-	mod, err := storage.GetMod(ctx, req.Modid, req.Version)
+	mod, err := storage.GetModRelease(ctx, req.Modid, req.Version)
 	if err != nil {
 		return nil, err
 	}

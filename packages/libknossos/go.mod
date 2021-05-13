@@ -14,6 +14,7 @@ require (
 	github.com/rs/zerolog v1.21.0
 	github.com/twitchtv/twirp v7.2.0+incompatible // indirect
 	go.etcd.io/bbolt v1.3.5
+	golang.org/x/net v0.0.0-20210508051633-16afe75a6701
 	golang.org/x/sys v0.0.0-20210503173754-0981d6026fa6
 	google.golang.org/protobuf v1.26.0
 )

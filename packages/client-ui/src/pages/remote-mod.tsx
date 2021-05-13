@@ -12,20 +12,19 @@ import {
 } from '@blueprintjs/core';
 import styled from 'astroturf/react';
 
-import { ModDetailsResponse } from '@api/service';
+import { ModInfoResponse } from '@api/client';
 
 import { useGlobalState, GlobalState } from '../lib/state';
 import bbparser from '../lib/bbparser';
+import RefImage from '../elements/ref-image';
 
 async function getModDetails(
   gs: GlobalState,
   params: ModDetailsParams,
-): Promise<ModDetailsResponse> {
-  const response = await gs.nebula.getModDetails({
-    modid: params.modid,
+): Promise<ModInfoResponse> {
+  const response = await gs.client.getRemoteModInfo({
+    id: params.modid,
     version: params.version ?? '',
-    latest: false,
-    requestDownloads: false,
   });
   return response.response;
 }
@@ -50,7 +49,7 @@ export default observer(function RemoteModDetailsPage(
     props.match.params,
   ]);
 
-  const rawDesc = (modDetails.value as ModDetailsResponse)?.description;
+  const rawDesc = (modDetails.value as ModInfoResponse | undefined)?.release?.description;
   const description = useMemo(() => {
     const desc = rawDesc ?? '';
     return { __html: bbparser(desc === '' ? 'No description provided' : desc) };
@@ -77,7 +76,7 @@ export default observer(function RemoteModDetailsPage(
               <div className="relative">
                 <div>
                   <h1 className="mb-2 text-white mod-title">
-                    <span className="text-3xl">{mod.title}</span>
+                    <span className="text-3xl">{mod.mod?.title}</span>
                     <HTMLSelect
                       className="ml-2 -mt-2"
                       value={props.match.params.version ?? mod.versions[0]}
@@ -93,8 +92,8 @@ export default observer(function RemoteModDetailsPage(
                     </HTMLSelect>
                   </h1>
                 </div>
-                {mod.banner && (
-                  <img className="object-contain w-full max-h-300px" src={mod.banner} />
+                {mod.release?.banner && (
+                  <RefImage className="object-contain w-full max-h-300px" src={mod.release?.banner} />
                 )}
               </div>
               <Tabs renderActiveTabPanelOnly={true}>

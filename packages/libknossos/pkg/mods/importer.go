@@ -163,8 +163,9 @@ func ImportMods(ctx context.Context, modFiles []string) error {
 	api.Log(ctx, api.LogInfo, "Parsing mod.json files")
 	api.SetProgress(ctx, 0, "Processing mods")
 	modCount := float32(len(modFiles))
+	seenMods := make(map[string]bool)
 
-	err := storage.ImportMods(ctx, func(ctx context.Context, importMod func(*common.Release) error) error {
+	err := storage.ImportMods(ctx, func(ctx context.Context, importMod func(*common.ModMeta) error, importRelease func(*common.Release) error) error {
 		done := float32(0)
 		for _, modFile := range modFiles {
 			data, err := ioutil.ReadFile(modFile)
@@ -278,11 +279,38 @@ func ImportMods(ctx context.Context, modFiles []string) error {
 				api.Log(ctx, api.LogInfo, "Folder conversion done")
 			}
 
+			if !seenMods[mod.ID] {
+				seenMods[mod.ID] = true
+				pbMod := &common.ModMeta{
+					Modid: mod.ID,
+					Title: mod.Title,
+				}
+
+				switch mod.Type {
+				case "mod":
+					pbMod.Type = common.ModType_MOD
+				case "tc":
+					pbMod.Type = common.ModType_TOTAL_CONVERSION
+				case "engine":
+					pbMod.Type = common.ModType_ENGINE
+				case "tool":
+					pbMod.Type = common.ModType_TOOL
+				case "extension":
+					pbMod.Type = common.ModType_EXTENSION
+				default:
+					pbMod.Type = common.ModType_MOD
+				}
+
+				err = importMod(pbMod)
+				if err != nil {
+					return eris.Wrapf(err, "failed to import mod %s", mod.ID)
+				}
+			}
+
 			item := new(common.Release)
 			item.Modid = mod.ID
 			item.Version = mod.Version
 			item.Folder = modPath
-			item.Title = mod.Title
 			item.Description = mod.Description
 			item.Teaser = convertPath(ctx, modPath, mod.Tile)
 			item.Banner = convertPath(ctx, modPath, mod.Banner)
@@ -316,22 +344,7 @@ func ImportMods(ctx context.Context, modFiles []string) error {
 				}
 			}
 
-			switch mod.Type {
-			case "mod":
-				item.Type = common.ModType_MOD
-			case "tc":
-				item.Type = common.ModType_TOTAL_CONVERSION
-			case "engine":
-				item.Type = common.ModType_ENGINE
-			case "tool":
-				item.Type = common.ModType_TOOL
-			case "extension":
-				item.Type = common.ModType_EXTENSION
-			default:
-				item.Type = common.ModType_MOD
-			}
-
-			if item.Type == common.ModType_ENGINE {
+			if mod.Type == "engine" {
 				switch mod.Stability {
 				case "stable":
 					item.Stability = common.ReleaseStability_STABLE
@@ -438,7 +451,7 @@ func ImportMods(ctx context.Context, modFiles []string) error {
 				item.Packages[pIdx] = pbPkg
 			}
 
-			err = importMod(item)
+			err = importRelease(item)
 			if err != nil {
 				return err
 			}
@@ -460,7 +473,7 @@ func ImportMods(ctx context.Context, modFiles []string) error {
 			}
 
 			rel.DependencySnapshot = snapshot
-			err = storage.SaveLocalMod(ctx, rel)
+			err = storage.SaveLocalModRelease(ctx, rel)
 			if err != nil {
 				return err
 			}

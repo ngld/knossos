@@ -8,16 +8,12 @@ import "mod.proto";
 message ModIndex {
 	message Mod {
 		string modid = 1;
-		repeated google.protobuf.Timestamp last_modified = 2;
+    google.protobuf.Timestamp last_modified = 4;
+		repeated google.protobuf.Timestamp packs_last_modified = 2;
+    bytes version_checksum = 3;
 	}
 
 	repeated Mod mods = 1;
-}
-
-message ModMeta {
-  string modid = 1;
-  string title = 2;
-  repeated string tags = 3;
 }
 
 message ReleasePack {

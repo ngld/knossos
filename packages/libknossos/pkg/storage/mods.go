@@ -37,7 +37,7 @@ func modVersionSorter(_ string, versions []string) error {
 	return nil
 }
 
-func ImportMods(ctx context.Context, callback func(context.Context, func(*common.Release) error) error) error {
+func ImportMods(ctx context.Context, callback func(context.Context, func(*common.ModMeta) error, func(*common.Release) error) error) error {
 	importMutex.Lock()
 	defer importMutex.Unlock()
 
@@ -62,7 +62,21 @@ func ImportMods(ctx context.Context, callback func(context.Context, func(*common
 		ctx = CtxWithTx(ctx, tx)
 
 		// Call the actual import function
-		err = callback(ctx, func(rel *common.Release) error {
+		err = callback(ctx, func(mod *common.ModMeta) error {
+			encoded, err := proto.Marshal(mod)
+			if err != nil {
+				return err
+			}
+
+			err = bucket.Put([]byte(mod.Modid), encoded)
+			if err != nil {
+				return err
+			}
+
+			// Add this mod to our type index
+			localTypeIdx.BatchedAdd(mod.Type.String(), mod.Modid)
+			return nil
+		}, func(rel *common.Release) error {
 			encoded, err := proto.Marshal(rel)
 			if err != nil {
 				return err
@@ -71,13 +85,6 @@ func ImportMods(ctx context.Context, callback func(context.Context, func(*common
 			err = bucket.Put([]byte(rel.Modid+"#"+rel.Version), encoded)
 			if err != nil {
 				return err
-			}
-
-			if len(localVersionIdx.Lookup(rel.Modid)) < 1 {
-				// This is the first time we process this mod
-
-				// Add this mod to our type index
-				localTypeIdx.BatchedAdd(string(rel.Type), rel.Modid)
 			}
 
 			localVersionIdx.BatchedAdd(rel.Modid, rel.Version)
@@ -121,11 +128,26 @@ func ImportUserSettings(ctx context.Context, callback func(context.Context, func
 	})
 }
 
-func SaveLocalMod(ctx context.Context, release *common.Release) error {
+func SaveLocalMod(ctx context.Context, mod *common.ModMeta) error {
+	return update(ctx, func(tx *bolt.Tx) error {
+		importMutex.Lock()
+		defer importMutex.Unlock()
+
+		bucket := tx.Bucket(localModsBucket)
+		encoded, err := proto.Marshal(mod)
+		if err != nil {
+			return eris.Wrap(err, "failed to serialise mod")
+		}
+
+		return bucket.Put([]byte(mod.Modid), encoded)
+	})
+}
+
+func SaveLocalModRelease(ctx context.Context, release *common.Release) error {
 	tx := TxFromCtx(ctx)
 	if tx == nil {
 		return BatchUpdate(ctx, func(ctx context.Context) error {
-			return SaveLocalMod(ctx, release)
+			return SaveLocalModRelease(ctx, release)
 		})
 	}
 
@@ -135,26 +157,11 @@ func SaveLocalMod(ctx context.Context, release *common.Release) error {
 	bucket := tx.Bucket(localModsBucket)
 	versions := localVersionIdx.Lookup(release.Modid)
 
-	isNew := false
-	if len(versions) > 0 {
-		verPresent := false
-		for _, ver := range versions {
-			if ver == release.Version {
-				verPresent = true
-				break
-			}
-		}
-
-		if !verPresent {
-			isNew = true
-		}
-	} else {
-		isNew = true
-
-		// Since this is the first entry for this mod, we also have to update the type index
-		err := localTypeIdx.Add(tx, string(release.Type), release.Modid)
-		if err != nil {
-			return err
+	isNew := true
+	for _, ver := range versions {
+		if ver == release.Version {
+			isNew = false
+			break
 		}
 	}
 
@@ -205,7 +212,23 @@ func GetLocalMods(ctx context.Context, taskRef uint32) ([]*common.Release, error
 	return result, nil
 }
 
-func GetMod(ctx context.Context, id string, version string) (*common.Release, error) {
+func GetMod(ctx context.Context, id string) (*common.ModMeta, error) {
+	var mod common.ModMeta
+	err := view(ctx, func(tx *bolt.Tx) error {
+		encoded := tx.Bucket(localModsBucket).Get([]byte(id))
+		if encoded == nil {
+			return eris.New("mod not found")
+		}
+
+		return proto.Unmarshal(encoded, &mod)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &mod, nil
+}
+
+func GetModRelease(ctx context.Context, id string, version string) (*common.Release, error) {
 	mod := new(common.Release)
 	err := db.View(func(tx *bolt.Tx) error {
 		item := tx.Bucket(localModsBucket).Get([]byte(id + "#" + version))
@@ -240,7 +263,7 @@ func (LocalMods) GetVersionsForMod(id string) ([]string, error) {
 }
 
 func (LocalMods) GetModMetadata(id, version string) (*common.Release, error) {
-	return GetMod(context.Background(), id, version)
+	return GetModRelease(context.Background(), id, version)
 }
 
 func SaveUserSettingsForMod(ctx context.Context, id, version string, settings *client.UserSettings) error {

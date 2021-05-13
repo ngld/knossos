@@ -37,6 +37,15 @@ message Mod {
   repeated string tags = 5;
 }
 
+message ModMeta {
+  string modid = 1;
+  string title = 2;
+  ModType type = 4;
+  string parent = 5;
+
+  repeated string tags = 3;
+}
+
 enum ReleaseStability {
   STABLE = 0;
   RC = 1;

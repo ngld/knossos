@@ -3,13 +3,13 @@ import { Button, NonIdealState, Spinner } from '@blueprintjs/core';
 import { observer } from 'mobx-react-lite';
 import { fromPromise } from 'mobx-utils';
 import { History } from 'history';
-import { Release } from '@api/mod';
+import { SimpleModList_Item } from '@api/client';
 import { GlobalState, useGlobalState } from '../lib/state';
 import { API_URL } from '../lib/constants';
 import { launchMod } from '../dialogs/launch-mod';
 import ModstockImage from '../resources/modstock.jpg';
 
-async function fetchMods(gs: GlobalState): Promise<Release[]> {
+async function fetchMods(gs: GlobalState): Promise<SimpleModList_Item[]> {
   const result = await gs.client.getLocalMods({});
   console.log(result.response.mods);
   return result.response.mods;
@@ -33,7 +33,7 @@ export default observer(function LocalModList(props: LocalModListProps): React.R
             description={e?.toString ? e.toString() : String(e)}
           />
         ),
-        fulfilled: (mods: Release[]) => (
+        fulfilled: (mods: SimpleModList_Item[]) => (
           <div className="flex flex-row flex-wrap justify-between gap-4">
             {mods.map((mod) => (
               <div key={mod.modid} className="mod-tile bg-important flex flex-col overflow-hidden">

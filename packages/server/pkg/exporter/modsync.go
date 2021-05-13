@@ -2,6 +2,7 @@ package exporter
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -228,6 +229,22 @@ func buildReleaseFromRow(ctx context.Context, q queries.Querier, row queries.Get
 	return rel, nil
 }
 
+func calcVersionsChecksum(ctx context.Context, versions []string) ([]byte, error) {
+	// We use simple string sorting here instead of proper versioning sorting since it doesn't matter *how* the versions
+	// are sorted as long as they appear in the same order on server and client.
+	sort.Strings(versions)
+
+	hasher := sha256.New()
+	for _, version := range versions {
+		_, err := hasher.Write([]byte(version))
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return hasher.Sum(nil), nil
+}
+
 func writePack(ctx context.Context, modID string, storagePath string, packnum uint32, relID int, pack []*common.Release) error {
 	modpack := &common.ReleasePack{
 		Modid:    modID,
@@ -251,16 +268,20 @@ func writePack(ctx context.Context, modID string, storagePath string, packnum ui
 func buildModIndex(ctx context.Context, q queries.Querier, modID string, aID int32, storagePath string) (*common.ModIndex_Mod, error) {
 	entry := new(common.ModIndex_Mod)
 	entry.Modid = modID
-	entry.LastModified = make([]*timestamppb.Timestamp, 0)
+	entry.LastModified = timestamppb.Now()
+	entry.PacksLastModified = make([]*timestamppb.Timestamp, 0)
 
 	releases, err := q.GetPublicModReleasesByAid(ctx, aID)
 	if err != nil {
 		return nil, eris.Wrapf(err, "failed to fetch releases for %s", modID)
 	}
 
+	versionNumbers := make([]string, len(releases))
 	pack := make([]*common.Release, 0, packSize)
 	current := uint32(0)
-	for _, release := range releases {
+	for idx, release := range releases {
+		versionNumbers[idx] = *release.Version
+
 		pbRel, err := buildReleaseFromRow(ctx, q, release, storagePath)
 		if err != nil {
 			return nil, eris.Wrapf(err, "failed to process release %d", *release.ID)
@@ -274,7 +295,7 @@ func buildModIndex(ctx context.Context, q queries.Querier, modID string, aID int
 			}
 
 			pack = make([]*common.Release, 0, packSize)
-			entry.LastModified = append(entry.LastModified, timestamppb.Now())
+			entry.PacksLastModified = append(entry.PacksLastModified, timestamppb.Now())
 			current++
 		}
 	}
@@ -284,20 +305,35 @@ func buildModIndex(ctx context.Context, q queries.Querier, modID string, aID int
 		if err != nil {
 			return nil, err
 		}
-		entry.LastModified = append(entry.LastModified, timestamppb.Now())
+		entry.PacksLastModified = append(entry.PacksLastModified, timestamppb.Now())
 	}
 
+	vchk, err := calcVersionsChecksum(ctx, versionNumbers)
+	if err != nil {
+		return nil, err
+	}
+	entry.VersionChecksum = vchk
 	return entry, nil
 }
 
 func updateModIndex(ctx context.Context, q queries.Querier, entry *common.ModIndex_Mod, aID int32, storagePath string) error {
 	var lastUpdate time.Time
 
-	for _, modifiedRaw := range entry.LastModified {
+	for _, modifiedRaw := range entry.PacksLastModified {
 		modified := modifiedRaw.AsTime()
 		if modified.After(lastUpdate) {
 			lastUpdate = modified
 		}
+	}
+
+	versionRows, err := q.GetPublicModVersionsByAID(ctx, aID)
+	if err != nil {
+		return eris.Wrapf(err, "failed to retrieve public release versions for mod %s", entry.Modid)
+	}
+
+	versions := make(map[string]bool)
+	for _, row := range versionRows {
+		versions[*row] = true
 	}
 
 	releases, err := q.GetPublicModReleasesByAIDSince(ctx, aID, pgtype.Timestamptz{
@@ -326,8 +362,9 @@ func updateModIndex(ctx context.Context, q queries.Querier, entry *common.ModInd
 	sort.Strings(deletedRels)
 
 	// update / remove existing entries
+	versionNumbers := make([]string, 0, 10*len(entry.PacksLastModified))
 	var pack common.ReleasePack
-	for packnum := range entry.LastModified {
+	for packnum := range entry.PacksLastModified {
 		packPath := filepath.Join(storagePath, fmt.Sprintf("m.%s.%03d", entry.Modid, packnum))
 		encoded, err := ioutil.ReadFile(packPath)
 		if err != nil {
@@ -347,17 +384,26 @@ func updateModIndex(ctx context.Context, q queries.Querier, entry *common.ModInd
 				pack.Releases[idx] = pbRel
 				delete(convertedRels, version)
 				modified = true
+
+				versionNumbers = append(versionNumbers, pbRel.Version)
 			} else {
-				delIdx := sort.SearchStrings(deletedRels, version)
-				if delIdx < len(deletedRels) && deletedRels[delIdx] == version {
+				deleted := !versions[version]
+				if !deleted {
+					delIdx := sort.SearchStrings(deletedRels, version)
+					deleted = delIdx < len(deletedRels) && deletedRels[delIdx] == version
+				}
+
+				if deleted {
 					pack.Releases = append(pack.Releases[:idx], pack.Releases[idx+1:]...)
 					modified = true
+				} else {
+					versionNumbers = append(versionNumbers, version)
 				}
 			}
 		}
 
 		if modified {
-			entry.LastModified[packnum] = timestamppb.Now()
+			entry.PacksLastModified[packnum] = timestamppb.Now()
 
 			encoded, err = proto.Marshal(&pack)
 			if err != nil {
@@ -372,7 +418,7 @@ func updateModIndex(ctx context.Context, q queries.Querier, entry *common.ModInd
 	}
 
 	// add new entries
-	current := uint32(len(entry.LastModified) - 1)
+	current := uint32(len(entry.PacksLastModified) - 1)
 	encoded, err := ioutil.ReadFile(fmt.Sprintf("m.%s.%03d", entry.Modid, current))
 	if err != nil {
 		return eris.Wrapf(err, "failed to open last pack (%d) from mod %s", current, entry.Modid)
@@ -385,6 +431,7 @@ func updateModIndex(ctx context.Context, q queries.Querier, entry *common.ModInd
 
 	rels := pack.Releases
 	for _, pbRel := range convertedRels {
+		versionNumbers = append(versionNumbers, pbRel.Version)
 		rels = append(rels, pbRel)
 		if len(rels) >= packSize {
 			err = writePack(ctx, entry.Modid, storagePath, current, -1, rels)
@@ -393,10 +440,10 @@ func updateModIndex(ctx context.Context, q queries.Querier, entry *common.ModInd
 			}
 
 			rels = make([]*common.Release, 0, packSize)
-			if len(entry.LastModified) <= int(current) {
-				entry.LastModified = append(entry.LastModified, timestamppb.Now())
+			if len(entry.PacksLastModified) <= int(current) {
+				entry.PacksLastModified = append(entry.PacksLastModified, timestamppb.Now())
 			} else {
-				entry.LastModified[current] = timestamppb.Now()
+				entry.PacksLastModified[current] = timestamppb.Now()
 			}
 			current++
 		}
@@ -404,14 +451,61 @@ func updateModIndex(ctx context.Context, q queries.Querier, entry *common.ModInd
 
 	if len(rels) > 0 {
 		err = writePack(ctx, entry.Modid, storagePath, current, -1, rels)
-		if len(entry.LastModified) <= int(current) {
-			entry.LastModified = append(entry.LastModified, timestamppb.Now())
+		if err != nil {
+			return err
+		}
+
+		if len(entry.PacksLastModified) <= int(current) {
+			entry.PacksLastModified = append(entry.PacksLastModified, timestamppb.Now())
 		} else {
-			entry.LastModified[current] = timestamppb.Now()
+			entry.PacksLastModified[current] = timestamppb.Now()
 		}
 	}
 
+	vchk, err := calcVersionsChecksum(ctx, versionNumbers)
+	if err != nil {
+		return err
+	}
+
+	entry.VersionChecksum = vchk
 	return err
+}
+
+func writeModMetaFile(ctx context.Context, mod queries.GetPublicModUpdatedDatesRow, storagePath string) error {
+	// We always update the mod metadata files since they're small and fast to write and we don't have a marker
+	// to check for updates.
+	modMeta := &common.ModMeta{
+		Modid: *mod.Modid,
+		Title: *mod.Title,
+		Tags:  mod.Tags,
+	}
+
+	switch db.ModType(*mod.Type) {
+	case db.TypeMod:
+		modMeta.Type = common.ModType_MOD
+	case db.TypeTotalConversion:
+		modMeta.Type = common.ModType_TOTAL_CONVERSION
+	case db.TypeEngine:
+		modMeta.Type = common.ModType_ENGINE
+	case db.TypeTool:
+		modMeta.Type = common.ModType_TOOL
+	case db.TypeExtension:
+		modMeta.Type = common.ModType_EXTENSION
+	default:
+		return eris.Errorf("failed to parse mod type for mod %s", *mod.Modid)
+	}
+
+	encoded, err := proto.Marshal(modMeta)
+	if err != nil {
+		return eris.Wrapf(err, "failed to serialise metadata for mod %s", *mod.Modid)
+	}
+
+	err = ioutil.WriteFile(filepath.Join(storagePath, fmt.Sprintf("m.%s", *mod.Modid)), encoded, 0660)
+	if err != nil {
+		return eris.Wrapf(err, "failed to write mod metadata file for mod %s", *mod.Modid)
+	}
+
+	return nil
 }
 
 func UpdateModsyncExport(ctx context.Context, q queries.Querier, storagePath string) error {
@@ -442,24 +536,6 @@ func UpdateModsyncExport(ctx context.Context, q queries.Querier, storagePath str
 	dbModIDs := make([]string, len(modlist))
 	for idx, mod := range modlist {
 		dbModIDs[idx] = *mod.Modid
-
-		// We always update the mod metadata files since they're small and fast to write and we don't have a marker
-		// to check for updates.
-		modMeta := &common.ModMeta{
-			Modid: *mod.Modid,
-			Title: *mod.Title,
-			Tags:  mod.Tags,
-		}
-		encoded, err := proto.Marshal(modMeta)
-		if err != nil {
-			return eris.Wrapf(err, "failed to serialise metadata for mod %s", *mod.Modid)
-		}
-
-		err = ioutil.WriteFile(filepath.Join(storagePath, fmt.Sprintf("m.%s", *mod.Modid)), encoded, 0660)
-		if err != nil {
-			return eris.Wrapf(err, "failed to write mod metadata file for mod %s", *mod.Modid)
-		}
-
 		idxEntry, found := modMap[*mod.Modid]
 		if !found {
 			// The mod isn't listed in the index. Build the pack files and append it.
@@ -469,19 +545,33 @@ func UpdateModsyncExport(ctx context.Context, q queries.Querier, storagePath str
 			}
 
 			index.Mods = append(index.Mods, entry)
+			err = writeModMetaFile(ctx, mod, storagePath)
+			if err != nil {
+				return eris.Wrapf(err, "failed to write mod meta for %s", *mod.Modid)
+			}
+
 			continue
 		}
 
-		// Check if the mod metadata has changed since the last time we updated packs for this mod.
-		isCurrent := false
-		for _, idxModified := range idxEntry.LastModified {
-			if idxModified != nil && !mod.Updated.Time.After(idxModified.AsTime()) {
-				isCurrent = true
-				break
+		var lastIdxUpdate time.Time
+		for _, stamp := range idxEntry.PacksLastModified {
+			stampTime := stamp.AsTime()
+			if stampTime.After(lastIdxUpdate) {
+				lastIdxUpdate = stampTime
 			}
 		}
 
-		if !isCurrent {
+		if mod.Updated.Time.After(idxEntry.LastModified.AsTime()) {
+			err = writeModMetaFile(ctx, mod, storagePath)
+			if err != nil {
+				return err
+			}
+
+			idxEntry.LastModified = timestamppb.Now()
+		}
+
+		// Check if the mod metadata has changed since the last time we updated packs for this mod.
+		if mod.ReleaseUpdated.Time.After(lastIdxUpdate) {
 			err = updateModIndex(ctx, q, idxEntry, *mod.Aid, storagePath)
 			if err != nil {
 				return err

@@ -84,11 +84,87 @@ func (i *StringListIndex) BatchedAdd(key, value string) {
 	i.cache[key] = append(i.cache[key], value)
 }
 
+func (i *StringListIndex) BatchedRemove(key, value string) {
+	if !i.batchMode {
+		panic("BatchedAdd() called on an index that wasn't in batch mode!")
+	}
+
+	if i.cache == nil {
+		return
+	}
+
+	for idx, item := range i.cache[key] {
+		if item == value {
+			i.cache[key] = append(i.cache[key][:idx], i.cache[key][idx+1:]...)
+			break
+		}
+	}
+}
+
+func (i *StringListIndex) BatchedRemoveAll(key string) {
+	if !i.batchMode {
+		panic("BatchedAdd() called on an index that wasn't in batch mode!")
+	}
+
+	if i.cache == nil {
+		return
+	}
+
+	delete(i.cache, key)
+}
+
 func (i *StringListIndex) Add(tx *bolt.Tx, key, value string) error {
 	if i.cache == nil {
 		i.Clear()
 	}
 	i.cache[key] = append(i.cache[key], value)
+
+	if !i.batchMode {
+		if i.sorter != nil {
+			err := i.ForEach(i.sorter)
+			if err != nil {
+				return err
+			}
+		}
+
+		return i.Save(tx)
+	}
+
+	return nil
+}
+
+func (i *StringListIndex) Remove(tx *bolt.Tx, key, value string) error {
+	if i.cache == nil {
+		i.Clear()
+	}
+
+	for idx, item := range i.cache[key] {
+		if item == value {
+			i.cache[key] = append(i.cache[key][:idx], i.cache[key][idx+1:]...)
+			break
+		}
+	}
+
+	if !i.batchMode {
+		if i.sorter != nil {
+			err := i.ForEach(i.sorter)
+			if err != nil {
+				return err
+			}
+		}
+
+		return i.Save(tx)
+	}
+
+	return nil
+}
+
+func (i *StringListIndex) RemoveAll(tx *bolt.Tx, key, value string) error {
+	if i.cache == nil {
+		i.Clear()
+	}
+
+	delete(i.cache, key)
 
 	if !i.batchMode {
 		if i.sorter != nil {

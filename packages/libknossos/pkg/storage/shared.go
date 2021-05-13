@@ -26,7 +26,8 @@ func Open(ctx context.Context) error {
 	}
 
 	buckets := [][]byte{
-		localModsBucket, indexBucket, fileBucket, settingsBucket, userModSettingsBucket, engineFlagsBucket,
+		localModsBucket, remoteModsBucket, indexBucket, fileBucket, settingsBucket, userModSettingsBucket,
+		engineFlagsBucket, httpCacheBucket,
 	}
 	err = newDB.Update(func(tx *bolt.Tx) error {
 		for _, bucket := range buckets {
@@ -50,7 +51,17 @@ func Open(ctx context.Context) error {
 			return err
 		}
 
-		return localTypeIdx.Open(tx)
+		err = localTypeIdx.Open(tx)
+		if err != nil {
+			return err
+		}
+
+		err = remoteVersionIdx.Open(tx)
+		if err != nil {
+			return err
+		}
+
+		return remoteTypeIdx.Open(tx)
 	})
 }
 

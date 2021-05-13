@@ -1,18 +1,25 @@
 -- name: GetPublicModUpdatedDates :many
-SELECT m.modid, m.aid, m.title, m.tags, MAX(r.updated) AS updated FROM mods AS m
+SELECT m.modid, m.aid, m.type, m.title, m.tags, MAX(r.updated) AS release_updated, m.updated FROM mods AS m
     LEFT JOIN mod_releases AS r ON r.mod_aid = m.aid
+    WHERE m.private = false
     GROUP BY m.modid, m.aid;
 
 -- name: GetPublicModReleasesByAid :many
 SELECT r.*, m.modid FROM mod_releases AS r
     INNER JOIN mods AS m ON m.aid = r.mod_aid
-    WHERE mod_aid = pggen.arg('aid') ORDER BY created ASC;
+    WHERE mod_aid = pggen.arg('aid') AND m.private = false
+    ORDER BY created ASC;
 
 -- name: GetPublicModReleasesByAIDSince :many
 SELECT r.*, m.modid FROM mod_releases AS r
     INNER JOIN mods AS m ON m.aid = r.mod_aid
-    WHERE mod_aid = pggen.arg('aid') AND updated > pggen.arg('since')
+    WHERE mod_aid = pggen.arg('aid') AND r.updated > pggen.arg('since') AND m.private = false
     ORDER BY created ASC;
+
+-- name: GetPublicModVersionsByAID :many
+SELECT r.version FROM mod_releases AS r
+    INNER JOIN mods AS m ON m.aid = r.mod_aid
+    WHERE mod_aid = pggen.arg('aid') AND m.private = false;
 
 -- name: GetPublicPackagesByReleaseID :many
 SELECT p.* FROM mod_packages AS p
