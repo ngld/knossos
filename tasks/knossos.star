@@ -2,6 +2,7 @@ load("helpers.star", "cmake_task", "find_library", "get_golangci_flags", "merge_
 load("options.star", "build")
 
 kn_args = option("client_args", "", help = "The parameters to pass to Knossos in the client-run target")
+local_nebula = option("use_local_nebula", "true" if build == "Debug" else "false", help = "Use localhost:8200 instead of nu.fsnebula.org (enabled by default for Debug builds)") == "true"
 
 def knossos_configure(binext, libext, generator):
     res_dir = ""
@@ -21,6 +22,7 @@ def knossos_configure(binext, libext, generator):
         outputs = ["../../build/client/launcher/%s/%sui.kar" % (cef_build, res_dir)],
         cmds = [
             yarn("webpack --env production --color --progress"),
+            "cp src/splash.html src/resources/logo.webm dist/prod",
             'tool pack-kar "../../build/client/launcher/%s/%sui.kar" dist/prod' % (cef_build, res_dir),
         ],
     )
@@ -87,7 +89,8 @@ def knossos_configure(binext, libext, generator):
         libkn_flags += " -tags release -trimpath"
         libkn_goldflags += " -s -w"
         libkn_defines["releaseBuild"] = "true"
-    else:
+
+    if local_nebula:
         libkn_defines["TwirpEndpoint"] = "http://localhost:8200/twirp"
         libkn_defines["SyncEndpoint"] = "http://localhost:8200/sync"
 
