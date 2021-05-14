@@ -1,5 +1,20 @@
 # Monorepo for Knossos and Nebula development
 
+## DISCLAIMER: This code is in pre-alpha stage
+
+I'm currently rewriting Knossos from scratch and as a result, this repository
+currently doesn't contain a functional mod manager. If you're just trying to
+run Knossos, please take a look at the [old repository](https://github.com/ngld/old-knossos).
+
+This repository contains the unfinished code for the next version and doesn't
+contain essential features like mod installation. You're welcome to test the
+software in its current state. Just please be aware of the limitations.
+
+I'll remove this notice once the basic mod manager functionality (mod install,
+update, remove, ...) has been implemented.
+
+## Overview
+
 Most of the source code is in the `packages` subdirectory. It also contains
 further documentation for the various packages.
 
