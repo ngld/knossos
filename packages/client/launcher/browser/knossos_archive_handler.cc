@@ -31,6 +31,11 @@ bool KnossosArchiveHandler::Open(CefRefPtr<CefRequest> request, bool& handle_req
   std::string name = url;
   name = name.substr(_prefix_length);
 
+  auto query_pos = name.find("?");
+  if (query_pos != std::string::npos) {
+    name = name.substr(0, query_pos);
+  }
+
   _archive->ReadEntry(name, _res_size, &_res_data);
 
   LOG(INFO) << "Loaded " << url << " of size " << _res_size << " from archive";

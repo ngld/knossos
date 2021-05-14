@@ -10,17 +10,18 @@
 #include "include/cef_browser.h"
 #include "include/cef_command_line.h"
 #include "include/cef_file_util.h"
+#include "include/cef_parser.h"
 #include "include/cef_path_util.h"
 #include "include/cef_process_message.h"
 #include "include/cef_values.h"
 #include "include/views/cef_browser_view.h"
 #include "include/views/cef_window.h"
-#include "include/wrapper/cef_helpers.h"
 #include "include/wrapper/cef_closure_task.h"
+#include "include/wrapper/cef_helpers.h"
 
-#include "browser/knossos_handler.h"
 #include "browser/knossos_bridge.h"
 #include "browser/knossos_dev_tools.h"
+#include "browser/knossos_handler.h"
 #include "renderer/knossos_js_interface.h"
 
 namespace {
@@ -28,8 +29,9 @@ namespace {
 // When using the Views framework this object provides the delegate
 // implementation for the CefWindow that hosts the Views-based browser.
 class KnossosWindowDelegate : public CefWindowDelegate {
- public:
-  explicit KnossosWindowDelegate(CefRefPtr<CefBrowserView> browser_view, bool main_browser)
+public:
+  explicit KnossosWindowDelegate(CefRefPtr<CefBrowserView> browser_view,
+                                 bool main_browser)
       : main_browser_(main_browser), browser_view_(browser_view) {}
 
   void OnWindowCreated(CefRefPtr<CefWindow> window) OVERRIDE {
@@ -53,9 +55,7 @@ class KnossosWindowDelegate : public CefWindowDelegate {
     return true;
   }
 
-  bool IsFrameless(CefRefPtr<CefWindow> window) OVERRIDE {
-    return true;
-  }
+  bool IsFrameless(CefRefPtr<CefWindow> window) OVERRIDE { return true; }
 
   CefRect GetInitialBounds(CefRefPtr<CefWindow> window) OVERRIDE {
     CefRect screen_size = KnossosHandler::GetInstance()->GetScreenSize();
@@ -67,7 +67,7 @@ class KnossosWindowDelegate : public CefWindowDelegate {
     return window_size;
   }
 
- private:
+private:
   bool main_browser_;
   CefRefPtr<CefBrowserView> browser_view_;
 
@@ -76,7 +76,7 @@ class KnossosWindowDelegate : public CefWindowDelegate {
 };
 
 class KnossosBrowserViewDelegate : public CefBrowserViewDelegate {
- public:
+public:
   KnossosBrowserViewDelegate() {}
 
   bool OnPopupBrowserViewCreated(CefRefPtr<CefBrowserView> browser_view,
@@ -84,7 +84,7 @@ class KnossosBrowserViewDelegate : public CefBrowserViewDelegate {
                                  bool is_devtools) OVERRIDE {
     if (is_devtools) {
       CefWindow::CreateTopLevelWindow(
-        new KnossosDevToolsWindowDelegate(popup_browser_view));
+          new KnossosDevToolsWindowDelegate(popup_browser_view));
     } else {
       // Create a new top-level Window for the popup. It will show itself after
       // creation.
@@ -96,16 +96,17 @@ class KnossosBrowserViewDelegate : public CefBrowserViewDelegate {
     return true;
   }
 
- private:
+private:
   IMPLEMENT_REFCOUNTING(KnossosBrowserViewDelegate);
   DISALLOW_COPY_AND_ASSIGN(KnossosBrowserViewDelegate);
 };
 
-}  // namespace
+} // namespace
 
 KnossosApp::KnossosApp() {}
 
-void KnossosApp::OnBeforeCommandLineProcessing(const CefString& process_type, CefRefPtr<CefCommandLine> command_line) {
+void KnossosApp::OnBeforeCommandLineProcessing(
+    const CefString &process_type, CefRefPtr<CefCommandLine> command_line) {
   if (process_type.empty()) {
     // Don't create a "GPUCache" directory
     command_line->AppendSwitch("disable-gpu-shader-disk-cache");
@@ -123,7 +124,8 @@ void KnossosApp::OnContextInitialized() {
   CefRefPtr<CefCommandLine> command_line =
       CefCommandLine::GetGlobalCommandLine();
 
-  const bool enable_chrome_runtime = command_line->HasSwitch("enable-chrome-runtime");
+  const bool enable_chrome_runtime =
+      command_line->HasSwitch("enable-chrome-runtime");
 
 #if defined(OS_WIN) || defined(OS_LINUX)
   // The Views framework is currently only supported on Windows and Linux.
@@ -131,12 +133,6 @@ void KnossosApp::OnContextInitialized() {
 #else
   const bool use_views = false;
 #endif
-
-  // KnossosHandler implements browser-level callbacks.
-  CefRefPtr<KnossosHandler> handler(new KnossosHandler(use_views, _settings_path));
-
-  // Specify CEF browser settings here.
-  CefBrowserSettings browser_settings;
 
   std::string url;
 
@@ -146,6 +142,16 @@ void KnossosApp::OnContextInitialized() {
   if (url.empty())
     url = "https://files.client.fsnebula.org/index.html";
 
+  url = "https://files.client.fsnebula.org/splash.html?load=" +
+        std::string(CefURIEncode(url, true));
+
+  // KnossosHandler implements browser-level callbacks.
+  CefRefPtr<KnossosHandler> handler(
+      new KnossosHandler(use_views, _settings_path));
+
+  // Specify CEF browser settings here.
+  CefBrowserSettings browser_settings;
+
   if (use_views && !enable_chrome_runtime) {
     // Create the BrowserView.
     CefRefPtr<CefBrowserView> browser_view = CefBrowserView::CreateBrowserView(
@@ -153,7 +159,8 @@ void KnossosApp::OnContextInitialized() {
         new KnossosBrowserViewDelegate());
 
     // Create the Window. It will show itself after creation.
-    CefWindow::CreateTopLevelWindow(new KnossosWindowDelegate(browser_view, true));
+    CefWindow::CreateTopLevelWindow(
+        new KnossosWindowDelegate(browser_view, true));
   } else {
     // Information used when creating the native window.
     CefWindowInfo window_info;
@@ -181,7 +188,8 @@ void KnossosApp::OnContextInitialized() {
   handler->PostKnossosTask(base::Bind(PrepareLibKnossos, _settings_path));
 }
 
-void KnossosApp::InitializeSettings(CefSettings &settings, std::string appDataPath) {
+void KnossosApp::InitializeSettings(CefSettings &settings,
+                                    std::string appDataPath) {
   CefString path;
   if (!CefGetPath(PK_DIR_EXE, path)) {
     LOG(ERROR) << "Could not find application directory!";
@@ -233,18 +241,14 @@ void KnossosApp::InitializeSettings(CefSettings &settings, std::string appDataPa
 #ifndef OS_APPLE
 
 // Keep in sync with knossos_helper_app.cc
-bool KnossosApp::OnProcessMessageReceived(CefRefPtr<CefBrowser> browser,
-                                                CefRefPtr<CefFrame> frame,
-                                                CefProcessId source_process,
-                                                CefRefPtr<CefProcessMessage> message
-) {
-  return KnossosJsInterface::ProcessMessage(browser, frame, source_process, message);
+bool KnossosApp::OnProcessMessageReceived(
+    CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame,
+    CefProcessId source_process, CefRefPtr<CefProcessMessage> message) {
+  return KnossosJsInterface::ProcessMessage(browser, frame, source_process,
+                                            message);
 }
 
 // Keep in sync with knossos_helper_app.cc
-void KnossosApp::OnWebKitInitialized()
-{
-  KnossosJsInterface::Init();
-}
+void KnossosApp::OnWebKitInitialized() { KnossosJsInterface::Init(); }
 
 #endif

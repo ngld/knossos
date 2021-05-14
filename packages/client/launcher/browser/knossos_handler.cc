@@ -29,13 +29,6 @@ KnossosHandler *g_instance = nullptr;
 const int kDevToolsMenuItem = MENU_ID_USER_FIRST;
 const int kReloadMenuItem = MENU_ID_USER_FIRST + 1;
 
-// Returns a data: URI with the specified contents.
-std::string GetDataURI(const std::string &data, const std::string &mime_type) {
-  return "data:" + mime_type + ";base64," +
-         CefURIEncode(CefBase64Encode(data.data(), data.size()), false)
-             .ToString();
-}
-
 } // namespace
 
 KnossosHandler::KnossosHandler(bool use_views, std::string settings_path)
@@ -146,13 +139,11 @@ void KnossosHandler::OnLoadError(CefRefPtr<CefBrowser> browser,
 
   // Display a load error message using a data: URI.
   std::stringstream ss;
-  ss << "<html><style>body { background: white; font-family: Helvetica, Arial, "
-        "\"Lucida Grande\", sans-serif; }</style><body>"
-        "<h2>Failed to load URL "
-     << std::string(failedUrl) << " with error " << std::string(errorText)
-     << " (" << errorCode << ").</h2></body></html>";
+  ss << "https://files.client.fsnebula.org/splash.html"
+     << "?load=" << CefURIEncode(failedUrl, true)
+     << "&error=" << CefURIEncode(errorText, true);
 
-  frame->LoadURL(GetDataURI(ss.str(), "text/html"));
+  frame->LoadURL(ss.str());
 }
 
 void KnossosHandler::CloseAllBrowsers(bool force_close) {
@@ -273,9 +264,9 @@ CefRefPtr<CefResourceRequestHandler> KnossosHandler::GetResourceRequestHandler(
   } else {
     std::string url = request->GetURL();
     if (url.substr(0, 11) != "devtools://")
-      LOG(INFO) << "Request " << request->GetURL() << " from "
-                << request_initiator << " (" << request->GetReferrerURL()
-                << ")";
+      VLOG(1) << "Request " << request->GetURL() << " from "
+              << request_initiator << " (" << request->GetReferrerURL()
+              << ")";
 
     if (!request_initiator.empty()) {
       if (url.substr(0, 34) == "https://files.client.fsnebula.org/") {

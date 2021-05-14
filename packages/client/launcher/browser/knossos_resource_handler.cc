@@ -139,7 +139,7 @@ bool KnossosResourceHandler::Read(void* data_out,
 
     pos += to_read;
     bytes_read = to_read;
-    LOG(INFO) << "[" << bytes_to_read << ";" << to_read << "  # " << pos << "/" << kn_response->response_length << "]";
+    VLOG(1) << "[" << bytes_to_read << ";" << to_read << "  # " << pos << "/" << kn_response->response_length << "]";
     return to_read > 0;
   }
   return false;

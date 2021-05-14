@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Knossos</title>
+        <style type="text/css">
+            html {
+                background: #000;
+            }
+
+            body {
+                overflow: hidden;
+            }
+
+            video {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                margin-top: -225px;
+                margin-left: -400px;
+            }
+
+            .error-container {
+                position: absolute;
+                top: 50%;
+                margin-top: -32px;
+                width: 100%;
+            }
+
+            .error {
+                margin: auto;
+                max-width: 500px;
+                font-family: sans-serif;
+                background: rgba(219,55,55,.25);
+                color: #eee;
+                padding: 8px;
+            }
+        </style>
+    </head>
+    <body>
+        <video src="logo.webm" width="800" height="450" autoplay loop muted></video>
+        <div class="error-container"></div>
+        <script type="text/javascript">
+            const params = new URLSearchParams(location.search);
+            if (params.has('error')) {
+                const msg = document.createElement('div');
+                msg.setAttribute('class', 'error');
+                msg.appendChild(document.createTextNode(params.get('error')));
+                document.querySelector('.error-container').appendChild(msg);
+
+                setTimeout(() => {
+                    location.href = params.get("load");
+                }, 500);
+            } else {
+                location.href = params.get("load");
+            }
+        </script>
+    </body>
+</html>
