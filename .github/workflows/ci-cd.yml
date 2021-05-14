@@ -55,11 +55,11 @@ jobs:
           echo "$changed"
           echo "::endgroup::"
 
-          if grep -E '^packages/(server|front|build-tools)' > /dev/null <<< "$changed"; then
+          if grep -E '^packages/(api|server|front|build-tools)' > /dev/null <<< "$changed"; then
             echo "::set-output name=nebula_changed::1"
           fi
 
-          if grep -E '^packages/(libarchive|libknossos|client|client-ui|build-tools)' > /dev/null <<< "$changed"; then
+          if grep -E '^packages/(api|libarchive|libknossos|client|client-ui|build-tools)' > /dev/null <<< "$changed"; then
             echo "::set-output name=knossos_changed::1"
           fi
 
