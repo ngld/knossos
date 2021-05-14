@@ -2,6 +2,7 @@ package storage
 
 import (
 	"encoding/json"
+	"sort"
 
 	bolt "go.etcd.io/bbolt"
 )
@@ -18,6 +19,13 @@ type StringListIndex struct {
 }
 
 func NewStringListIndex(name string, sorter StringListSorter) *StringListIndex {
+	if sorter == nil {
+		sorter = func(_ string, slice []string) error {
+			sort.Strings(slice)
+			return nil
+		}
+	}
+
 	return &StringListIndex{
 		Name:   name,
 		sorter: sorter,
@@ -43,14 +51,6 @@ func (i *StringListIndex) StartBatch() {
 
 func (i *StringListIndex) FinishBatch(tx *bolt.Tx) error {
 	i.batchMode = false
-
-	if i.sorter != nil {
-		err := i.ForEach(i.sorter)
-		if err != nil {
-			return err
-		}
-	}
-
 	return i.Save(tx)
 }
 
@@ -120,13 +120,6 @@ func (i *StringListIndex) Add(tx *bolt.Tx, key, value string) error {
 	i.cache[key] = append(i.cache[key], value)
 
 	if !i.batchMode {
-		if i.sorter != nil {
-			err := i.ForEach(i.sorter)
-			if err != nil {
-				return err
-			}
-		}
-
 		return i.Save(tx)
 	}
 
@@ -146,13 +139,6 @@ func (i *StringListIndex) Remove(tx *bolt.Tx, key, value string) error {
 	}
 
 	if !i.batchMode {
-		if i.sorter != nil {
-			err := i.ForEach(i.sorter)
-			if err != nil {
-				return err
-			}
-		}
-
 		return i.Save(tx)
 	}
 
@@ -167,13 +153,6 @@ func (i *StringListIndex) RemoveAll(tx *bolt.Tx, key, value string) error {
 	delete(i.cache, key)
 
 	if !i.batchMode {
-		if i.sorter != nil {
-			err := i.ForEach(i.sorter)
-			if err != nil {
-				return err
-			}
-		}
-
 		return i.Save(tx)
 	}
 
@@ -183,6 +162,27 @@ func (i *StringListIndex) RemoveAll(tx *bolt.Tx, key, value string) error {
 func (i *StringListIndex) Save(tx *bolt.Tx) error {
 	if i.cache == nil {
 		i.Clear()
+	}
+
+	err := i.ForEach(i.sorter)
+	if err != nil {
+		return nil
+	}
+
+	// Remove duplicates
+	for k, v := range i.cache {
+		if len(v) > 0 {
+			last := v[len(v)-1]
+			for idx := len(v) - 2; idx >= 0; idx-- {
+				if v[idx] == last {
+					v = append(v[:idx], v[idx+1:]...)
+				} else {
+					last = v[idx]
+				}
+			}
+
+			i.cache[k] = v
+		}
 	}
 
 	encoded, err := json.Marshal(i.cache)
