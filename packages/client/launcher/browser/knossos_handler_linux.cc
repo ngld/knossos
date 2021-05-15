@@ -16,7 +16,10 @@
 #include "include/cef_browser.h"
 #include "include/wrapper/cef_helpers.h"
 
-void KnossosHandler::PlatformInit() { gtk_init(nullptr, nullptr); }
+void KnossosHandler::PlatformInit() {
+  XInitThreads();
+  gtk_init(nullptr, nullptr);
+}
 
 void KnossosHandler::PlatformTitleChange(CefRefPtr<CefBrowser> browser,
                                          const CefString &title) {

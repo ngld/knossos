@@ -109,6 +109,8 @@ def configure():
         libext = ".so"
         binext = ""
 
+        setenv("CFLAGS", "-fPIC " + getenv("CFLAGS", ""))
+
         if generator == "":
             if execute("ninja -h") != False:
                 generator = "Ninja"
