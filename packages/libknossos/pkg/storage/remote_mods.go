@@ -243,9 +243,9 @@ type RemoteMods struct{}
 var _ ModProvider = (*RemoteMods)(nil)
 
 func (RemoteMods) GetVersionsForMod(id string) ([]string, error) {
-	return GetVersionsForMod(context.Background(), id)
+	return GetVersionsForRemoteMod(context.Background(), id)
 }
 
 func (RemoteMods) GetModMetadata(id, version string) (*common.Release, error) {
-	return GetModRelease(context.Background(), id, version)
+	return GetRemoteModRelease(context.Background(), id, version)
 }

@@ -52,7 +52,7 @@ func pickNaiveVersion(ctx context.Context, available []string, constraints *semv
 		}
 	}
 
-	return "", eris.New("no matching version found")
+	return "", eris.Errorf("no matching version found (looking for %s, available %s)", constraints, strings.Join(available, ", "))
 }
 
 var noPreRelConstraintPattern = regexp.MustCompile(`[0-9]+\.[0-9]+\.[0-9]+(?:-)?`)
@@ -80,7 +80,7 @@ func GetDependencySnapshot(ctx context.Context, mods storage.ModProvider, releas
 
 				// Make sure all constraints allow prerelease versions
 				rawConstraint = noPreRelConstraintPattern.ReplaceAllStringFunc(rawConstraint, func(s string) string {
-					if !strings.HasSuffix(s, "-") {
+					if !strings.HasSuffix(s, "-") && strings.ContainsAny(s, ">~") {
 						return s + "-0"
 					}
 					return s
@@ -142,7 +142,7 @@ func GetDependencySnapshot(ctx context.Context, mods storage.ModProvider, releas
 
 	api.Log(ctx, api.LogDebug, "Resolving constraints")
 	for modid, cons := range constraints {
-		versions, err := storage.GetVersionsForMod(ctx, modid)
+		versions, err := mods.GetVersionsForMod(modid)
 		if err != nil {
 			return nil, eris.Wrapf(err, "failed to look up versions for mod %s", modid)
 		}

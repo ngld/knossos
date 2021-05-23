@@ -114,6 +114,32 @@ message UserSettings {
   google.protobuf.Timestamp last_played = 4;
 }
 
+message InstallInfoResponse {
+  message Dependency {
+    string id = 1;
+    string package = 2;
+  }
+
+  message Package {
+    string name = 1;
+    PackageType type = 2;
+    string notes = 3;
+    repeated Dependency dependencies = 4;
+  }
+
+  message ModInfo {
+    string id = 5;
+    string title = 1;
+    string version = 2;
+    string notes = 3;
+
+    repeated Package packages = 4;
+  }
+
+  string title = 1;
+  repeated ModInfo mods = 2;
+}
+
 // event messages
 
 message ClientSentEvent {
@@ -169,4 +195,5 @@ service Knossos {
   rpc SyncRemoteMods (TaskRequest) returns (SuccessResponse) {};
   rpc GetRemoteMods (NullMessage) returns (SimpleModList) {};
   rpc GetRemoteModInfo (ModInfoRequest) returns (ModInfoResponse) {};
+  rpc GetModInstallInfo (ModInfoRequest) returns (InstallInfoResponse) {};
 }

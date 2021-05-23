@@ -5,6 +5,7 @@ import { observer } from 'mobx-react-lite';
 import { fromPromise } from 'mobx-utils';
 import { SimpleModList_Item } from '@api/client';
 import { GlobalState, useGlobalState } from '../lib/state';
+import { installMod } from '../dialogs/install-mod';
 import RefImage from '../elements/ref-image';
 import ModstockImage from '../resources/modstock.jpg';
 
@@ -51,6 +52,10 @@ export default observer(function RemoteModList(props: RemoteModListProps): React
                   </div>
 
                   <div className="cover flex flex-col justify-center gap-2">
+                    <Button onClick={() => installMod(gs, mod.modid, mod.version)}>
+                      Install
+                    </Button>
+
                     <Button
                       onClick={() => props.history.push('/rmod/' + mod.modid + '/' + mod.version)}
                     >
