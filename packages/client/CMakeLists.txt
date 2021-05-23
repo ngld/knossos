@@ -131,15 +131,19 @@
 # Global setup.
 #
 
-cmake_minimum_required(VERSION 2.8.12.1)
-# We can't change the name for CEF_ROOT since it's referenced from CEF's CMake files
-cmake_policy(SET CMP0074 OLD)
+cmake_minimum_required(VERSION 2.8.12.1...3.20.2)
+# We don't want CMake to look in CEF_PATH for FindCEF.cmake but that's the new behavior and it doesn't break
+# anything so let's avoid future headaches by enabling it now.
+cmake_policy(SET CMP0074 NEW)
+
+# Enable MACOSX_RPATH by default
+cmake_policy(SET CMP0042 NEW)
 
 # Only generate Debug and Release configuration types.
 set(CMAKE_CONFIGURATION_TYPES Debug Release)
 
 # Project name.
-project(knossos)
+project(Knossos)
 
 # Use folders in the resulting project files.
 set_property(GLOBAL PROPERTY OS_FOLDERS ON)
@@ -174,6 +178,7 @@ find_package(CEF REQUIRED)
 add_subdirectory(${CEF_LIBCEF_DLL_WRAPPER_PATH} libcef_dll_wrapper)
 
 set(BROTLI_BUNDLED_MODE ON)
+set(BROTLI_DISABLE_TESTS ON)
 add_subdirectory(../../third_party/brotli brotli)
 
 # Include application targets.
