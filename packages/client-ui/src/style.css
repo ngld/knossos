@@ -13,6 +13,12 @@ body {
     background: url(./resources/logo.png) no-repeat -85px -107px;
 }
 
+/* reset Blueprint.JS's link styles */
+#container a {
+    color: #fff;
+    text-decoration: none;
+}
+
 .title-bar {
     -webkit-app-region: drag;
 }
@@ -31,6 +37,11 @@ body {
 
 .bp3-toast-container.bp3-toast-container-top {
     top: 70px;
+}
+
+/* workaround because the backdrop can overlay a dialog's scroll bar (see https://github.com/palantir/blueprint/issues/3930) */
+.bp3-overlay-backdrop {
+    pointer-events: none;
 }
 
 .large-dialog {
