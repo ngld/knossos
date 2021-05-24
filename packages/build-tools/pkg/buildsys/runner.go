@@ -283,8 +283,17 @@ func runTaskInternal(ctx context.Context, task *Task, tasks TaskList, dryRun, fo
 					if err != nil {
 						_, exit := interp.IsExitStatus(err)
 						if !exit || (exit && !task.IgnoreExit) {
+							// try resetting the console but ignore any errors since the previous error is
+							// more important
+							_ = resetConsole()
 							return err
 						}
+					}
+
+					// reset the console in case a process we ran in this step changed the console mode
+					err = resetConsole()
+					if err != nil {
+						return eris.Wrap(err, "failed to reset console")
 					}
 
 					if runner.Exited() {
