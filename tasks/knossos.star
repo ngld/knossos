@@ -1,5 +1,5 @@
 load("helpers.star", "cmake_task", "find_library", "get_golangci_flags", "merge_compile_commands", "yarn")
-load("options.star", "build")
+load("options.star", "build", "msys2_path")
 
 kn_args = option("client_args", "", help = "The parameters to pass to Knossos in the client-run target")
 local_nebula = option("use_local_nebula", "true" if build == "Debug" else "false", help = "Use localhost:8200 instead of nu.fsnebula.org (enabled by default for Debug builds)") == "true"
@@ -60,7 +60,13 @@ def knossos_configure(binext, libext, generator):
     if OS != "darwin":
         libkn_ldflags += " -Wl,--no-undefined"
 
-    if OS != "linux":
+    if OS == "windows":
+        # force static linking on windows
+        libs = ["liblzma", "libzstd", "libz", "libiconv"]
+        for lib in libs:
+            libkn_ldflags += " %s.a" % resolve_path(msys2_path, "mingw64/lib", lib)
+
+    elif OS != "linux":
         libkn_ldflags += " -liconv -llzma -lzstd -lz"
     else:
         libkn_ldflags += " " + " ".join([

@@ -147,12 +147,6 @@ def configure():
     )
 
     extra_tools = []
-    if OS == "windows" and getenv("CI") == "":
-        extra_tools = [
-            "cd packages/build-tools",
-            "go build -o ../../.tools/gcc%s ./ccache-helper" % binext,
-        ]
-
     task(
         "install-tools",
         desc = "Installs necessary go tools in the workspace (task, pggen, protoc plugins, ...)",
