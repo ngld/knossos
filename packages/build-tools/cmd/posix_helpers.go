@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -10,6 +11,87 @@ import (
 	"github.com/rotisserie/eris"
 	"github.com/spf13/cobra"
 )
+
+var cpCmd = &cobra.Command{
+	Use:   "cp",
+	Short: "Cross-platform implementation of the POSIX cp command",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) < 2 {
+			return eris.New("Not enough parameters")
+		}
+
+		dest := filepath.Clean(args[len(args)-1])
+		destParent := filepath.Dir(dest)
+		info, err := os.Stat(destParent)
+		if err != nil {
+			return eris.Wrapf(err, "Could not find destination directory %s", destParent)
+		}
+
+		if !info.IsDir() {
+			return eris.Errorf("%s is not a directory!", destParent)
+		}
+
+		rename := false
+
+		info, err = os.Stat(dest)
+		if eris.Is(err, os.ErrNotExist) || !info.IsDir() {
+			if len(args) > 2 {
+				return eris.Errorf("Can't copy multiple items to %s because it is not a directory!", dest)
+			}
+			rename = true
+		} else if err != nil {
+			return eris.Wrapf(err, "Failed to retrieve info about destination %s", dest)
+		}
+
+		items := []string{}
+		if runtime.GOOS == "windows" {
+			for _, arg := range args[:len(args)-1] {
+				matches, err := filepath.Glob(arg)
+				if err != nil {
+					return eris.Wrapf(err, "Failed to resolve parameter %s", arg)
+				}
+
+				if matches == nil {
+					return eris.Errorf("Pattern %s produced no matches!", arg)
+				}
+
+				items = append(items, matches...)
+			}
+		} else {
+			items = args[:len(args)-1]
+		}
+
+		for _, item := range items {
+			var itemDest string
+			if rename {
+				itemDest = dest
+			} else {
+				itemDest = filepath.Join(dest, filepath.Base(item))
+			}
+
+			fIn, err := os.Open(item)
+			if err != nil {
+				return eris.Wrapf(err, "Failed to open %s", item)
+			}
+
+			fOut, err := os.Create(itemDest)
+			if err != nil {
+				fIn.Close()
+				return eris.Wrapf(err, "Failed to create %s", itemDest)
+			}
+
+			_, err = io.Copy(fOut, fIn)
+			if err != nil {
+				return eris.Wrapf(err, "Failed to copy %s to %s", item, itemDest)
+			}
+
+			fOut.Close()
+			fIn.Close()
+		}
+
+		return nil
+	},
+}
 
 var mvCmd = &cobra.Command{
 	Use:   "mv",
@@ -207,6 +289,7 @@ func init() {
 	rmCmd.Flags().BoolP("force", "f", false, "suppresses errors caused by missing files/folders")
 	mkdirCmd.Flags().BoolP("parents", "p", false, "create parent directories as needed")
 
+	rootCmd.AddCommand(cpCmd)
 	rootCmd.AddCommand(mvCmd)
 	rootCmd.AddCommand(rmCmd)
 	rootCmd.AddCommand(mkdirCmd)

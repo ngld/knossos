@@ -35,15 +35,7 @@ var defaultExecHandler = interp.DefaultExecHandler(2)
 func execHandler(ctx context.Context, args []string) error {
 	if len(args) > 0 {
 		switch args[0] {
-		case "mv":
-			fallthrough
-		case "rm":
-			fallthrough
-		case "mkdir":
-			fallthrough
-		case "touch":
-			fallthrough
-		case "sleep":
+		case "cp", "mv", "rm", "mkdir", "touch", "sleep":
 			// always use our cross-platform implementation for these operations to make sure
 			// they behave consistently
 			args = append([]string{"tool"}, args...)
