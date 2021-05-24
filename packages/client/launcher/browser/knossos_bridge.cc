@@ -71,8 +71,11 @@ void PrepareLibKnossos(std::string settings_path) {
 
   char* error;
   if (!LoadKnossos(libknossos_path.c_str(), &error)) {
-    KnossosHandler::ShowError("Failed to load libknossos: " + std::string(error));
-    LOG(FATAL) << "Failed to load libknossos: " << error;
+    std::stringstream msg;
+    msg << "Failed to load libknossos from " << libknossos_path
+        << ": " << error;
+    KnossosHandler::ShowError(msg.str());
+    LOG(FATAL) << msg.str();
   }
 
   std::string path_conv = resource_path;

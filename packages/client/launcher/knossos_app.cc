@@ -7,6 +7,11 @@
 #include <cstdio>
 #include <string>
 
+#if !defined(OS_WIN)
+#include <sys/types.h>
+#include <sys/stat.h>
+#endif
+
 #include "include/cef_browser.h"
 #include "include/cef_command_line.h"
 #include "include/cef_file_util.h"
@@ -188,6 +193,19 @@ void KnossosApp::OnContextInitialized() {
   handler->PostKnossosTask(base::Bind(PrepareLibKnossos, _settings_path));
 }
 
+// We can't use CefDirectoryExists() here because it expects threads to have
+// been initialised.
+static bool DirectoryExists(std::string path) {
+#if defined(OS_WIN)
+  auto attrs = GetFileAttributesA(path.c_str());
+  return attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_DIRECTORY) != 0;
+#else
+  struct stat statbuf;
+  auto error = stat(path.c_str(), &statbuf);
+  return error == 0 && (statbuf.st_mode & S_IFDIR) != 0;
+#endif
+}
+
 void KnossosApp::InitializeSettings(CefSettings &settings,
                                     std::string appDataPath) {
   CefString path;
@@ -204,9 +222,9 @@ void KnossosApp::InitializeSettings(CefSettings &settings,
   tmp += sep + "portable_settings";
 
   std::string config_path;
-  LOG(INFO) << "Portable path: " << tmp;
+  VLOG(1) << "Portable path: " << tmp;
 
-  if (CefDirectoryExists(CefString(tmp))) {
+  if (DirectoryExists(tmp)) {
     config_path = tmp;
   } else {
     if (!appDataPath.empty()) {
@@ -222,7 +240,7 @@ void KnossosApp::InitializeSettings(CefSettings &settings,
     LOG(FATAL) << "Could not determine a valid config folder.";
   }
 
-  LOG(INFO) << "Config path: " << config_path;
+  VLOG(1) << "Config path: " << config_path;
 
   CefString cache_path(&settings.cache_path);
   cache_path = config_path + sep + "cache";
