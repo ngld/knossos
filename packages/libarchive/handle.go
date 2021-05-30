@@ -9,8 +9,9 @@ package libarchive
 import "C"
 
 import (
-	"fmt"
 	"io"
+	"os"
+	"runtime"
 	"unsafe"
 
 	"github.com/rotisserie/eris"
@@ -26,6 +27,8 @@ type Archive struct {
 
 type Header struct {
 	Pathname string
+	Mode     os.FileMode
+	Size     int64
 }
 
 func CompiledVersion() int {
@@ -44,6 +47,11 @@ func OpenArchive(filename string) (*Archive, error) {
 	if a.handle == nil {
 		return nil, ErrAlloc
 	}
+
+	// Safety net
+	runtime.SetFinalizer(a, func(obj *Archive) {
+		obj.Close()
+	})
 
 	C.archive_read_support_filter_bzip2(a.handle)
 	C.archive_read_support_filter_gzip(a.handle)
@@ -66,17 +74,22 @@ func OpenArchive(filename string) (*Archive, error) {
 		err := a.Error()
 		a.Close()
 		return nil, err
-	} else {
-		fmt.Println("opened archive")
 	}
 
 	return a, nil
 }
 
 func (a *Archive) Error() error {
-	code := C.archive_errno(a.handle)
+	return a.code2error(C.archive_errno(a.handle))
+}
+
+func (a *Archive) code2error(code C.int) error {
 	if code == C.ARCHIVE_OK {
 		return nil
+	}
+
+	if code == C.ARCHIVE_EOF {
+		return io.EOF
 	}
 
 	msg := C.GoString(C.archive_error_string(a.handle))
@@ -87,13 +100,12 @@ func (a *Archive) Next() error {
 	var entry *C.struct_archive_entry
 	code := C.archive_read_next_header(a.handle, &entry)
 	if code != C.ARCHIVE_OK {
-		if code == C.ARCHIVE_EOF {
-			return io.EOF
-		}
-		return a.Error()
+		return a.code2error(code)
 	}
 
 	a.Entry.Pathname = C.GoString(C.archive_entry_pathname(entry))
+	a.Entry.Mode = os.FileMode(C.archive_entry_mode(entry))
+	a.Entry.Size = int64(C.archive_entry_size(entry))
 	return nil
 }
 
@@ -114,6 +126,8 @@ func (a *Archive) Read(buffer []byte) (int, error) {
 	if read > 0 {
 		goBuffer := C.GoBytes(a.buffer, C.int(read))
 		copy(buffer, goBuffer)
+	} else {
+		return 0, io.EOF
 	}
 
 	return int(read), nil
@@ -126,5 +140,6 @@ func (a *Archive) Close() error {
 		C.free(a.buffer)
 	}
 
+	runtime.SetFinalizer(a, nil)
 	return nil
 }
