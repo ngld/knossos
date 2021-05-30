@@ -55,7 +55,7 @@ func pickNaiveVersion(ctx context.Context, available []string, constraints *semv
 	return "", eris.Errorf("no matching version found (looking for %s, available %s)", constraints, strings.Join(available, ", "))
 }
 
-var noPreRelConstraintPattern = regexp.MustCompile(`[0-9]+\.[0-9]+\.[0-9]+(?:-)?`)
+var noPreRelConstraintPattern = regexp.MustCompile(`[>=~]*\s*[0-9]+\.[0-9]+\.[0-9]+(?:-)?`)
 
 func GetDependencySnapshot(ctx context.Context, mods storage.ModProvider, release *common.Release) (DependencySnapshot, error) {
 	snapshot := make(DependencySnapshot)

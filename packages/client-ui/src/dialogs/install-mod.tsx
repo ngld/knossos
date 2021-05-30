@@ -17,7 +17,7 @@ import {
 } from '@blueprintjs/core';
 import { ContextMenu2 } from '@blueprintjs/popover2';
 import { PackageType } from '@api/mod';
-import { InstallInfoResponse_Package } from '@api/client';
+import { InstallInfoResponse_Package, InstallModRequest_Mod } from '@api/client';
 import { GlobalState, useGlobalState } from '../lib/state';
 
 interface NodeData {
@@ -55,6 +55,7 @@ interface InstallState {
   nodes: TreeNodeInfo<NodeData>[];
   title: string;
   notes: string;
+  modVersions: Record<string, string>;
 }
 
 async function getInstallInfo(
@@ -69,7 +70,9 @@ async function getInstallInfo(
 
   const nodes = [] as TreeNodeInfo<NodeData>[];
   const userSelected = {} as Record<string, boolean>;
+  const modVersions = {} as Record<string, string>;
   for (const mod of result.response.mods) {
+    modVersions[mod.id] = mod.version;
     nodes.push({
       id: mod.title,
       hasCaret: true,
@@ -103,6 +106,7 @@ async function getInstallInfo(
     title: result.response.title,
     notes: '',
     userSelected,
+    modVersions,
   });
 }
 
@@ -191,7 +195,8 @@ const InstallMod = observer(function InstallMod(props: InstallModProps): React.R
   const [state, setState] = useState<InstallState>({
     loading: true,
     error: false,
-    userSelected: {} as Record<string, boolean>,
+    userSelected: {},
+    modVersions: {},
     nodes: [],
     title: '',
     notes: '',
@@ -278,7 +283,7 @@ const InstallMod = observer(function InstallMod(props: InstallModProps): React.R
               <div className={Classes.DIALOG_FOOTER_ACTIONS}>
                 <Button intent="primary" onClick={() => {
                   setOpen(false);
-                  triggerModInstallation(gs, state);
+                  triggerModInstallation(gs, state, props);
                 }}>Install Mod</Button>
                 <Button onClick={() => setOpen(false)}>Cancel</Button>
               </div>
@@ -298,6 +303,27 @@ export function installMod(gs: GlobalState, modid: string, version: string): voi
   gs.launchOverlay(InstallMod, { modid, version });
 }
 
-function triggerModInstallation(gs: GlobalState, state: InstallState): void {
-  gs.launchOverlay((props) => <Alert isOpen={true} onClose={() => props.onFinished()}>TODO</Alert>, {});
+function triggerModInstallation(gs: GlobalState, state: InstallState, props: InstallModProps): void {
+  const mods = {} as Record<string, InstallModRequest_Mod>;
+  for (const [key, selected] of Object.entries(state.userSelected)) {
+    if (selected) {
+      const [modID, pkgName] = key.split('#', 2);
+      if (!mods[modID]) {
+        mods[modID] = {
+          modid: modID,
+          version: state.modVersions[modID],
+          packages: [],
+        };
+      }
+
+      mods[modID].packages.push(pkgName);
+    }
+  }
+
+  gs.client.installMod({
+    modid: props.modid ?? '',
+    version: props.version ?? '',
+    ref: gs.tasks.startTask("Installing mod " + state.title),
+    mods: Object.values(mods),
+  })
 }

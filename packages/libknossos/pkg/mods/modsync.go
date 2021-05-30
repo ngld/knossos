@@ -6,11 +6,14 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io/ioutil"
+	"os"
+	"path/filepath"
 	"sort"
 	"time"
 
 	"github.com/ngld/knossos/packages/api/common"
 	"github.com/ngld/knossos/packages/libknossos/pkg/api"
+	"github.com/ngld/knossos/packages/libknossos/pkg/downloader"
 	"github.com/ngld/knossos/packages/libknossos/pkg/helpers"
 	"github.com/ngld/knossos/packages/libknossos/pkg/storage"
 	"github.com/rotisserie/eris"
@@ -25,6 +28,7 @@ func fetchRemoteMessage(ctx context.Context, messageName string, ref protoreflec
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode == 404 {
 		return errModNotFound
@@ -40,10 +44,8 @@ func fetchRemoteMessage(ctx context.Context, messageName string, ref protoreflec
 
 	encoded, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		resp.Body.Close()
 		return err
 	}
-	resp.Body.Close()
 
 	return proto.Unmarshal(encoded, ref)
 }
@@ -90,14 +92,13 @@ func processRemoteMod(ctx context.Context, params storage.RemoteImportCallbackPa
 		return nil, err
 	}
 
+	var versionHash []byte
 	localVersions, err := storage.GetVersionsForRemoteMod(ctx, entry.Modid)
-	if err != nil {
-		return nil, err
-	}
-
-	versionHash, err := calcVersionsChecksum(ctx, localVersions)
-	if err != nil {
-		return nil, err
+	if err == nil {
+		versionHash, err = calcVersionsChecksum(ctx, localVersions)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	versionMismatch := !bytes.Equal(versionHash, entry.VersionChecksum)
@@ -178,4 +179,45 @@ func UpdateRemoteModIndex(ctx context.Context) error {
 
 		return storage.UpdateRemoteModsLastModifiedDates(ctx, curDates)
 	})
+}
+
+func FetchModChecksums(ctx context.Context, modVersions map[string]string) (map[string]*common.ChecksumPack, error) {
+	tempFolder, err := os.MkdirTemp("", "knossos-chk-dl")
+	if err != nil {
+		return nil, err
+	}
+	defer os.RemoveAll(tempFolder)
+
+	queueItems := make([]*downloader.QueueItem, 0, len(modVersions))
+	for modID, version := range modVersions {
+		queueItems = append(queueItems, &downloader.QueueItem{
+			Key:      modID,
+			Filepath: filepath.Join(tempFolder, modID),
+			Mirrors:  []string{fmt.Sprintf("%s/c.%s.%s", api.SyncEndpoint, modID, version)},
+		})
+	}
+
+	queue := downloader.NewQueue(queueItems)
+	err = queue.Run(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[string]*common.ChecksumPack)
+	for _, item := range queueItems {
+		encoded, err := os.ReadFile(item.Filepath)
+		if err != nil {
+			return nil, err
+		}
+
+		data := new(common.ChecksumPack)
+		err = proto.Unmarshal(encoded, data)
+		if err != nil {
+			return nil, err
+		}
+
+		result[item.Key] = data
+	}
+
+	return result, nil
 }

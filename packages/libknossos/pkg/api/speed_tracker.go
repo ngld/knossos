@@ -17,7 +17,7 @@ const maxSamples = 10
 // NewSpeedTracker creates a new SpeedTracker instance
 func NewSpeedTracker() *SpeedTracker {
 	return &SpeedTracker{
-		samples: make([]speedSample, 0),
+		samples: make([]speedSample, 0, maxSamples+1),
 	}
 }
 

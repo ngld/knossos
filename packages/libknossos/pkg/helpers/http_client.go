@@ -49,7 +49,7 @@ func CachedGet(ctx context.Context, url string) (*http.Response, error) {
 		req.Header.Set("If-Modified-Since", cacheEntry.FetchDate)
 	}
 
-	res, err := Do(ctx, req)
+	res, err := HTTPDo(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +65,7 @@ func CachedGet(ctx context.Context, url string) (*http.Response, error) {
 	return res, nil
 }
 
-func Do(ctx context.Context, req *http.Request) (*http.Response, error) {
+func HTTPDo(ctx context.Context, req *http.Request) (*http.Response, error) {
 	req.Header.Set("User-Agent", userAgent)
 	return httpClient.Do(req)
 }

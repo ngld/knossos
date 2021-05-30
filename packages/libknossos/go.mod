@@ -5,6 +5,7 @@ go 1.15
 require (
 	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/aidarkhanov/nanoid v1.0.8
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.4.2
 	github.com/ngld/knossos/packages/api v0.0.0-00010101000000-000000000000

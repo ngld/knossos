@@ -99,7 +99,7 @@ body {
 }
 
 .log-error, .log-fatal {
-    color: #f00;
+    color: #ff4747;
 }
 
 .max-h-300px {

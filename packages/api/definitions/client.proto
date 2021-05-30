@@ -140,6 +140,20 @@ message InstallInfoResponse {
   repeated ModInfo mods = 2;
 }
 
+message InstallModRequest {
+  message Mod {
+    string modid = 1;
+    string version = 2;
+    repeated string packages = 3;
+  }
+
+  uint32 ref = 1;
+  string modid = 2;
+  string version = 3;
+
+  repeated Mod mods = 4;
+}
+
 // event messages
 
 message ClientSentEvent {
@@ -196,4 +210,5 @@ service Knossos {
   rpc GetRemoteMods (NullMessage) returns (SimpleModList) {};
   rpc GetRemoteModInfo (ModInfoRequest) returns (ModInfoResponse) {};
   rpc GetModInstallInfo (ModInfoRequest) returns (InstallInfoResponse) {};
+  rpc InstallMod (InstallModRequest) returns (SuccessResponse) {};
 }
