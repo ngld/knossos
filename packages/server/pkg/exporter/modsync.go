@@ -3,6 +3,7 @@ package exporter
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -103,9 +104,9 @@ func buildReleaseFromRow(ctx context.Context, q queries.Querier, row queries.Get
 		return nil, eris.Wrapf(err, "failed to fetch package archives for release %d (%s)", *row.ID, *row.Modid)
 	}
 
-	archiveMap := make(map[int32][]*queries.GetPublicPackageArchivesByReleaseIDRow)
+	archiveMap := make(map[int32][]queries.GetPublicPackageArchivesByReleaseIDRow)
 	for _, archive := range pkgArchives {
-		archiveMap[*archive.PackageID] = append(archiveMap[*archive.PackageID], &archive)
+		archiveMap[*archive.PackageID] = append(archiveMap[*archive.PackageID], archive)
 	}
 
 	pkgExes, err := q.GetPublicPackageExecutablesByReleaseID(ctx, *row.ID)
@@ -207,9 +208,21 @@ func buildReleaseFromRow(ctx context.Context, q queries.Querier, row queries.Get
 		}
 
 		for fpath, chksum := range files {
+			if fpath == "" {
+				continue
+			}
+
+			if chksum[:2] != "\\x" {
+				return nil, eris.Errorf("failed to decode checksum for %s of archive %d of release %d: %s", fpath, *archive.ID, *row.ID, chksum)
+			}
+			rawsum, err := hex.DecodeString(chksum[2:])
+			if err != nil {
+				return nil, eris.Wrapf(err, "failed to decode checksum for %s of archive %d of release %d", fpath, *archive.ID, *row.ID)
+			}
+
 			ar.Files = append(ar.Files, &common.ChecksumPack_Archive_File{
 				Filename: fpath,
-				Checksum: []byte(chksum),
+				Checksum: rawsum,
 			})
 		}
 
