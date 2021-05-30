@@ -195,7 +195,7 @@ def knossos_configure(binext, libext, generator):
             "CC": "gcc",
             "CGO_LDFLAGS": libkn_ldflags,
         },
-        cmds = [("go", "build", "-o", "../../build/libknossos/dev-server%s" % binext, "./dev-server")],
+        cmds = [["go", "build"] + list(parse_shell_args(libkn_flags)) + ["-o", "../../build/libknossos/dev-server%s" % binext, "./dev-server"]],
     )
 
     task(

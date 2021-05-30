@@ -206,7 +206,12 @@ func (a StarlarkShellArgs) Index(i int) starlark.Value {
 		return starlark.None
 	}
 
-	return starlark.String(buffer.String())
+	result := buffer.String()
+	if len(result) > 1 && (result[0] == '"' || result[0] == '\'') {
+		result = result[1 : len(result)-1]
+	}
+
+	return starlark.String(result)
 }
 
 // Iterable
