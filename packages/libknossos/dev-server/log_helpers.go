@@ -85,12 +85,12 @@ func getConsoleWriter(out io.Writer) zerolog.ConsoleWriter {
 			return callerStr
 		}
 
-		return fmt.Sprintf("\x1b[%dm%s:%s\x1b[0m \x1b[36m>\x1b[0m", 1, rel, parts[1])
+		return fmt.Sprintf("\x1b[%dm%s:%s\x1b[0m \x1b[36m>\x1b[0m", 1, filepath.ToSlash(rel), parts[1])
 	}
 
 	return writer
 }
 
 func logCallback(level api.LogLevel, msg string, args ...interface{}) {
-	log.WithLevel(logLevelMap[level]).Msgf(msg, args...)
+	log.WithLevel(logLevelMap[level]).CallerSkipFrame(3).Msgf(msg, args...)
 }

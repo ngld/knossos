@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -172,16 +172,11 @@ func refHandler(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data, err := ioutil.ReadAll(f)
+	_, err = io.Copy(rw, f)
 	if err != nil {
 		log.Error().Err(err).Msgf("Failed to read %s", localPath)
 		rw.WriteHeader(500)
 		return
-	}
-
-	_, err = rw.Write(data)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to send file")
 	}
 }
 

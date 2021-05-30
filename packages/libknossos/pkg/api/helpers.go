@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
+	"path"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -273,8 +276,10 @@ func ProgressCopier(ctx context.Context, stepInfo TaskStep, length int64, input 
 
 // RunTask updates the context with the necessary task info and handles errors as well as panics from the task.
 func RunTask(ctx context.Context, ref uint32, task func(context.Context) error) {
+	taskCtx := WithKnossosContext(context.Background(), ctx.Value(knKey{}).(KnossosCtxParams))
+	taskCtx = WithTaskContext(taskCtx, TaskCtxParams{Ref: ref})
+
 	go func() {
-		ctx = WithTaskContext(ctx, TaskCtxParams{Ref: ref})
 		defer func() {
 			cause := recover()
 			if cause != nil {
@@ -282,27 +287,73 @@ func RunTask(ctx context.Context, ref uint32, task func(context.Context) error) 
 				if !ok {
 					err = fmt.Errorf("%+v", cause)
 				}
-				err = eris.Wrap(err, "Most recent call last:\n")
 
-				TaskLog(ctx, client.LogMessage_FATAL, "Failed with panic: %s", eris.ToString(err, true))
-				_ = UpdateTask(ctx, &client.TaskResult{
+				TaskLog(taskCtx, client.LogMessage_FATAL, "Failed with panic:%s %s", stacktrace(4), eris.ToString(err, true))
+				_ = UpdateTask(taskCtx, &client.TaskResult{
 					Success: false,
 					Error:   "Failed with panic",
 				})
 			}
 		}()
 
-		err := task(ctx)
+		err := task(taskCtx)
 		if err != nil {
-			TaskLog(ctx, client.LogMessage_ERROR, "Failed with error: %s", eris.ToString(err, true))
-			_ = UpdateTask(ctx, &client.TaskResult{
+			TaskLog(taskCtx, client.LogMessage_ERROR, "Failed with error: %s", eris.ToString(err, true))
+			_ = UpdateTask(taskCtx, &client.TaskResult{
 				Success: false,
 				Error:   err.Error(),
 			})
 		} else {
-			_ = UpdateTask(ctx, &client.TaskResult{
+			_ = UpdateTask(taskCtx, &client.TaskResult{
 				Success: true,
 			})
 		}
 	}()
+}
+
+func CrashReporter(ctx context.Context) {
+	cause := recover()
+	if cause != nil {
+		err, ok := cause.(error)
+		if !ok {
+			err = fmt.Errorf("%+v", cause)
+		}
+
+		Log(ctx, LogFatal, "Failed with panic: Most recent call last:\n%s %s", stacktrace(4), eris.ToString(err, true))
+	}
+}
+
+func Stacktrace(skip int) string { return stacktrace(skip + 1) }
+
+func stacktrace(skip int) string {
+	framePtrs := make([]uintptr, 64)
+	n := runtime.Callers(skip+1, framePtrs)
+	frames := runtime.CallersFrames(framePtrs[:n])
+
+	result := make([]string, 0)
+	wd, err := os.Getwd()
+	if err != nil {
+		wd = ""
+	} else {
+		wd = filepath.ToSlash(wd) + "/"
+	}
+
+	for {
+		frame, ok := frames.Next()
+		if !ok {
+			break
+		}
+
+		// Strip off the package path
+		funcName := path.Base(frame.Function)
+
+		filename := strings.TrimPrefix(frame.File, wd)
+		result = append(result, fmt.Sprintf("%s:%s:%d", funcName, filename, frame.Line))
+	}
+
+	reversed := make([]string, len(result))
+	for idx := 0; idx < len(result); idx++ {
+		reversed[idx] = result[len(result)-idx-1]
+	}
+	return strings.Join(reversed, "\n")
 }
