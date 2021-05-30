@@ -131,6 +131,8 @@ export class TaskTracker extends EventEmitter {
 
         line.appendChild(lineText);
         line.appendChild(document.createTextNode(' ' + msg.message));
+
+        line.innerHTML = line.innerHTML.replace(/\n/g, '<br>');
         task.logContainer.appendChild(line);
         break;
       case 'progress':

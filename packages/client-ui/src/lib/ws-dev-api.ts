@@ -1,20 +1,41 @@
-type Listener = (msg: ArrayBuffer) => void;
+type Listener = (msg: ArrayBuffer[]) => void;
 const listeners: Listener[] = [];
 
 window.knAddMessageListener = (cb: Listener) => {
-	listeners.push(cb);
+  listeners.push(cb);
 };
 
 window.knRemoveMessageListener = (cb: Listener) => {
-	const idx = listeners.indexOf(cb);
-	if (idx > -1) {
-		listeners.splice(idx, 1);
-	}
+  const idx = listeners.indexOf(cb);
+  if (idx > -1) {
+    listeners.splice(idx, 1);
+  }
 };
 
-const ws = new WebSocket('ws://localhost:8100/ws');
-ws.addEventListener('message', (ev) => {
-  console.log(ev.data);
-});
+function openWS() {
+  const ws = new WebSocket('ws://localhost:8100/ws');
+  ws.addEventListener('message', async (ev) => {
+    if (ev.data instanceof Blob) {
+      const content = await ev.data.arrayBuffer();
+
+      for (const listener of listeners) {
+        listener([content]);
+      }
+    }
+  });
+
+  ws.addEventListener('open', () => {
+    console.info('Connected to libknossos');
+  });
+  ws.addEventListener('close', (e) => {
+    if (e instanceof CloseEvent) {
+      console.info('libknossos WS closed, reconnecting');
+    } else {
+      console.error(e);
+    }
+    openWS();
+  });
+}
+openWS();
 
 export {};

@@ -97,7 +97,7 @@ export default observer(function TaskDisplay(): React.ReactElement {
             <div key={task.id}>
               <div className="relative">
                 <Text className="mb-1" ellipsize={true}>
-                  {task.label}
+                  {task.label} {task.status !== '' ? ' - ' + task.status : ''}
                 </Text>
                 {(task.progress === 1 || task.error) && (
                   <div className="absolute right-0 top-0">
