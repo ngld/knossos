@@ -1,10 +1,11 @@
-*		text eol=lf
+*		text=auto eol=lf
 *.bat	text eol=crlf
 *.rc	text eol=crlf
-*.jpg	-text
-*.jpeg	-text
-*.png	-text
-*.woff2	-text
-*.ttf	-text
-*.otf -text
-
+*.icns	binary
+*.jpeg	binary
+*.jpg	binary
+*.otf	binary
+*.png	binary
+*.ttf	binary
+*.webm	binary
+*.woff2	binary
