@@ -45,7 +45,7 @@ Task help:
 load("tasks/options.star", "build", "generator_opt", "msys2_path")
 load("tasks/helpers.star", "protoc", "yarn")
 load("tasks/nebula.star", "nebula_configure")
-load("tasks/knossos.star", "knossos_configure")
+load("tasks/knossos.star", "knossos_configure", "get_libarchive_flags")
 
 def configure():
     generator = generator_opt
@@ -255,6 +255,7 @@ def configure():
         env = {
             "CC": "gcc",
             "CXX": "g++",
+            "CGO_LDFLAGS": get_libarchive_flags(),
         },
         cmds = [
             "mkdir -p build/updater",

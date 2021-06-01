@@ -139,7 +139,7 @@ func RunApp(title string, width, height int32) error {
 		}
 
 		imgui.NewFrame()
-		Render()
+		render()
 		imgui.Render()
 
 		renderer.PreRender([3]float32{0.0, 0.0, 0.0})

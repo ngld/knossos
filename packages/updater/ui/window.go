@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/inkyblackness/imgui-go/v4"
+	"github.com/ngld/knossos/packages/updater/platform"
 )
 
 type LogLevel int
@@ -29,7 +30,7 @@ var (
 	progress       = float32(0.0)
 )
 
-func Render() {
+func render() {
 	viewport := imgui.MainViewport()
 	imgui.SetNextWindowPos(imgui.Vec2{
 		X: 0,
@@ -39,6 +40,38 @@ func Render() {
 
 	imgui.BeginV("Default", nil, imgui.WindowFlagsNoDecoration|imgui.WindowFlagsNoMove|imgui.WindowFlagsNoResize|imgui.WindowFlagsNoSavedSettings)
 
+	introWindow()
+
+	imgui.End()
+}
+
+var installPath string
+
+func introWindow() {
+	imgui.Text("Install Path: ")
+	imgui.NextColumn()
+	// imgui.SameLine()
+	imgui.InputText("", &installPath)
+	imgui.SameLine()
+	if imgui.Button("...") {
+		path, err := platform.OpenFolder("Select installation folder", "")
+		if err == nil {
+			installPath = path
+		}
+	}
+
+	imgui.Text("Version: ")
+	imgui.NextColumn()
+	// imgui.SameLine()
+	if imgui.BeginCombo("##X", "TODO") {
+		imgui.Selectable("A")
+		imgui.Selectable("B")
+		imgui.Selectable("C")
+		imgui.EndCombo()
+	}
+}
+
+func progressWindow() {
 	imgui.Text(progressStatus)
 	imgui.ProgressBar(progress)
 	imgui.Spacing()
@@ -86,8 +119,6 @@ func Render() {
 
 	imgui.PopStyleVar()
 	imgui.EndChild()
-
-	imgui.End()
 }
 
 func SetProgress(fraction float32, status string) {
