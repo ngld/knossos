@@ -136,7 +136,7 @@ void KnossosApp::OnContextInitialized() {
   // The Views framework is currently only supported on Windows and Linux.
   const bool use_views = true;
 #else
-  const bool use_views = false;
+  const bool use_views = true;
 #endif
 
   std::string url;

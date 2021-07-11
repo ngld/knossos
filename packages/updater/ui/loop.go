@@ -8,7 +8,15 @@ import (
 	"github.com/veandco/go-sdl2/sdl"
 )
 
+var mainQueue chan func()
+
+func RunOnMain(callback func()) {
+	mainQueue <- callback
+}
+
 func RunApp(title string, width, height int32) error {
+	mainQueue = make(chan func())
+
 	// Avoid threading issues around cgo / C
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
@@ -146,7 +154,16 @@ func RunApp(title string, width, height int32) error {
 		renderer.Render([2]float32{float32(displayWidth), float32(displayHeight)}, [2]float32{float32(frameWidth), float32(frameHeight)}, imgui.RenderedDrawData())
 		window.GLSwap()
 
-		// time.Sleep(25 * time.Millisecond)
+		// Process callbacks
+	callbackLoop:
+		for {
+			select {
+			case callback := <-mainQueue:
+				callback()
+			default:
+				break callbackLoop
+			}
+		}
 	}
 
 	return nil

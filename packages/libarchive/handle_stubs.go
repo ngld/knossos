@@ -7,13 +7,17 @@ package libarchive
 
 import (
 	"os"
+	"unsafe"
 
 	"github.com/rotisserie/eris"
 )
 
 type Archive struct {
-	Filename string
-	Entry    Header
+	handle     unsafe.Pointer
+	buffer     unsafe.Pointer
+	Filename   string
+	Entry      Header
+	bufferSize int
 }
 
 type Header struct {
@@ -47,5 +51,33 @@ func (a *Archive) Read(buffer []byte) (int, error) {
 }
 
 func (a *Archive) Close() error {
+	return eris.New("stub")
+}
+
+type ArchiveWriter struct {
+	handle     unsafe.Pointer
+	entry      unsafe.Pointer
+	buffer     unsafe.Pointer
+	Filename   string
+	bufferSize int
+}
+
+func CreateArchive(filename string) (*ArchiveWriter, error) {
+	return nil, eris.New("stub")
+}
+
+func (w *ArchiveWriter) CreateFile(filename string, mode uint32, size int64) error {
+	return eris.New("stub")
+}
+
+func (w *ArchiveWriter) Write(buffer []byte) (int, error) {
+	return 0, eris.New("stub")
+}
+
+func (w *ArchiveWriter) Error() error {
+	return eris.New("stub")
+}
+
+func (w *ArchiveWriter) Close() error {
 	return eris.New("stub")
 }

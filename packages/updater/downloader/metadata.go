@@ -7,34 +7,43 @@ import (
 	"io"
 	"net/http"
 	"time"
+
+	"github.com/rotisserie/eris"
 )
 
 const (
-	repoEndpoint  = "https://ghcr.io/v2/"
-	tokenEndpoint = "https://ghcr.io/token?scope=repository:%s&service=ghcr.io"
-	repo          = "ngld/knossos/nebula"
+	RepoEndpoint  = "https://ghcr.io/v2/"
+	tokenEndpoint = "https://ghcr.io/token?scope=repository:%s:pull&service=ghcr.io"
+	Repo          = "ngld/knossos/releases"
 )
 
-type tokenResponse struct {
-	token string
+type TokenResponse struct {
+	Token  string          `json:"token"`
+	Errors []responseError `json:"errors"`
+}
+
+type responseError struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
 }
 
 type listResponse struct {
-	name string
-	tags []string
+	Name   string          `json:"name"`
+	Tags   []string        `json:"tags"`
+	Errors []responseError `json:"errors"`
 }
 
-type blob struct {
-	mediaType string
-	size      int
-	digest    string
+type Blob struct {
+	MediaType string `json:"mediaType"`
+	Digest    string `json:"digest"`
+	Size      int    `json:"size"`
 }
 
-type manifestResponse struct {
-	schemaVersion int
-	mediaType     string
-	config        blob
-	layers        []blob
+type RegistryManifest struct {
+	MediaType     string `json:"mediaType"`
+	Config        Blob   `json:"config"`
+	Layers        []Blob `json:"layers"`
+	SchemaVersion int    `json:"schemaVersion"`
 }
 
 var client = http.Client{
@@ -44,7 +53,7 @@ var client = http.Client{
 	},
 }
 
-func getToken(repo string) (string, error) {
+func GetToken(repo string) (string, error) {
 	resp, err := client.Get(fmt.Sprintf(tokenEndpoint, repo))
 	if err != nil {
 		return "", err
@@ -56,17 +65,20 @@ func getToken(repo string) (string, error) {
 		return "", err
 	}
 
-	var result tokenResponse
+	var result TokenResponse
 	err = json.Unmarshal(body, &result)
 	if err != nil {
 		return "", err
 	}
 
-	return result.token, nil
+	if len(result.Errors) > 0 {
+		return "", eris.Errorf("GitHub token error: %s", result.Errors[0].Message)
+	}
+	return result.Token, nil
 }
 
 func doAuthenticatedRequest(ctx context.Context, path string, token string, dest interface{}) error {
-	req, err := http.NewRequest("GET", repoEndpoint+path, nil)
+	req, err := http.NewRequest("GET", RepoEndpoint+path, nil)
 	if err != nil {
 		return err
 	}
@@ -86,24 +98,24 @@ func doAuthenticatedRequest(ctx context.Context, path string, token string, dest
 	return json.Unmarshal(body, dest)
 }
 
-func getAvailableVersions(ctx context.Context, token string) ([]string, error) {
+func GetAvailableVersions(ctx context.Context, token string) ([]string, error) {
 	var response listResponse
-	err := doAuthenticatedRequest(ctx, repo+"/tags/list", token, &response)
+	err := doAuthenticatedRequest(ctx, Repo+"/tags/list", token, &response)
 	if err != nil {
 		return nil, err
 	}
 
-	return response.tags, nil
+	if len(response.Errors) > 0 {
+		return nil, eris.Errorf("GitHub error: %s", response.Errors[0].Message)
+	}
+	return response.Tags, nil
 }
 
-func getBlobURL(ctx context.Context, token string, digest string) (string, error) {
-	resp, err := client.Get(repoEndpoint + repo + "/blobs/" + digest)
+func GetBlobURL(ctx context.Context, token string, digest string) (string, error) {
+	resp, err := client.Get(RepoEndpoint + Repo + "/blobs/" + digest)
 	if err != nil {
 		return "", err
 	}
 
 	return resp.Header.Get("Location"), nil
-}
-
-func downloadVersion(ctx context.Context, token string, version string) error {
 }

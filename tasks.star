@@ -272,6 +272,22 @@ def configure():
     )
 
     task(
+        "uploader-build",
+        desc = "Builds the Knossos uploader",
+        deps = [],
+        env = {
+            "CC": "gcc",
+            "CXX": "g++",
+            "CGO_LDFLAGS": get_libarchive_flags(),
+        },
+        cmds = [
+            "mkdir -p build/updater",
+            "cd packages/updater",
+            "go build -tags static -ldflags '-s -w' -o ../../build/updater/uploader%s ./cmd/uploader" % binext,
+        ],
+    )
+
+    task(
         "clean",
         desc = "Delete all generated files",
         deps = ["build-tool", "database-clean"],
