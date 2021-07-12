@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       short_sha: ${{ steps.sha.outputs.short_sha }}
-      timestamp: ${{ steps.timestamp.ouputs.timestamp }}
+      timestamp: ${{ steps.timestamp.outputs.timestamp }}
       go_version: ${{ steps.read.outputs.go_version }}
       msys2_packages: ${{ steps.read.outputs.msys2_packages }}
       nebula_changed: ${{ steps.changes.outputs.nebula_changed }}
@@ -258,7 +258,7 @@ jobs:
       - name: Upload Knossos build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./build/updater/uploader 0.0.1-nightly.${{ needs.setup.output.timestamp }}+${{ needs.setup.outputs.short_sha }} ${{ matrix.bucket }} build/client/launcher/Release/
+        run: ./build/updater/uploader 0.0.1-nightly.${{ needs.setup.outputs.timestamp }}-${{ needs.setup.outputs.short_sha }} ${{ matrix.bucket }} build/client/launcher/Release/
 
       - name: Delete uploader
         if: runner.os == 'Windows'

@@ -292,7 +292,7 @@ func runTaskInternal(ctx context.Context, task *Task, tasks TaskList, dryRun, fo
 
 					// reset the console in case a process we ran in this step changed the console mode
 					err = resetConsole()
-					if err != nil {
+					if err != nil && os.Getenv("CI") != "true" {
 						return eris.Wrap(err, "failed to reset console")
 					}
 
