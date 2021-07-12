@@ -1,10 +1,12 @@
 package ui
 
 import (
+	"context"
 	"fmt"
 	"time"
 
 	"github.com/inkyblackness/imgui-go/v4"
+	"github.com/ngld/knossos/packages/updater/downloader"
 	"github.com/ngld/knossos/packages/updater/platform"
 )
 
@@ -45,11 +47,14 @@ func render() {
 	imgui.End()
 }
 
-var installPath string
+var (
+	installPath     string
+	versions        []string
+	selectedVersion = "latest"
+)
 
 func introWindow() {
 	imgui.Text("Install Path: ")
-	imgui.NextColumn()
 	// imgui.SameLine()
 	imgui.InputText("", &installPath)
 	imgui.SameLine()
@@ -61,14 +66,36 @@ func introWindow() {
 	}
 
 	imgui.Text("Version: ")
-	imgui.NextColumn()
 	// imgui.SameLine()
-	if imgui.BeginCombo("##X", "TODO") {
-		imgui.Selectable("A")
-		imgui.Selectable("B")
-		imgui.Selectable("C")
+	if imgui.BeginCombo("##X", selectedVersion) {
+		for _, item := range versions {
+			if imgui.Selectable(item) {
+				selectedVersion = item
+			}
+		}
 		imgui.EndCombo()
 	}
+}
+
+func InitIntroWindow() {
+	token, err := downloader.GetToken(downloader.Repo)
+	if err != nil {
+		RunOnMain(func() {
+			platform.ShowError(fmt.Sprintf("Failed to retrieve available versions:\n%v", err))
+		})
+		return
+	}
+
+	tags, err := downloader.GetAvailableVersions(context.TODO(), token)
+	if err != nil {
+		RunOnMain(func() {
+			platform.ShowError(fmt.Sprintf("Failed to retrieve available versions:\n%v", err))
+		})
+		return
+	}
+
+	// TODO filter by OS
+	versions = tags
 }
 
 func progressWindow() {

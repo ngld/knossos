@@ -1,7 +1,7 @@
 vars:
-  PROTOC: 3.17.0
+  PROTOC: 3.17.2
   LIBARCHIVE: 3.5.1
-  CEF: 90.6.6+g3c44b04+chromium-90.0.4430.93
+  CEF: 90.6.7+g19ba721+chromium-90.0.4430.212 
   MSYS_BUILD: 20210419
   NODEJS: 14.17.0
   BROTLI: 1.0.9
@@ -40,7 +40,7 @@ update-checks:
 
 deps:
   protoc-linux:
-    sha256: aad5cfd2daf9d49f5ec9b14c4e7e7af0392324706c0e5bb3e44ad5e70a7add5e
+    sha256: 98e2253e513620bb6cb6f5654c3586107cafcd789cc1c778bba780607b335c03
     if: linux, amd64
     url: https://github.com/protocolbuffers/protobuf/releases/download/v{PROTOC}/protoc-{PROTOC}-linux-x86_64.zip
     strip: 1
@@ -48,7 +48,7 @@ deps:
     markExec: [protoc]
 
   protoc-darwin:
-    sha256: f51e7d285e9e8fcfe04ac6834d9dab56571e39dbcb01d0437b0eb3ee8a5a76c9
+    sha256: d6f71643e0e56e4775ae915bb8a942b84629e8620722549b6cbab485fbbcf84e
     if: darwin, amd64
     url: https://github.com/protocolbuffers/protobuf/releases/download/v{PROTOC}/protoc-{PROTOC}-osx-x86_64.zip
     strip: 1
@@ -56,14 +56,14 @@ deps:
     markExec: [protoc]
 
   protoc-win64:
-    sha256: f504bd885835c10d3adc819d8cd442567b7145454f4aaff0caabd341868be90e
+    sha256: 73451257945cc889eea6fc912bdf02023a5f12054b4ec39e8c5ba048b6b1d8fc
     if: windows, amd64
     url: https://github.com/protocolbuffers/protobuf/releases/download/v{PROTOC}/protoc-{PROTOC}-win64.zip
     strip: 1
     dest: third_party/protoc-dist
 
   cef-linux-full:
-    sha256: d069905a3ac8c53a98825b0974984bfaeb819046ddcf8555f9754c69cc416970
+    sha256: 42784df935496bf9fa0fd7fe94d4dd9d542f1b6812b8bc13c9e610752037a28d
     if: linux, amd64
     ifNot: ci
     url: https://cef-builds.spotifycdn.com/cef_binary_{CEF}_linux64.tar.bz2
@@ -71,14 +71,14 @@ deps:
     dest: third_party/cef
 
   cef-linux:
-    sha256: 2f57d7bd969ee2038741ea98c401d21853eb893473d455f2fbaa85123b46d83d
+    sha256: b29f29c7a94a7b8d72e0413d699fd3bf30b9e9b03dcdc071108e36977a0847c9
     if: linux, amd64, ci
     url: https://cef-builds.spotifycdn.com/cef_binary_{CEF}_linux64_minimal.tar.bz2
     strip: 1
     dest: third_party/cef
 
   cef-darwin-full:
-    sha256: 36c66180b095b3012844fbf3e4cf63de1a8646221e071eada91a2506d768a0be
+    sha256: aa653b662af9d4aa7d6cad8e14c1a99f3665c13f1577b02cf271924f391ebe78
     if: darwin, amd64
     ifNot: ci
     url: https://cef-builds.spotifycdn.com/cef_binary_{CEF}_macosx64.tar.bz2
@@ -86,14 +86,14 @@ deps:
     dest: third_party/cef
 
   cef-darwin:
-    sha256: 695b483503be66d31eab14bf516a22a0c6a0820cfa6087b11a4ebbcb74028e54
+    sha256: b851b139d71a61c687e9cdaad610b16be1089c3ede2da5308d8baf8e643985b2
     if: darwin, amd64, ci
     url: https://cef-builds.spotifycdn.com/cef_binary_{CEF}_macosx64_minimal.tar.bz2
     strip: 1
     dest: third_party/cef
 
   cef-win64-full:
-    sha256: 67d69a0185c5916b8f89430af70629853638ca12f0b969db8ffc136567a8f3a8
+    sha256: 5e7902b2a24d74f335b74b07328eb51599ad79a108905593be5f95ebc7440d54
     if: windows, amd64
     ifNot: ci
     url: https://cef-builds.spotifycdn.com/cef_binary_{CEF}_windows64.tar.bz2
@@ -101,7 +101,7 @@ deps:
     dest: third_party/cef
 
   cef-win64:
-    sha256: 01bd810ddbea80d2a683d647b301b16cd9e022abedb6210e2fdf1ab6fb998b3c
+    sha256: 67670840ade921982387e76b5cfb66c6a7ff791261c79ddd2e06500fc2cf7261
     if: windows, amd64, ci
     url: https://cef-builds.spotifycdn.com/cef_binary_{CEF}_windows64_minimal.tar.bz2
     strip: 1

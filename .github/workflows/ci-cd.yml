@@ -12,6 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       short_sha: ${{ steps.sha.outputs.short_sha }}
+      timestamp: ${{ steps.timestamp.ouputs.timestamp }}
       go_version: ${{ steps.read.outputs.go_version }}
       msys2_packages: ${{ steps.read.outputs.msys2_packages }}
       nebula_changed: ${{ steps.changes.outputs.nebula_changed }}
@@ -26,6 +27,10 @@ jobs:
       - name: Generate short SHA
         id: sha
         run: echo "::set-output name=short_sha::$(git rev-parse --short HEAD)"
+
+      - name: Generate timestamp
+        id: timestamp
+        run: echo "::set-output name=timestamp::$(date +'%Y%d%m%H%M')"
 
       - name: Read build settings from repository
         id: read
@@ -139,19 +144,22 @@ jobs:
     name: Knossos / ${{ matrix.os }}
     runs-on: ${{ matrix.runner }}
     needs: setup
-    if: ${{ needs.setup.outputs.knossos_changed == '1' }}
+    if: ${{ needs.setup.outputs.knossos_changed == '1' || needs.setup.outputs.updater_changed == '1' }}
     strategy:
       matrix:
         os: [Windows, macOS, Ubuntu]
         include:
           - os: Windows
             runner: windows-2019
+            bucket: windows
             script: .\task.ps1
           - os: macOS
             runner: macos-10.15
+            bucket: darwin
             script: ./task.sh
           - os: Ubuntu
             runner: ubuntu-20.04
+            bucket: linux
             script: ./task.sh
       fail-fast: false
     steps:
@@ -244,8 +252,40 @@ jobs:
       - name: Build Knossos UI
         run: ${{ matrix.script }} client-ui-build
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v2
+      - name: Build uploader
+        run: ${{ matrix.script }} uploader-build
+
+      - name: Upload Knossos build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./build/updater/uploader 0.0.1-nightly.${{ needs.setup.output.timestamp }}+${{ needs.setup.outputs.short_sha }} ${{ matrix.bucket }} build/client/launcher/Release/
+
+      - name: Delete uploader
+        if: runner.os == 'Windows'
+        run: rd /S /Q build/updater
+
+      - name: Delete uploader
+        if: runner.os != 'Windows'
+        run: rm -rf ./build/updater
+
+      - name: Build updater
+        if: needs.setup.outputs.updater_changed == '1'
+        run: ${{ matrix.script }} updater-build
+
+      - name: Package updater
+        if: runner.os == 'Windows'
+        run: cd build && zip -r updater.zip updater
+
+      - name: Package updater
+        if: runner.os != 'Windows'
+        run: cd build && tar -czf updater.tar.gz updater
+
+      - name: Upload updater
+        if: needs.setup.outputs.updater_changed == '1'
+        uses: softprops/action-gh-release@v1
         with:
-          name: Knossos-${{ matrix.os }}-${{ needs.setup.outputs.short_sha }}
-          path: build/client/launcher/Release/
+          files: build/updater.*
+          name: Updater ${{ needs.setup.output.timestamp }}+${{ needs.setup.outputs.short_sha }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
