@@ -92,6 +92,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	if os.Getenv("GITHUB_TOKEN") == "" {
+		fmt.Print("The env var GITHUB_TOKEN is not set!\n")
+		os.Exit(1)
+	}
+
 	reldir, err := filepath.Abs(args[2])
 	if err != nil {
 		fmt.Printf("Failed to proces release path: %+v\n", err)

@@ -1,7 +1,7 @@
 package platform
 
 // #cgo darwin LDFLAGS: -framework CoreFoundation -framework Cocoa
-// #cgo linux LDFLAGS: -lX -lgtk
+// #cgo linux pkg-config: gtk+-3.0 x11
 // #include <stdlib.h>
 // #include "platform.h"
 import "C"
