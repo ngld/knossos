@@ -3290,12 +3290,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"autoprefixer@npm:^10.2.6":
-  version: 10.2.6
-  resolution: "autoprefixer@npm:10.2.6"
+"autoprefixer@npm:^10.3.0":
+  version: 10.3.0
+  resolution: "autoprefixer@npm:10.3.0"
   dependencies:
     browserslist: ^4.16.6
-    caniuse-lite: ^1.0.30001230
+    caniuse-lite: ^1.0.30001243
     colorette: ^1.2.2
     fraction.js: ^4.1.1
     normalize-range: ^0.1.2
@@ -3304,7 +3304,7 @@ __metadata:
     postcss: ^8.1.0
   bin:
     autoprefixer: bin/autoprefixer
-  checksum: 805414d4efe4f25c6162edc65ad999235ea28cf11b6a1ed838b055ef1f777368dd16c978b44d0b48bb96a3420948d26da27066d5caa4f81bcee1946e9a269532
+  checksum: f733fb0487bf1dbb37e28becb47df4decdd056dad7094c672533a2a0550add58e179488263b05b12e39d8b59e5386ee827d50b90025f08e6af71e1dbc62e5fb6
   languageName: node
   linkType: hard
 
@@ -3695,10 +3695,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"caniuse-lite@npm:^1.0.30001219, caniuse-lite@npm:^1.0.30001230":
+"caniuse-lite@npm:^1.0.30001219":
   version: 1.0.30001234
   resolution: "caniuse-lite@npm:1.0.30001234"
   checksum: 0c8e2b68e227eb47121ca0c93bda530bbe8475a3e2ab14138a3d751258817c1a16c8a86a0809637fb90d48f92b63e47740f863c806f3e6de012e417dc3cb54c4
+  languageName: node
+  linkType: hard
+
+"caniuse-lite@npm:^1.0.30001243":
+  version: 1.0.30001243
+  resolution: "caniuse-lite@npm:1.0.30001243"
+  checksum: 0d6330d2279c9ec2b58cf5154ec80eeea6bca861825a791f037c644e36cf28a19db32a35a66ac989ee026b7d19ffc0eb3ad78fbc8512f7433b0caa1964de4999
   languageName: node
   linkType: hard
 
@@ -7893,17 +7900,17 @@ fsevents@~2.3.2:
   languageName: node
   linkType: hard
 
-"mobx-keystone@npm:^0.60.2":
-  version: 0.60.2
-  resolution: "mobx-keystone@npm:0.60.2"
+"mobx-keystone@npm:^0.60.6":
+  version: 0.60.6
+  resolution: "mobx-keystone@npm:0.60.6"
   dependencies:
     fast-deep-equal: ^3.1.3
+    nanoid: ^3.1.23
     ts-toolbelt: ^9.6.0
-    tslib: ^2.2.0
-    uuid: ^8.3.2
+    tslib: ^2.3.0
   peerDependencies:
     mobx: ^6.0.0 || ^5.0.0 || ^4.0.0
-  checksum: 7c79f3ff7c7efc47c145c2895f6d49381376174903200558e1d36fe97c51c94d0aa1425411073ade9b9db04ebd87c7efb3d3cbebaf0a7808636ef2f416c12231
+  checksum: f8c2918b8997f8f1c063cede44758a4eca2db8863dcb059cf7fc0a0af93fe8dc478c2d1c8647149b08e0917b57b0c4a714b1c4ba028bdeceec1f9bf619f8f74c
   languageName: node
   linkType: hard
 
@@ -8327,7 +8334,7 @@ fsevents@~2.3.2:
     "@typescript-eslint/parser": ^4.28.2
     "@yarnpkg/pnpify": ^3.0.0-rc.10
     astroturf: ^1.0.0-beta.22
-    autoprefixer: ^10.2.6
+    autoprefixer: ^10.3.0
     babel-loader: ^8.2.2
     classnames: ^2.3.1
     clean-webpack-plugin: ^4.0.0-alpha.0
@@ -8350,7 +8357,7 @@ fsevents@~2.3.2:
     mini-css-extract-plugin: ^2.1.0
     mini-svg-data-uri: ^1.3.3
     mobx: ^6.3.2
-    mobx-keystone: ^0.60.2
+    mobx-keystone: ^0.60.6
     mobx-react-lite: ^3.2.0
     mobx-utils: ^6.0.4
     nanoid: ^3.1.23
@@ -8380,9 +8387,9 @@ fsevents@~2.3.2:
     webpack-merge: ^5.8.0
     xbbcode: ^2.0.4
   dependenciesMeta:
-    "@blueprintjs/core@3.44.3":
+    "@blueprintjs/core":
       unplugged: true
-    "@blueprintjs/icons@3.26.1":
+    "@blueprintjs/icons":
       unplugged: true
   languageName: unknown
   linkType: soft
@@ -11175,10 +11182,17 @@ resolve@^2.0.0-next.3:
   languageName: node
   linkType: hard
 
-"tslib@npm:^2.0.3, tslib@npm:^2.2.0":
+"tslib@npm:^2.0.3":
   version: 2.2.0
   resolution: "tslib@npm:2.2.0"
   checksum: 2d35468c470410871c5246e43f12dcb6d0fc363b617c176f26443b9530e5c5ee8448966892a42956168d8f495da7865bda33dfe82c26c91991e28999974a618f
+  languageName: node
+  linkType: hard
+
+"tslib@npm:^2.3.0":
+  version: 2.3.0
+  resolution: "tslib@npm:2.3.0"
+  checksum: 7b4fc9feff0f704743c3760f5d8d708f6417fac6458159e63df3a6b1100f0736e3b99edb9fe370f274ad15160a1f49ff05cb49402534c818ff552c48e38c3e6e
   languageName: node
   linkType: hard
 
@@ -11299,12 +11313,12 @@ resolve@^2.0.0-next.3:
   linkType: hard
 
 typescript@>=3.8.3 <4:
-  version: 3.9.9
-  resolution: "typescript@npm:3.9.9"
+  version: 3.9.10
+  resolution: "typescript@npm:3.9.10"
   bin:
     tsc: bin/tsc
     tsserver: bin/tsserver
-  checksum: 22bbe953faa34903587f3bd8fb6c343d754745d4177e49da523a2a3b814fe5eaf60d9b23c2d401d038a08a5ac2d8094b268ba75adee840cc2358fb5a866624ab
+  checksum: 544f3810ac3d3fcd141907e7f52f0b8c70af178adc83af47e2b8a48351e5a119919a4d3bfbe2f62d5165b5aa203e896fe0432024cfbda670dbd03a4f53ce7748
   languageName: node
   linkType: hard
 
@@ -11319,12 +11333,12 @@ typescript@^4.3.5:
   linkType: hard
 
 "typescript@patch:typescript@>=3.8.3 <4#builtin<compat/typescript>":
-  version: 3.9.9
-  resolution: "typescript@patch:typescript@npm%3A3.9.9#builtin<compat/typescript>::version=3.9.9&hash=ddfc1b"
+  version: 3.9.10
+  resolution: "typescript@patch:typescript@npm%3A3.9.10#builtin<compat/typescript>::version=3.9.10&hash=ddfc1b"
   bin:
     tsc: bin/tsc
     tsserver: bin/tsserver
-  checksum: 05a113f2ec0d0fc3263335c230d2eb7b94d851e51b5766f63b88b611127d08782ce41132eb32b9d3d434de8340f698f7ec2f72ebb4d33c3b2976b27de1f47ace
+  checksum: 744dab471ae59659b1618be636ab56b9c0afbca801e0640c3cdfad0a894315c87d30a290b7063c6a3f1860bf47fe44d9188cb85e46b2bdadda7f207d67e6b4e1
   languageName: node
   linkType: hard
 
@@ -11518,15 +11532,6 @@ typescript@^4.3.5:
   bin:
     uuid: ./bin/uuid
   checksum: 1ce3f37e214d6d0dc94a6a9663a0365013ace66bc3fd5b203e6f5d2eeb978aaee1192367222386345d30b4c6a447928c501121aa84c637724bf105ef57284949
-  languageName: node
-  linkType: hard
-
-"uuid@npm:^8.3.2":
-  version: 8.3.2
-  resolution: "uuid@npm:8.3.2"
-  bin:
-    uuid: dist/bin/uuid
-  checksum: aed2bcef341f95635f308fea8831fb9038b18c485fe7e71feb89d2e05602dfecad0cb6f2246fae096d4da425cca6e8a71056f28abd97ad98cf770a2018853248
   languageName: node
   linkType: hard
 
