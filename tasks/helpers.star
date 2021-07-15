@@ -117,12 +117,12 @@ def find_static_lib(names, display_name = None):
     for name in names:
         so_path = lookup_lib(name + ".so")
         if so_path:
-            a_path = so_path.replace(".so", ".a")
+            a_path = so_path[:so_path.find(".so")] + ".a"
             if isfile(a_path):
                 return a_path
 
-    error("Could not find static library for %s! Please make sure it's installed." % display_name)
-    return None
+    warn("Could not find static library for %s! Please make sure it's installed." % display_name)
+    return "-l%s" % names[0]
 
 def find_library(names, display_name = None):
     """A helper which either calls find_static_lib() or returns -l<libname> depending on static_deps.

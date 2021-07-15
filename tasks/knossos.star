@@ -13,11 +13,6 @@ def get_libarchive_flags():
     else:
         libkn_ldflags += str(resolve_path("build/libarchive/libarchive/libarchive.a"))
 
-    if OS == "darwin":
-        # look for liblzma in the lib directory from homebrew's xz package
-        # darwin's ld doesn't understand --no-undefined so skip it there
-        libkn_ldflags += " -L/usr/local/opt/xz/lib"
-
     if OS != "darwin":
         libkn_ldflags += " -Wl,--no-undefined"
 
@@ -28,7 +23,7 @@ def get_libarchive_flags():
             libkn_ldflags += " %s.a" % resolve_path(msys2_path, "mingw64/lib", lib)
 
     elif OS != "linux":
-        libkn_ldflags += " -liconv -llzma -lzstd -lz"
+        libkn_ldflags += " -liconv -lz /usr/local/opt/xz/lib/liblzma.a /usr/local/opt/zstd/lib/libzstd.a"
     else:
         libkn_ldflags += " " + " ".join([
             find_library(["liblzma"]),

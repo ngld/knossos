@@ -7,6 +7,15 @@ mkdir -p build/libarchive
 cd build/libarchive
 
 if [ ! -f CMakeCache.txt ]; then
+    link_opts=""
+    if [ -f /usr/local/opt/xz/lib/liblzma.a ]; then
+        link_opts="$link_opts -DLIBLZMA_LIBRARY=/usr/local/opt/xz/lib/liblzma.a"
+    fi
+
+    if [ -f /usr/local/opt/zstd/lib/libzstd.a ]; then
+        link_opts="$link_opts -DZSTD_LIBRARY=/usr/local/opt/zstd/lib/libzstd.a"
+    fi
+
     cmake -G"Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -Wno-dev \
         -DENABLE_ACL=OFF \
         -DENABLE_BZip2=OFF \
@@ -20,6 +29,7 @@ if [ ! -f CMakeCache.txt ]; then
         -DENABLE_TAR=OFF \
         -DENABLE_TEST=OFF \
         -DENABLE_CAT=OFF \
+        $link_opts \
         ../../third_party/libarchive
 fi
 
