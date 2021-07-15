@@ -3,11 +3,17 @@ package ui
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
+	"strings"
 	"time"
 
 	"github.com/inkyblackness/imgui-go/v4"
 	"github.com/ngld/knossos/packages/updater/downloader"
 	"github.com/ngld/knossos/packages/updater/platform"
+	"github.com/rotisserie/eris"
 )
 
 type LogLevel int
@@ -17,6 +23,15 @@ const (
 	LogInfo
 	LogWarn
 	LogError
+)
+
+type stateType uint8
+
+const (
+	stateIntro stateType = iota + 1
+	stateInstalling
+	stateError
+	stateFinish
 )
 
 type logItem struct {
@@ -30,6 +45,7 @@ var (
 	autoScroll     = true
 	progressStatus = "Initialising..."
 	progress       = float32(0.0)
+	state          = stateIntro
 )
 
 func render() {
@@ -42,7 +58,14 @@ func render() {
 
 	imgui.BeginV("Default", nil, imgui.WindowFlagsNoDecoration|imgui.WindowFlagsNoMove|imgui.WindowFlagsNoResize|imgui.WindowFlagsNoSavedSettings)
 
-	introWindow()
+	switch state {
+	case stateIntro:
+		introWindow()
+	case stateInstalling, stateError:
+		progressWindow()
+	case stateFinish:
+		finishWindow()
+	}
 
 	imgui.End()
 }
@@ -50,7 +73,8 @@ func render() {
 var (
 	installPath     string
 	versions        []string
-	selectedVersion = "latest"
+	selectedVersion = ""
+	token           string
 )
 
 func introWindow() {
@@ -75,10 +99,41 @@ func introWindow() {
 		}
 		imgui.EndCombo()
 	}
+
+	imgui.Spacing()
+	if imgui.Button("Install") {
+		if installPath == "" {
+			platform.ShowError("Please select an installation folder.")
+		} else {
+			info, err := os.Stat(installPath)
+			ok := false
+			if eris.Is(err, os.ErrNotExist) {
+				// This is fine, we can create the folder
+				ok = true
+			} else if err != nil {
+				platform.ShowError(fmt.Sprintf("Failed to check installation folder:\n%s", err))
+			} else if !info.IsDir() {
+				platform.ShowError("The entered path doesn't point to a folder!")
+			} else {
+				ok = true
+			}
+
+			if ok {
+				state = stateInstalling
+				go PerformInstallation(installPath, selectedVersion, token)
+			}
+		}
+	}
+
+	imgui.SameLineV(0, 10)
+	if imgui.Button("Cancel") {
+		running = false
+	}
 }
 
 func InitIntroWindow() {
-	token, err := downloader.GetToken(downloader.Repo)
+	var err error
+	token, err = downloader.GetToken(downloader.Repo)
 	if err != nil {
 		RunOnMain(func() {
 			platform.ShowError(fmt.Sprintf("Failed to retrieve available versions:\n%v", err))
@@ -94,14 +149,32 @@ func InitIntroWindow() {
 		return
 	}
 
-	// TODO filter by OS
-	versions = tags
+	osPrefix := runtime.GOOS + "-"
+	filtered := make([]string, 0)
+	for idx := len(tags) - 1; idx >= 0; idx-- {
+		version := tags[idx]
+		if strings.HasPrefix(version, osPrefix) {
+			filtered = append(filtered, version[len(osPrefix):])
+		}
+	}
+
+	versions = filtered
+	selectedVersion = versions[0]
 }
 
 func progressWindow() {
 	imgui.Text(progressStatus)
 	imgui.ProgressBar(progress)
 	imgui.Spacing()
+
+	if state == stateError {
+		if imgui.Button("Retry") {
+			state = stateIntro
+			logLines = make([]logItem, 0)
+		}
+
+		imgui.SameLineV(0, 20)
+	}
 
 	if imgui.Button("Clear") {
 		logLines = make([]logItem, 0)
@@ -140,6 +213,14 @@ func progressWindow() {
 		imgui.PopStyleColor()
 	}
 
+	if state == stateError {
+		imgui.Spacing()
+		if imgui.Button("Retry") {
+			state = stateIntro
+			logLines = make([]logItem, 0)
+		}
+	}
+
 	if autoScroll && imgui.ScrollY() >= imgui.ScrollMaxY() {
 		imgui.SetScrollHereY(1.0)
 	}
@@ -159,4 +240,35 @@ func Log(level LogLevel, message string, args ...interface{}) {
 		level:     level,
 		message:   fmt.Sprintf(message, args...),
 	})
+}
+
+func finishWindow() {
+	imgui.Text("Done!")
+	imgui.Spacing()
+
+	if imgui.Button("Open Knossos") {
+		var binpath string
+		switch runtime.GOOS {
+		case "darwin":
+			binpath = "Knossos.app/Contents/MacOS/knossos"
+		case "windows":
+			binpath = "knossos.exe"
+		default:
+			binpath = "knossos"
+		}
+
+		binpath = filepath.Join(installPath, binpath)
+		err := exec.Command(binpath).Start()
+		if err != nil {
+			platform.ShowError(fmt.Sprintf("Failed to launch Knossos:\n%s", eris.ToString(err, true)))
+		} else {
+			running = false
+		}
+	}
+
+	imgui.SameLine()
+
+	if imgui.Button("Close") {
+		running = false
+	}
 }

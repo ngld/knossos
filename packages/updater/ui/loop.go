@@ -8,7 +8,10 @@ import (
 	"github.com/veandco/go-sdl2/sdl"
 )
 
-var mainQueue chan func()
+var (
+	mainQueue chan func()
+	running   bool
+)
 
 func RunOnMain(callback func()) {
 	mainQueue <- callback
@@ -75,7 +78,7 @@ func RunApp(title string, width, height int32) error {
 
 	lastTime := uint64(0)
 	buttonsDown := make([]bool, 3)
-	running := true
+	running = true
 
 	for running {
 		// Process events

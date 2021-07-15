@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+
 	"github.com/ngld/knossos/packages/updater/ui"
 )
 
@@ -11,4 +13,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	os.Exit(0)
 }

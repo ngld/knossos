@@ -1,10 +1,9 @@
-name: CI/CD
+name: Publish Updater
 
 on:
   push:
-    branches:
-      - nu
-  pull_request:
+    tags:
+      - 'updater-v*'
 
 jobs:
   setup:
@@ -15,8 +14,6 @@ jobs:
       timestamp: ${{ steps.timestamp.outputs.timestamp }}
       go_version: ${{ steps.read.outputs.go_version }}
       msys2_packages: ${{ steps.read.outputs.msys2_packages }}
-      nebula_changed: ${{ steps.changes.outputs.nebula_changed }}
-      knossos_changed: ${{ steps.changes.outputs.knossos_changed }}
       updater_changed: ${{ steps.changes.outputs.updater_changed }}
     steps:
       - name: Checkout repository
@@ -60,108 +57,29 @@ jobs:
           echo "$changed"
           echo "::endgroup::"
 
-          if grep -E '^packages/(api|server|front|build-tools)' > /dev/null <<< "$changed"; then
-            echo "::set-output name=nebula_changed::1"
-          fi
-
-          if grep -E '^packages/(api|libarchive|libknossos|client|client-ui|build-tools)' > /dev/null <<< "$changed"; then
-            echo "::set-output name=knossos_changed::1"
-          fi
-
           if grep -E '^packages/(libarchive|updater|build-tools)' > /dev/null <<< "$changed"; then
             echo "::set-output name=updater_changed::1"
           fi
 
-  nebula:
-    name: Nebula
-    runs-on: ubuntu-20.04
-    needs: setup
-    if: ${{ needs.setup.outputs.nebula_changed == '1' }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: Setup Go toolchain
-        uses: actions/setup-go@v2
-        with:
-          go-version: ${{ needs.setup.outputs.go_version }}
-
-      - name: Cache Go dependencies
-        uses: actions/cache@v2
-        with:
-          key: golang-${{ github.job }}-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
-          restore-keys: golang-${{ github.job }}-${{ runner.os }}-
-          path: |
-            ~/go/pkg
-            ~/.cache/go-build
-
-      - name: Cache Yarn dependencies
-        uses: actions/cache@v2
-        with:
-          key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
-          restore-keys: yarn-${{ runner.os }}-
-          path: |
-            .pnp.*
-            .yarn/
-            !.yarn/releases
-            !.yarn/plugins
-
-      - name: Cache managed dependencies
-        uses: actions/cache@v2
-        with:
-          key: third_party-${{ runner.os }}-${{ hashFiles('packages/build-tools/DEPS.yml') }}
-          restore-keys: third_party-${{ runner.os }}-
-          path: |
-            packages/build-tools/DEPS.stamps
-            third_party
-
-      - name: Configure build
-        run: ./task.sh configure build=Release static_deps=false
-
-      - name: Fetch managed dependencies
-        run: ./task.sh fetch-deps
-
-      - name: Install build tools
-        run: ./task.sh install-tools
-
-      - name: Compile API definitions
-        run: ./task.sh proto-build
-
-      - name: Migrate database
-        run: ./task.sh database-migrate
-
-      - name: Lint
-        if: ${{ github.event_name == 'pull_request' }}
-        run: ./task.sh server-lint
-
-      - name: Build Nebula server
-        run: ./task.sh server-build
-
-      - name: Build Nebula frontend
-        run: ./task.sh front-build
-
-  knossos:
-    name: Knossos / ${{ matrix.os }}
+  updater:
+    name: Updater / ${{ matrix.os }}
     runs-on: ${{ matrix.runner }}
     needs: setup
-    if: ${{ needs.setup.outputs.knossos_changed == '1' || needs.setup.outputs.updater_changed == '1' }}
+    if: needs.setup.outputs.updater_changed == '1'
     strategy:
+      fail-fast: false
       matrix:
         os: [Windows, macOS, Ubuntu]
         include:
           - os: Windows
             runner: windows-2019
-            bucket: windows
             script: .\task.ps1
           - os: macOS
             runner: macos-10.15
-            bucket: darwin
             script: ./task.sh
           - os: Ubuntu
             runner: ubuntu-20.04
-            bucket: linux
             script: ./task.sh
-      fail-fast: false
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -195,17 +113,6 @@ jobs:
             ~/go/pkg
             ~/.cache/go-build
 
-      - name: Cache Yarn dependencies
-        uses: actions/cache@v2
-        with:
-          key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
-          restore-keys: yarn-${{ runner.os }}-
-          path: |
-            .pnp.*
-            .yarn/
-            !.yarn/releases
-            !.yarn/plugins
-
       - name: Cache managed dependencies
         uses: actions/cache@v2
         with:
@@ -233,33 +140,26 @@ jobs:
       - name: Install build tools
         run: ${{ matrix.script }} install-tools
 
-      - name: Compile API definitions
-        run: ${{ matrix.script }} proto-build
-
       - name: Build libarchive
         run: ${{ matrix.script }} libarchive-build
-
-      - name: Lint libknossos
-        if: ${{ github.event_name == 'pull_request' && runner.os == 'Linux' }}
-        run: ./task.sh libknossos-lint
-
-      - name: Build libknossos
-        run: ${{ matrix.script }} libknossos-build
-
-      - name: Build Knossos wrapper
-        run: ${{ matrix.script }} client-build
-
-      - name: Build Knossos UI
-        run: ${{ matrix.script }} client-ui-build
-
-      - name: Build uploader
-        run: ${{ matrix.script }} uploader-build
-
-      - name: Upload Knossos build
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./build/updater/uploader 0.0.1-nightly.${{ needs.setup.outputs.timestamp }}-${{ needs.setup.outputs.short_sha }} ${{ matrix.bucket }} build/client/launcher/Release/
 
       - name: Build updater
         if: needs.setup.outputs.updater_changed == '1'
         run: ${{ matrix.script }} updater-build
+
+      - name: Package updater (Windows)
+        if: runner.os == 'Windows'
+        run: cd build && zip -r updater.zip updater
+
+      - name: Package updater (*nix)
+        if: runner.os != 'Windows'
+        run: cd build && tar -czf updater.tar.gz updater
+
+      - name: Upload updater
+        if: needs.setup.outputs.updater_changed == '1'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: build/updater.*
+          name: Updater ${{ needs.setup.output.timestamp }}+${{ needs.setup.outputs.short_sha }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

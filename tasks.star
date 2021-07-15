@@ -45,7 +45,7 @@ Task help:
 load("tasks/options.star", "build", "generator_opt", "msys2_path")
 load("tasks/helpers.star", "protoc", "yarn")
 load("tasks/nebula.star", "nebula_configure")
-load("tasks/knossos.star", "knossos_configure", "get_libarchive_flags")
+load("tasks/knossos.star", "get_libarchive_flags", "knossos_configure")
 
 def configure():
     generator = generator_opt
@@ -245,22 +245,24 @@ def configure():
     knossos_configure(binext, libext, generator)
 
     updater_ldflags = ""
+    updater_goldflags = "-s -w"
     if OS == "windows":
-        updater_ldflags = "-lSDL2 -luser32 -lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lversion -luuid -ladvapi32 -lsetupapi -lshell32"
+        #updater_ldflags = " -lSDL2 -luser32 -lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lversion -luuid -ladvapi32 -lsetupapi -lshell32"
+        updater_goldflags += " -H windowsgui -extldflags -static"
 
     task(
         "updater-build",
         desc = "Builds the Knossos updater",
-        deps = [],
+        deps = ["libarchive-build"],
         env = {
             "CC": "gcc",
             "CXX": "g++",
-            "CGO_LDFLAGS": get_libarchive_flags(),
+            "CGO_LDFLAGS": get_libarchive_flags() + updater_ldflags,
         },
         cmds = [
             "mkdir -p build/updater",
             "cd packages/updater",
-            "go build -tags static -ldflags '-s -w' -o ../../build/updater/updater%s" % binext,
+            "go build -tags static -ldflags '-s -w %s' -o ../../build/updater/updater%s" % (updater_goldflags, binext),
         ],
     )
 
@@ -283,7 +285,7 @@ def configure():
         cmds = [
             "mkdir -p build/updater",
             "cd packages/updater",
-            "go build -tags static -ldflags '-s -w' -o ../../build/updater/uploader%s ./cmd/uploader" % binext,
+            "go build -o ../../build/updater/uploader%s ./cmd/uploader" % binext,
         ],
     )
 

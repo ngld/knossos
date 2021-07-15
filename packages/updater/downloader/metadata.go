@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/rotisserie/eris"
@@ -112,10 +113,77 @@ func GetAvailableVersions(ctx context.Context, token string) ([]string, error) {
 }
 
 func GetBlobURL(ctx context.Context, token string, digest string) (string, error) {
-	resp, err := client.Get(RepoEndpoint + Repo + "/blobs/" + digest)
+	req, err := http.NewRequest("GET", RepoEndpoint+Repo+"/blobs/"+digest, nil)
 	if err != nil {
 		return "", err
 	}
+	req.Header.Add("Authorization", "Bearer "+token)
 
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	resp.Body.Close()
+
+	if resp.StatusCode != 307 {
+		return "", eris.Errorf("unexpected status %d", resp.StatusCode)
+	}
 	return resp.Header.Get("Location"), nil
+}
+
+func DownloadVersion(ctx context.Context, token, tag, dest string, progressCb func(float32, string)) error {
+	var response RegistryManifest
+	err := doAuthenticatedRequest(ctx, Repo+"/manifests/"+tag, token, &response)
+	if err != nil {
+		return err
+	}
+
+	if len(response.Layers) < 1 {
+		return eris.New("no layers found")
+	}
+
+	if response.Layers[0].MediaType != "application/vnd.docker.image.rootfs.diff.tar.gzip" {
+		return eris.Errorf("the layer has an unexpected type: %s", response.Layers[0].MediaType)
+	}
+
+	url, err := GetBlobURL(ctx, token, response.Layers[0].Digest)
+	if err != nil {
+		return eris.Wrap(err, "failed to generate blob URL")
+	}
+
+	f, err := os.Create(dest)
+	if err != nil {
+		return eris.Wrap(err, "failed to open destination file")
+	}
+	defer f.Close()
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return eris.Wrap(err, "failed to download")
+	}
+	defer resp.Body.Close()
+
+	done := false
+	defer func() {
+		done = true
+	}()
+
+	go func() {
+		for !done {
+			pos, err := f.Seek(0, io.SeekCurrent)
+			if err == nil {
+				progressCb(float32(pos)/float32(resp.ContentLength), "Downloading")
+			}
+
+			time.Sleep(500 * time.Millisecond)
+		}
+	}()
+
+	_, err = io.Copy(f, resp.Body)
+	if err != nil {
+		return eris.Wrap(err, "download was interrupted")
+	}
+
+	// TODO verify checksum (digest)
+	return nil
 }
