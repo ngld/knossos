@@ -10,6 +10,7 @@ jobs:
     name: Setup
     runs-on: ubuntu-latest
     outputs:
+      updater_version: ${{ steps.version.outputs.version }}
       short_sha: ${{ steps.sha.outputs.short_sha }}
       timestamp: ${{ steps.timestamp.outputs.timestamp }}
       go_version: ${{ steps.read.outputs.go_version }}
@@ -27,6 +28,10 @@ jobs:
       - name: Generate timestamp
         id: timestamp
         run: echo "::set-output name=timestamp::$(date +'%Y%d%m%H%M')"
+
+      - name: Generate updater version
+        id: version
+        run: echo "::set-output name=version::$(echo "${{ github.ref }}" | cut -d - -f 2)"
 
       - name: Read build settings from repository
         id: read
@@ -104,7 +109,7 @@ jobs:
           if [ "$RUNNER_OS" = 'macOS' ]; then
             brew install xz
           elif [ "$RUNNER_OS" = 'Linux' ]; then
-            sudo apt-get install -y libgtk-3-dev liblzma-dev libzstd-dev zlib1g-dev
+            sudo apt-get install -y liblzma-dev libzstd-dev zlib1g-dev libsdl2-2.0-0
           fi
 
       - name: Configure build
@@ -124,16 +129,16 @@ jobs:
 
       - name: Package updater (Windows)
         if: runner.os == 'Windows'
-        run: cd build && zip -r updater.zip updater
+        run: cd build && tar -caf updater-${{ needs.setup.outputs.updater_version }}.zip updater
 
       - name: Package updater (*nix)
         if: runner.os != 'Windows'
-        run: cd build && tar -czf updater.tar.gz updater
+        run: cd build && tar -czf updater-${{ needs.setup.outputs.updater_version }}-${{ matrix.os }}.tar.gz updater
 
       - name: Upload updater
         uses: softprops/action-gh-release@v1
         with:
-          files: build/updater.*
-          name: Updater ${{ needs.setup.output.timestamp }}+${{ needs.setup.outputs.short_sha }}
+          files: build/updater-*
+          name: Updater ${{ needs.setup.outputs.timestamp }}+${{ needs.setup.outputs.short_sha }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
