@@ -247,7 +247,6 @@ def configure():
     updater_ldflags = ""
     updater_goldflags = "-s -w"
     if OS == "windows":
-        #updater_ldflags = " -lSDL2 -luser32 -lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lversion -luuid -ladvapi32 -lsetupapi -lshell32"
         updater_goldflags += " -H windowsgui -extldflags -static"
 
     task(
@@ -262,7 +261,7 @@ def configure():
         cmds = [
             "mkdir -p build/updater",
             "cd packages/updater",
-            "go build -tags static -ldflags '-s -w %s' -o ../../build/updater/updater%s" % (updater_goldflags, binext),
+            "go build -tags static -ldflags '%s' -o ../../build/updater/updater%s" % (updater_goldflags, binext),
         ],
     )
 

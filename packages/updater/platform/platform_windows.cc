@@ -13,23 +13,20 @@ void ShowError(const char *msg) {
 
 DialogResult SaveFileDialog(
     const char *title,
-    const char *default_filepath,
-    DialogCallback callback) {
+    const char *default_filepath) {
   // TODO
   return {};
 }
 
 DialogResult OpenFileDialog(
     const char *title,
-    const char *default_filepath,
-    DialogCallback callback) {
+    const char *default_filepath) {
   // TODO
   return {};
 }
 
 DialogResult OpenFolderDialog(
-    const char *title, const char *folder,
-    DialogCallback callback) {
+    const char *title, const char *folder) {
   // TODO
   return {};
 }

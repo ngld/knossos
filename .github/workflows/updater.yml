@@ -14,7 +14,6 @@ jobs:
       timestamp: ${{ steps.timestamp.outputs.timestamp }}
       go_version: ${{ steps.read.outputs.go_version }}
       msys2_packages: ${{ steps.read.outputs.msys2_packages }}
-      updater_changed: ${{ steps.changes.outputs.updater_changed }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -39,33 +38,10 @@ jobs:
           echo "MSYS2 packages: ${msys2_packages}"
           echo "::set-output name=msys2_packages::${msys2_packages}"
 
-      - name: Detect changed files
-        id: changes
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            base_ref="origin/${{ github.base_ref }}"
-          elif [ "${{ github.event_name }}" = "push" ]; then
-            base_ref="${{ github.event.before }}"
-          else
-            echo "Unsupported event ${{ github.event_name }}"
-            exit 1
-          fi
-
-          changed="$(git diff --name-only "$base_ref..HEAD")"
-
-          echo "::group::Changed files"
-          echo "$changed"
-          echo "::endgroup::"
-
-          if grep -E '^packages/(libarchive|updater|build-tools)' > /dev/null <<< "$changed"; then
-            echo "::set-output name=updater_changed::1"
-          fi
-
   updater:
     name: Updater / ${{ matrix.os }}
     runs-on: ${{ matrix.runner }}
     needs: setup
-    if: needs.setup.outputs.updater_changed == '1'
     strategy:
       fail-fast: false
       matrix:
@@ -144,7 +120,6 @@ jobs:
         run: ${{ matrix.script }} libarchive-build
 
       - name: Build updater
-        if: needs.setup.outputs.updater_changed == '1'
         run: ${{ matrix.script }} updater-build
 
       - name: Package updater (Windows)
@@ -156,7 +131,6 @@ jobs:
         run: cd build && tar -czf updater.tar.gz updater
 
       - name: Upload updater
-        if: needs.setup.outputs.updater_changed == '1'
         uses: softprops/action-gh-release@v1
         with:
           files: build/updater.*

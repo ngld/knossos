@@ -3,12 +3,6 @@
 
 #include <stdint.h>
 
-#ifdef WIN32
-#define EXPORT __declspec(dllexport)
-#else
-#define EXPORT extern
-#endif
-
 typedef void (*DialogCallback)(int, const char*);
 typedef struct {
   uint8_t code;
@@ -19,11 +13,11 @@ typedef struct {
 extern "C" {
 #endif
 
-EXPORT void PlatformInit();
-EXPORT void ShowError(const char *message);
-EXPORT DialogResult SaveFileDialog(const char *title, const char *default_filepath);
-EXPORT DialogResult OpenFileDialog(const char *title, const char *default_filepath);
-EXPORT DialogResult OpenFolderDialog(const char *title, const char *folder);
+extern void PlatformInit();
+extern void ShowError(const char *message);
+extern DialogResult SaveFileDialog(const char *title, const char *default_filepath);
+extern DialogResult OpenFileDialog(const char *title, const char *default_filepath);
+extern DialogResult OpenFolderDialog(const char *title, const char *folder);
 
 #ifdef __cplusplus
 }
