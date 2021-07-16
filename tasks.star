@@ -244,10 +244,11 @@ def configure():
     nebula_configure(binext)
     knossos_configure(binext, libext, generator)
 
-    updater_ldflags = ""
     updater_goldflags = "-s -w"
+    updater_cmds = []
     if OS == "windows":
         updater_goldflags += " -H windowsgui -extldflags -static"
+        updater_cmds.append('cp %s ../../build/updater' % resolve_path(msys2_path, 'mingw64/bin/SDL2.dll'))
 
     task(
         "updater-build",
@@ -256,13 +257,13 @@ def configure():
         env = {
             "CC": "gcc",
             "CXX": "g++",
-            "CGO_LDFLAGS": get_libarchive_flags() + updater_ldflags,
+            "CGO_LDFLAGS": get_libarchive_flags(),
         },
         cmds = [
             "mkdir -p build/updater",
             "cd packages/updater",
             "go build -tags static -ldflags '%s' -o ../../build/updater/updater%s" % (updater_goldflags, binext),
-        ],
+        ] + updater_cmds,
     )
 
     task(
