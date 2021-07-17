@@ -115,6 +115,7 @@ message PackageFile {
   // archive id
   string archive = 2;
   string archive_path = 3;
+  uint32 filesize = 5;
   Checksum checksum = 4;
 }
 

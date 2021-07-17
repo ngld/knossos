@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"hash"
 	"io"
@@ -133,6 +134,8 @@ func (kn *knossosServer) InstallMod(ctx context.Context, req *client.InstallModR
 
 		plan := make(map[string]ModInstallStep)
 		modVersions := make(map[string]string)
+		newMeta := make(map[string]*common.ModMeta)
+		newRelMeta := make(map[string]*common.Release)
 		for _, mod := range req.Mods {
 			modVersions[mod.Modid] = mod.Version
 		}
@@ -151,12 +154,12 @@ func (kn *knossosServer) InstallMod(ctx context.Context, req *client.InstallModR
 
 		settings, err := storage.GetSettings(ctx)
 		if err != nil {
-			return err
+			return eris.Wrap(err, "failed to read settings")
 		}
 
 		tempFolder, err := os.MkdirTemp(filepath.Join(settings.LibraryPath, "temp"), "mod-install")
 		if err != nil {
-			return err
+			return eris.Wrap(err, "failed to create temp folder")
 		}
 		defer os.RemoveAll(tempFolder)
 
@@ -164,12 +167,12 @@ func (kn *knossosServer) InstallMod(ctx context.Context, req *client.InstallModR
 		for _, mod := range req.Mods {
 			modMeta, err := storage.GetRemoteMod(ctx, mod.Modid)
 			if err != nil {
-				return err
+				return eris.Wrapf(err, "failed to read metadata for %s", mod.Modid)
 			}
 
 			relMeta, err := storage.GetRemoteModRelease(ctx, mod.Modid, mod.Version)
 			if err != nil {
-				return err
+				return eris.Wrapf(err, "failed to read release metadata for %s %s", mod.Modid, mod.Version)
 			}
 
 			for _, pkg := range relMeta.Packages {
@@ -186,6 +189,21 @@ func (kn *knossosServer) InstallMod(ctx context.Context, req *client.InstallModR
 					continue
 				}
 
+				if _, present := newMeta[mod.Modid]; !present {
+					newMeta[mod.Modid] = modMeta
+				}
+
+				relKey := mod.Modid + "#" + relMeta.Version
+				if _, present := newRelMeta[relKey]; !present {
+					// Create a copy of the release without packages; we'll add the installed packages later
+					relCopy := new(common.Release)
+					*relCopy = *relMeta
+					relCopy.Packages = make([]*common.Package, 0)
+					newRelMeta[relKey] = relCopy
+				}
+
+				newRelMeta[relKey].Packages = append(newRelMeta[relKey].Packages, pkg)
+
 				for idx, ar := range pkg.Archives {
 					chkInfo, ok := checksumLookup[mod.Modid+"#"+ar.Label]
 					if !ok {
@@ -194,13 +212,6 @@ func (kn *knossosServer) InstallMod(ctx context.Context, req *client.InstallModR
 
 					arPath := filepath.Join(tempFolder, fmt.Sprintf("%s-%s-%d", mod.Modid, pkg.Name, idx))
 					arKey := mod.Modid + "#" + pkg.Name + "#" + ar.Label
-					dlItems = append(dlItems, &downloader.QueueItem{
-						Key:      arKey,
-						Filepath: arPath,
-						Filesize: int64(chkInfo.Size),
-						Mirrors:  chkInfo.Mirrors,
-						Checksum: chkInfo.Checksum,
-					})
 
 					parent := modMeta.Parent
 					if modMeta.Type == common.ModType_ENGINE {
@@ -208,8 +219,9 @@ func (kn *knossosServer) InstallMod(ctx context.Context, req *client.InstallModR
 					} else if parent == "" {
 						parent = "FS2"
 					}
+					modMeta.Parent = parent
 
-					plan[arKey] = ModInstallStep{
+					step := ModInstallStep{
 						folder:      filepath.Join(settings.LibraryPath, parent, mod.Modid+"-"+relMeta.Version, pkg.Folder),
 						destination: ar.Destination,
 						label:       ar.Label,
@@ -217,6 +229,39 @@ func (kn *knossosServer) InstallMod(ctx context.Context, req *client.InstallModR
 						relInfo:     relMeta,
 						pkgInfo:     pkg,
 						files:       chkInfo.Files,
+					}
+
+					allFilesExists := true
+					for _, item := range step.files {
+						info, err := os.Stat(filepath.Join(step.folder, filepath.FromSlash(item.Filename)))
+						if eris.Is(err, os.ErrNotExist) {
+							allFilesExists = false
+							break
+						} else if err != nil {
+							api.Log(ctx, api.LogError, "Failed to check file %s of mod %s, assuming that it's missing: %s", item.Filename, modMeta.Title, err)
+							allFilesExists = false
+							break
+						}
+
+						if info.Size() != int64(item.Size) {
+							// Ignore incomplete files
+							allFilesExists = false
+							break
+						}
+					}
+
+					if allFilesExists {
+						api.Log(ctx, api.LogInfo, "Skipping package %s: %s because it's already installed.", modMeta.Title, pkg.Name)
+					} else {
+						dlItems = append(dlItems, &downloader.QueueItem{
+							Key:      arKey,
+							Filepath: arPath,
+							Filesize: int64(chkInfo.Size),
+							Mirrors:  chkInfo.Mirrors,
+							Checksum: chkInfo.Checksum,
+						})
+
+						plan[arKey] = step
 					}
 				}
 			}
@@ -254,8 +299,124 @@ func (kn *knossosServer) InstallMod(ctx context.Context, req *client.InstallModR
 
 		err = queue.Error()
 		if err != nil {
+			return eris.Wrap(err, "failed to download mod archives")
+		}
+
+		api.Log(ctx, api.LogInfo, "Updating mod metadata")
+		err = storage.BatchUpdate(ctx, func(ctx context.Context) error {
+			modMetas := make(map[string]*common.ModMeta)
+			for _, mod := range newMeta {
+				err = storage.SaveLocalMod(ctx, mod)
+				if err != nil {
+					return eris.Wrapf(err, "failed to save mod %s", mod.Title)
+				}
+
+				modMetas[mod.Modid] = mod
+			}
+
+			for _, rel := range newRelMeta {
+				// Keep previously installed packages
+				oldRel, err := storage.GetModRelease(ctx, rel.Modid, rel.Version)
+				if err == nil {
+					for _, oldPkg := range oldRel.Packages {
+						found := false
+						for _, pkg := range rel.Packages {
+							if pkg.Name == oldPkg.Name {
+								found = true
+								break
+							}
+						}
+
+						if !found {
+							rel.Packages = append(rel.Packages, oldPkg)
+						}
+					}
+
+					// Preserve downloaded files if possible (no server-side changes)
+					if oldRel.Banner.GetFileid() == rel.Banner.GetFileid() {
+						rel.Banner = oldRel.Banner
+					}
+
+					if oldRel.Teaser.GetFileid() == rel.Teaser.GetFileid() {
+						rel.Teaser = oldRel.Teaser
+					}
+
+					for idx := 0; idx < len(oldRel.Screenshots) && idx < len(rel.Screenshots); idx++ {
+						if oldRel.Screenshots[idx].GetFileid() == rel.Screenshots[idx].GetFileid() {
+							rel.Screenshots[idx] = oldRel.Screenshots[idx]
+						}
+					}
+				}
+
+				fileRefs := append([]*common.FileRef{rel.Banner, rel.Teaser}, rel.Screenshots...)
+				queueItems := make([]*downloader.QueueItem, 0)
+				for _, ref := range fileRefs {
+					if ref != nil && (len(ref.Urls) != 1 || !strings.HasPrefix(ref.Urls[0], "file://")) {
+						urls := ref.Urls
+						ext := filepath.Ext(ref.Urls[0])
+						dest := "ref_" + hex.EncodeToString([]byte(ref.Fileid)) + ext
+						dest = filepath.Join(settings.LibraryPath, modMetas[rel.Modid].Parent, rel.Modid+"-"+rel.Version, dest)
+						ref.Urls = []string{"file://" + filepath.ToSlash(dest)}
+
+						// Only download missing images.
+						_, err = os.Stat(dest)
+						if err != nil {
+							queueItems = append(queueItems, &downloader.QueueItem{
+								Key:      ref.Fileid,
+								Filepath: dest,
+								Mirrors:  urls,
+								Checksum: nil,
+								Filesize: 0,
+							})
+						}
+					}
+
+					err = storage.ImportFile(ctx, ref)
+					if err != nil {
+						return eris.Wrapf(err, "failed to import file ref %s", ref.Fileid)
+					}
+				}
+
+				err = downloader.NewQueue(queueItems).Run(ctx)
+				if err != nil {
+					return eris.Wrap(err, "failed to fetch mod images")
+				}
+
+				// Build dependency snapshot based on the passed snapshot.
+				// The user-requested mod will receive the full snapshot but dependencies usually only need a subset.
+				// For example, FSO's dep snapshot would only contain FSO while the MVPs' snapshot would only contain
+				// the MVPs and FSO and any other mods the MVPs might depend on.
+				rel.DependencySnapshot, err = mods.GetDependencySnapshot(ctx, storage.RemoteMods{}, rel)
+				if err != nil {
+					return eris.Wrapf(err, "failed to build dependency snpashot for %s (%s)", modMetas[rel.Modid].Title, rel.Version)
+				}
+
+				for modid := range rel.DependencySnapshot {
+					version, ok := modVersions[modid]
+					if !ok {
+						return eris.Errorf("dependency snapshot for %s (%s) contains %s but it's missing from the initial request", modMetas[rel.Modid].Title, rel.Version, modid)
+					}
+
+					// Not sure how problematic this would be, just warn for now.
+					if rel.DependencySnapshot[modid] != version {
+						api.Log(ctx, api.LogWarn, "Mod %s (%s) would use dependency %s (%s) but the request uses %s",
+							modMetas[rel.Modid].Title, rel.Version, modMetas[modid].Title, rel.DependencySnapshot[modid], version)
+					}
+				}
+
+				err = storage.SaveLocalModRelease(ctx, rel)
+				if err != nil {
+					return eris.Wrapf(err, "failed to save release %s (%s)", modMetas[rel.Modid].Title, rel.Version)
+				}
+			}
+
+			return nil
+		})
+		if err != nil {
 			return err
 		}
+
+		// TODO save dependency snapshots
 
 		api.Log(ctx, api.LogInfo, "Done")
 		return nil
@@ -352,10 +513,10 @@ func handleArchive(ctx context.Context, archivePath string, step *ModInstallStep
 
 		writtenSum := hasher.Sum(nil)
 		if !bytes.Equal(checksum, writtenSum) {
-			/*err = os.Remove(destPath)
+			err = os.Remove(destPath)
 			if err != nil {
 				return eris.Wrapf(err, "failed to remove %s after a checksum error for %s in %s", destPath, step.pkgInfo.Name, step.modInfo.Title)
-			}*/
+			}
 
 			return eris.Errorf("checksum error (%x != %x) in %s for %s in %s", writtenSum, checksum, archive.Entry.Pathname, step.pkgInfo.Name, step.modInfo.Title)
 		}

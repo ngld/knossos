@@ -226,7 +226,7 @@ func TaskLog(ctx context.Context, level client.LogMessage_LogLevel, msg string, 
 			Time:    timestamppb.Now(),
 		})
 		if err != nil {
-			Log(ctx, LogError, "Error in TaskLog(%d): %+v", ref, err)
+			logImpl(ctx, LogError, "Error in TaskLog(%d): %+v", ref, err)
 		}
 	}
 }

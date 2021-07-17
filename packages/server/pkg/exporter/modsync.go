@@ -54,7 +54,7 @@ func buildReleaseFromRow(ctx context.Context, q queries.Querier, row queries.Get
 		}
 
 		rel.Teaser = &common.FileRef{
-			Fileid: string(*row.Teaser),
+			Fileid: fmt.Sprint(*row.Teaser),
 			Urls:   urls,
 		}
 	}
@@ -66,7 +66,7 @@ func buildReleaseFromRow(ctx context.Context, q queries.Querier, row queries.Get
 		}
 
 		rel.Banner = &common.FileRef{
-			Fileid: string(*row.Banner),
+			Fileid: fmt.Sprint(*row.Banner),
 			Urls:   urls,
 		}
 	}
@@ -79,7 +79,7 @@ func buildReleaseFromRow(ctx context.Context, q queries.Querier, row queries.Get
 		}
 
 		rel.Screenshots[idx] = &common.FileRef{
-			Fileid: string(*el),
+			Fileid: fmt.Sprint(*el),
 			Urls:   urls,
 		}
 	}
@@ -202,7 +202,7 @@ func buildReleaseFromRow(ctx context.Context, q queries.Querier, row queries.Get
 
 		ar := &common.ChecksumPack_Archive{
 			Checksum: archive.ChecksumDigest.Bytes,
-			Size:     uint32(*archive.Filesize),
+			Size:     uint64(*archive.Filesize),
 			Mirrors:  mirrors,
 			Files:    make([]*common.ChecksumPack_Archive_File, len(files)),
 		}

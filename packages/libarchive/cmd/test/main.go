@@ -20,7 +20,7 @@ func main() {
 		panic(err)
 	}
 
-	for archive.Next() {
+	for archive.Next() != nil {
 		fmt.Println(archive.Entry.Pathname)
 	}
 

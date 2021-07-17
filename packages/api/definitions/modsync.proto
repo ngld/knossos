@@ -27,11 +27,12 @@ message ChecksumPack {
     message File {
       string filename = 1;
       bytes checksum = 2;
+      uint32 size = 3;
     }
 
     repeated File files = 1;
     bytes checksum = 2;
-    uint32 size = 3;
+    uint64 size = 3;
     repeated string mirrors = 4;
   }
 

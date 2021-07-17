@@ -82,9 +82,12 @@ func (q *Queue) Run(ctx context.Context) error {
 		panic("Called Run() on a finished queue")
 	}
 
+	q.activeLock.L.Lock()
 	if q.active > 0 {
+		q.activeLock.L.Unlock()
 		panic("Called Run() on an already running queue")
 	}
+	q.activeLock.L.Unlock()
 
 	if q.ProgressCb != nil {
 		go q.updateProgressTicker()

@@ -21,7 +21,7 @@ func (kn *knossosServer) ScanLocalMods(ctx context.Context, task *client.TaskReq
 	api.RunTask(ctx, task.Ref, func(ctx context.Context) error {
 		settings, err := storage.GetSettings(ctx)
 		if err != nil {
-			return err
+			return eris.Wrap(err, "failed to read settings")
 		}
 
 		pathQueue := []string{settings.LibraryPath}
@@ -32,7 +32,7 @@ func (kn *knossosServer) ScanLocalMods(ctx context.Context, task *client.TaskReq
 
 			info, err := os.Stat(item)
 			if err != nil {
-				return err
+				return eris.Wrapf(err, "failed to read library folder %s", item)
 			}
 
 			if !info.IsDir() {

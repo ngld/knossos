@@ -184,7 +184,7 @@ func UpdateRemoteModIndex(ctx context.Context) error {
 func FetchModChecksums(ctx context.Context, modVersions map[string]string) (map[string]*common.ChecksumPack, error) {
 	tempFolder, err := os.MkdirTemp("", "knossos-chk-dl")
 	if err != nil {
-		return nil, err
+		return nil, eris.Wrap(err, "failed to create temp folder for checksums")
 	}
 	defer os.RemoveAll(tempFolder)
 
@@ -200,20 +200,20 @@ func FetchModChecksums(ctx context.Context, modVersions map[string]string) (map[
 	queue := downloader.NewQueue(queueItems)
 	err = queue.Run(ctx)
 	if err != nil {
-		return nil, err
+		return nil, eris.Wrap(err, "failed to download checksums")
 	}
 
 	result := make(map[string]*common.ChecksumPack)
 	for _, item := range queueItems {
 		encoded, err := os.ReadFile(item.Filepath)
 		if err != nil {
-			return nil, err
+			return nil, eris.Wrapf(err, "failed to read downloaded checksum file %s", item.Filepath)
 		}
 
 		data := new(common.ChecksumPack)
 		err = proto.Unmarshal(encoded, data)
 		if err != nil {
-			return nil, err
+			return nil, eris.Wrapf(err, "failed to parse checksum file %s", item.Filepath)
 		}
 
 		result[item.Key] = data
