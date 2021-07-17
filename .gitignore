@@ -12,6 +12,7 @@ dist/
 packages/api/api/*.ts
 packages/api/api/**/*.ts
 packages/server/sync/*
+packages/libarchive/cgo_flags.go
 gen/
 third_party/
 DEPS.stamps

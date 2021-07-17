@@ -15,7 +15,7 @@ require (
 	github.com/twitchtv/twirp v8.1.0+incompatible
 	go.etcd.io/bbolt v1.3.5
 	golang.org/x/net v0.0.0-20210521195947-fe42d452be8f
-	golang.org/x/sys v0.0.0-20210521203332-0cec03c779c1
+	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c
 	google.golang.org/protobuf v1.27.1
 )
 
