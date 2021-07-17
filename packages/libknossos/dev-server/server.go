@@ -45,8 +45,21 @@ func main() {
 	log.Logger = log.Logger.With().Caller().Stack().Logger()
 
 	profilePath := ""
-	if runtime.GOOS == "windows" {
+	switch runtime.GOOS {
+	case "windows":
 		profilePath = filepath.Join(os.Getenv("AppData"), "Knossos")
+	case "darwin":
+		profilePath = filepath.Join(os.Getenv("HOME"), "Library/Application Support/Knossos")
+	case "linux":
+		profilePath = os.Getenv("XDG_STATE_HOME")
+		if profilePath == "" {
+			profilePath = os.Getenv("XDG_CONFIG_HOME")
+		}
+		if profilePath == "" {
+			profilePath = filepath.Join(os.Getenv("HOME"), ".knossos")
+		} else {
+			profilePath = filepath.Join(profilePath, "knossos")
+		}
 	}
 
 	if profilePath == "" {
