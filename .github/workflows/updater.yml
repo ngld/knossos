@@ -109,7 +109,7 @@ jobs:
           if [ "$RUNNER_OS" = 'macOS' ]; then
             brew install xz
           elif [ "$RUNNER_OS" = 'Linux' ]; then
-            sudo apt-get install -y liblzma-dev libzstd-dev zlib1g-dev libsdl2-2.0-0
+            sudo apt-get install -y liblzma-dev libzstd-dev zlib1g-dev libsdl2-2.0-0 libasound2
           fi
 
       - name: Configure build

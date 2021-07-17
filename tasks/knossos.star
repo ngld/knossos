@@ -52,6 +52,7 @@ def knossos_configure(binext, libext, generator):
         for lib in libs:
             libarchive_ldflags += " %s.a" % resolve_path(msys2_path, "mingw64/lib", lib)
 
+        libarchive_ldflags = libarchive_ldflags.replace("\\", "/")
     elif OS != "linux":
         libarchive_ldflags += " -liconv -lz /usr/local/opt/xz/lib/liblzma.a /usr/local/opt/zstd/lib/libzstd.a"
     else:
