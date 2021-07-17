@@ -60,6 +60,7 @@ var noPreRelConstraintPattern = regexp.MustCompile(`[>=~]*\s*[0-9]+\.[0-9]+\.[0-
 func GetDependencySnapshot(ctx context.Context, mods storage.ModProvider, release *common.Release) (DependencySnapshot, error) {
 	snapshot := make(DependencySnapshot)
 	constraints := make(map[string][]constraintItem)
+	blocklist := make(map[string]bool)
 	queue := []modRequest{{
 		mod:    release,
 		source: "<root>",
@@ -109,8 +110,10 @@ func GetDependencySnapshot(ctx context.Context, mods storage.ModProvider, releas
 					}
 
 					depRel.Packages = FilterUnsupportedPackages(ctx, depRel.Packages)
+					api.Log(ctx, api.LogDebug, "Found %d pkgs for %s %s", len(depRel.Packages), depRel.Modid, depRel.Version)
 					if len(depRel.Packages) == 0 {
 						// This release doesn't support the current platform, remove this version and try again
+						blocklist[dep.Modid+"#"+version] = true
 						for idx, v := range modVersions {
 							if v == version {
 								modVersions = append(modVersions[:idx], modVersions[idx+1:]...)
@@ -166,6 +169,10 @@ func GetDependencySnapshot(ctx context.Context, mods storage.ModProvider, releas
 		// Check each version (starting with the latest) against our given constraints until we find one that satisfies
 		// them.
 		for idx := len(versions) - 1; idx >= 0; idx-- {
+			if blocklist[modid+"#"+versions[idx]] {
+				continue
+			}
+
 			version, err := semver.StrictNewVersion(versions[idx])
 			if err != nil {
 				return nil, eris.Wrapf(err, "failed to parse versions for %s", modid)
