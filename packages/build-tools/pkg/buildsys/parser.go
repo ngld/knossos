@@ -446,6 +446,7 @@ func RunScript(ctx context.Context, filename, projectRoot string, options map[st
 		"isdir":            starlark.NewBuiltin("isdir", starIsdir),
 		"isfile":           starlark.NewBuiltin("isfile", starIsfile),
 		"read_yaml":        starlark.NewBuiltin("read_yaml", readYaml),
+		"write_file":       starlark.NewBuiltin("write_file", starWriteFile),
 		"execute":          starlark.NewBuiltin("execute", starExec),
 		"parse_shell_args": starlark.NewBuiltin("parse_shell_args", starParseShellArgs),
 

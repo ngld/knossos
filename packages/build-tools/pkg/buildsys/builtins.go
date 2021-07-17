@@ -578,3 +578,30 @@ func starParseShellArgs(thread *starlark.Thread, fn *starlark.Builtin, args star
 
 	return StarlarkShellArgs(call.Args), nil
 }
+
+func starWriteFile(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	var filename string
+	var content string
+	err := starlark.UnpackPositionalArgs(fn.Name(), args, kwargs, 2, &filename, &content)
+	if err != nil {
+		return nil, err
+	}
+
+	f, err := os.Create(filename)
+	if err != nil {
+		return nil, eris.Wrapf(err, "failed to open %s", filename)
+	}
+
+	_, err = f.WriteString(content)
+	if err != nil {
+		f.Close()
+		return nil, eris.Wrapf(err, "failed to write %s", filename)
+	}
+
+	err = f.Close()
+	if err != nil {
+		return nil, eris.Wrapf(err, "failed to close %s", filename)
+	}
+
+	return starlark.None, nil
+}

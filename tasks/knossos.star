@@ -4,34 +4,6 @@ load("options.star", "build", "msys2_path")
 kn_args = option("client_args", "", help = "The parameters to pass to Knossos in the client-run target")
 local_nebula = option("use_local_nebula", "true" if build == "Debug" else "false", help = "Use localhost:8200 instead of nu.fsnebula.org (enabled by default for Debug builds)") == "true"
 
-def get_libarchive_flags():
-    libkn_ldflags = ""
-
-    # platform specific filename for libarchive
-    if OS == "windows":
-        libkn_ldflags += str(resolve_path("build/libarchive/libarchive/libarchive_static.a"))
-    else:
-        libkn_ldflags += str(resolve_path("build/libarchive/libarchive/libarchive.a"))
-
-    if OS != "darwin":
-        libkn_ldflags += " -Wl,--no-undefined"
-
-    if OS == "windows":
-        # force static linking on windows
-        libs = ["liblzma", "libzstd", "libz", "libiconv"]
-        for lib in libs:
-            libkn_ldflags += " %s.a" % resolve_path(msys2_path, "mingw64/lib", lib)
-
-    elif OS != "linux":
-        libkn_ldflags += " -liconv -lz /usr/local/opt/xz/lib/liblzma.a /usr/local/opt/zstd/lib/libzstd.a"
-    else:
-        libkn_ldflags += " " + " ".join([
-            find_library(["liblzma"]),
-            find_library(["libzstd"]),
-            find_library(["libz", "zlib"], "zlib"),
-        ])
-    return libkn_ldflags
-
 def knossos_configure(binext, libext, generator):
     res_dir = ""
     if OS == "darwin":
@@ -63,6 +35,39 @@ def knossos_configure(binext, libext, generator):
         cmds = [yarn("client:watch")],
     )
 
+    libarchive_ldflags = ""
+
+    # platform specific filename for libarchive
+    if OS == "windows":
+        libarchive_ldflags += str(resolve_path("build/libarchive/libarchive/libarchive_static.a"))
+    else:
+        libarchive_ldflags += str(resolve_path("build/libarchive/libarchive/libarchive.a"))
+
+    if OS != "darwin":
+        libarchive_ldflags += " -Wl,--no-undefined"
+
+    if OS == "windows":
+        # force static linking on windows
+        libs = ["liblzma", "libzstd", "libz", "libiconv"]
+        for lib in libs:
+            libarchive_ldflags += " %s.a" % resolve_path(msys2_path, "mingw64/lib", lib)
+
+    elif OS != "linux":
+        libarchive_ldflags += " -liconv -lz /usr/local/opt/xz/lib/liblzma.a /usr/local/opt/zstd/lib/libzstd.a"
+    else:
+        libarchive_ldflags += " " + " ".join([
+            find_library(["liblzma"]),
+            find_library(["libzstd"]),
+            find_library(["libz", "zlib"], "zlib"),
+        ])
+
+    write_file("packages/libarchive/cgo_flags.go", """
+package libarchive
+
+// #cgo LDFLAGS: %s
+import "C"
+""" % libarchive_ldflags)
+
     cmake_task(
         "libarchive-build",
         desc = "Builds libarchive with CMake",
@@ -80,7 +85,6 @@ def knossos_configure(binext, libext, generator):
         env = {
             # cgo only supports gcc, make sure it doesn't try to use a compiler meant for our other packages
             "CC": "gcc",
-            "CGO_LDFLAGS": get_libarchive_flags(),
         },
         cmds = ["golangci-lint run" + get_golangci_flags()],
     )
@@ -121,7 +125,6 @@ def knossos_configure(binext, libext, generator):
         env = {
             # cgo only supports gcc, make sure it doesn't try to use a compiler meant for our other packages
             "CC": "gcc",
-            "CGO_LDFLAGS": get_libarchive_flags(),
         },
         cmds = [
             "go build %s -o ../../build/libknossos/libknossos%s -buildmode c-shared ./api" % (libkn_flags, libext),
@@ -192,7 +195,6 @@ def knossos_configure(binext, libext, generator):
         env = {
             # cgo only supports gcc, make sure it doesn't try to use a compiler meant for our other packages
             "CC": "gcc",
-            "CGO_LDFLAGS": get_libarchive_flags(),
         },
         cmds = [["go", "build"] + list(parse_shell_args(libkn_flags)) + ["-o", "../../build/libknossos/dev-server%s" % binext, "./dev-server"]],
     )

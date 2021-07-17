@@ -1,7 +1,6 @@
 package libarchive
 
 // #cgo CFLAGS: -I${SRCDIR}/../../third_party/libarchive
-// #cgo LDFLAGS: -L${SRCDIR}/../../build/libarchive/libarchive
 //
 // #include <stdlib.h>
 // #include <libarchive/archive.h>
