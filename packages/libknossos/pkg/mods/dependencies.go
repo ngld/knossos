@@ -78,7 +78,7 @@ func GetDependencySnapshot(ctx context.Context, mods storage.ModProvider, releas
 					rawConstraint = ">= 0.0.0-0"
 				}
 
-				// Make sure all constraints allow prerelease versions
+				// Make sure all constraints that don't require exact versions allow prerelease versions
 				rawConstraint = noPreRelConstraintPattern.ReplaceAllStringFunc(rawConstraint, func(s string) string {
 					if !strings.HasSuffix(s, "-") && strings.ContainsAny(s, ">~") {
 						return s + "-0"
@@ -97,6 +97,7 @@ func GetDependencySnapshot(ctx context.Context, mods storage.ModProvider, releas
 						return nil, eris.Wrapf(err, "failed to retrieve versions for %s", dep.Modid)
 					}
 
+				repickModVersion:
 					version, err := pickNaiveVersion(ctx, modVersions, con)
 					if err != nil {
 						return nil, eris.Wrapf(err, "failed to resolve dependency %s (%s)", dep.Modid, con)
@@ -105,6 +106,20 @@ func GetDependencySnapshot(ctx context.Context, mods storage.ModProvider, releas
 					depRel, err := mods.GetModMetadata(dep.Modid, version)
 					if err != nil {
 						return nil, eris.Wrapf(err, "failed to fetch metadata for mod %s (%s)", dep.Modid, version)
+					}
+
+					depRel.Packages = FilterUnsupportedPackages(ctx, depRel.Packages)
+					if len(depRel.Packages) == 0 {
+						// This release doesn't support the current platform, remove this version and try again
+						for idx, v := range modVersions {
+							if v == version {
+								modVersions = append(modVersions[:idx], modVersions[idx+1:]...)
+								goto repickModVersion
+							}
+						}
+
+						// pickNaiveVersion picked a version that isn't in modVersions??!
+						panic("internal consistency error")
 					}
 
 					preReqs := make(map[string]string)

@@ -250,7 +250,7 @@ TRUNCATE files CASCADE;
 			rStabilility = db.EngineUnknown
 		}
 
-		// TODO files (logo -> ?, tile -> teaser, banner -> banner, screenshots)
+		// TODO files (logo -> ?)
 		relDate, err := time.Parse("2006-01-02", mod.FirstRelease)
 		if err != nil {
 			if mod.FirstRelease == "" {

@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/rotisserie/eris"
-	"golang.org/x/sys/cpu"
 
 	"github.com/ngld/knossos/packages/api/client"
 	"github.com/ngld/knossos/packages/api/common"
@@ -38,6 +37,8 @@ func getEngineForMod(ctx context.Context, mod *common.Release) (*common.Release,
 			if err != nil {
 				return nil, eris.Wrapf(err, "failed to find release %s (%s) during engine lookup", modid, version)
 			}
+
+			engine.Packages = FilterUnsupportedPackages(ctx, engine.Packages)
 		}
 	}
 
@@ -52,36 +53,9 @@ func getBinaryForEngine(ctx context.Context, engine *common.Release) (string, er
 	binaryScore := uint32(0)
 	binaryPath := ""
 
+	engine.Packages = FilterUnsupportedPackages(ctx, engine.Packages)
+
 	for _, pkg := range engine.Packages {
-		shouldSkip := false
-		for _, spec := range pkg.CpuSpec.GetRequiredFeatures() {
-			switch spec {
-			case "windows":
-				shouldSkip = runtime.GOOS != "windows"
-			case "linux":
-				shouldSkip = runtime.GOOS != "linux"
-			case "macosx":
-				shouldSkip = runtime.GOOS != "darwin"
-			case "x86_64":
-				// TODO make sure that this check yields the correct result even for 32bit builds of Knossos
-				shouldSkip = runtime.GOARCH != "amd64"
-			case "avx":
-				shouldSkip = !cpu.X86.HasAVX
-			case "avx2":
-				shouldSkip = !cpu.X86.HasAVX2
-			case "avx512":
-				shouldSkip = !cpu.X86.HasAVX512
-			}
-
-			if shouldSkip {
-				break
-			}
-		}
-
-		if shouldSkip {
-			continue
-		}
-
 		for _, exe := range pkg.Executables {
 			if exe.Label == "" && !exe.Debug && exe.Priority > binaryScore {
 				binaryScore = exe.Priority

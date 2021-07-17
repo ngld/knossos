@@ -29,6 +29,7 @@ func (kn *knossosServer) GetModInstallInfo(ctx context.Context, req *client.ModI
 	if err != nil {
 		return nil, err
 	}
+	release.Packages = mods.FilterUnsupportedPackages(ctx, release.Packages)
 
 	// Remote mods don't have a dependency snpashot so we'll have to create a new snapshot
 	snapshot, err := mods.GetDependencySnapshot(ctx, storage.RemoteMods{}, release)
@@ -83,6 +84,7 @@ func (kn *knossosServer) GetModInstallInfo(ctx context.Context, req *client.ModI
 		if err != nil {
 			return nil, err
 		}
+		rel.Packages = mods.FilterUnsupportedPackages(ctx, rel.Packages)
 
 		modInfo := &client.InstallInfoResponse_ModInfo{
 			Id:       mod.Modid,
