@@ -23,7 +23,7 @@ func getEngineForMod(ctx context.Context, mod *common.Release) (*common.Release,
 	var engine *common.Release
 
 	for modid, version := range mod.DependencySnapshot {
-		dep, err := storage.GetMod(ctx, modid)
+		dep, err := storage.LocalMods.GetMod(ctx, modid)
 		if err != nil {
 			return nil, eris.Wrapf(err, "failed to resolve dependency %s (%s)", modid, version)
 		}
@@ -33,7 +33,7 @@ func getEngineForMod(ctx context.Context, mod *common.Release) (*common.Release,
 				return nil, eris.New("more than one engine dependency")
 			}
 
-			engine, err = storage.GetModRelease(ctx, modid, version)
+			engine, err = storage.LocalMods.GetModRelease(ctx, modid, version)
 			if err != nil {
 				return nil, eris.Wrapf(err, "failed to find release %s (%s) during engine lookup", modid, version)
 			}
@@ -151,7 +151,7 @@ func LaunchMod(ctx context.Context, mod *common.Release, settings *client.UserSe
 
 		engOpts := settings.GetEngineOptions()
 		if engOpts.GetModid() != "" {
-			engine, err = storage.GetModRelease(ctx, engOpts.Modid, engOpts.Version)
+			engine, err = storage.LocalMods.GetModRelease(ctx, engOpts.Modid, engOpts.Version)
 			if err != nil {
 				return eris.Wrap(err, "failed to fetch user engine")
 			}
@@ -174,17 +174,17 @@ func LaunchMod(ctx context.Context, mod *common.Release, settings *client.UserSe
 		cmdline = mod.Cmdline
 	}
 
-	modMeta, err := storage.GetMod(ctx, mod.Modid)
+	modMeta, err := storage.LocalMods.GetMod(ctx, mod.Modid)
 	if err != nil {
 		return err
 	}
 
-	parentVersions, err := storage.GetVersionsForMod(ctx, modMeta.Parent)
+	parentVersions, err := storage.LocalMods.GetVersionsForMod(ctx, modMeta.Parent)
 	if err != nil {
 		return err
 	}
 
-	parent, err := storage.GetModRelease(ctx, modMeta.Parent, parentVersions[len(parentVersions)-1])
+	parent, err := storage.LocalMods.GetModRelease(ctx, modMeta.Parent, parentVersions[len(parentVersions)-1])
 	if err != nil {
 		return err
 	}
@@ -204,7 +204,7 @@ func LaunchMod(ctx context.Context, mod *common.Release, settings *client.UserSe
 				continue
 			}
 
-			rel, err = storage.GetModRelease(ctx, ID, version)
+			rel, err = storage.LocalMods.GetModRelease(ctx, ID, version)
 			if err != nil {
 				return eris.Wrap(ModMissing{
 					ModID:   ID,

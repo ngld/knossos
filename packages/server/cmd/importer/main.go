@@ -369,7 +369,7 @@ TRUNCATE files CASCADE;
 
 				fid, err := q.CreateExternalFile(ctx, queries.CreateExternalFileParams{
 					StorageKey: "ext#" + nanoid.New(),
-					Filesize:   int32(archive.FileSize),
+					Filesize:   archive.FileSize,
 					Public:     true,
 					External:   archive.URLs,
 					Owner:      1,

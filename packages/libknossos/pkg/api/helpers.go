@@ -20,6 +20,7 @@ import (
 // LogLevel indicates the severity of a log message
 type LogLevel int
 
+// These are the available log levels
 const (
 	LogDebug LogLevel = iota + 1
 	LogInfo

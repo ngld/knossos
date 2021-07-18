@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/rotisserie/eris"
 	bolt "go.etcd.io/bbolt"
 	"google.golang.org/protobuf/proto"
 
@@ -17,6 +16,13 @@ var (
 	remoteVersionIdx = NewStringListIndex("remote_mod_versions", modVersionSorter)
 	// TODO maybe add a Uint8ListIndex?
 	remoteTypeIdx = NewStringListIndex("remote_mod_types", nil)
+
+	// RemoteMods implements a ModProvider to access remote mods
+	RemoteMods = genericModProvider{
+		bucket:       remoteModsBucket,
+		versionIndex: remoteVersionIdx,
+		typeIndex:    remoteTypeIdx,
+	}
 )
 
 type RemoteIndexLastModifiedDates map[string][]time.Time
@@ -163,89 +169,4 @@ func UpdateRemoteModsLastModifiedDates(ctx context.Context, dates RemoteIndexLas
 
 		return tx.Bucket(remoteModsBucket).Put([]byte("#last_modifieds"), encoded)
 	})
-}
-
-func GetRemoteMods(ctx context.Context, taskRef uint32) ([]*common.Release, error) {
-	var result []*common.Release
-
-	err := db.View(func(tx *bolt.Tx) error {
-		// Retrieve IDs and the latest version for all known remote mods
-		bucket := tx.Bucket(remoteModsBucket)
-		result = make([]*common.Release, 0)
-
-		return remoteVersionIdx.ForEach(func(modID string, versions []string) error {
-			item := bucket.Get([]byte(modID + "#" + versions[len(versions)-1]))
-			if item == nil {
-				return eris.Errorf("Failed to find mod %s from index", modID+"#"+versions[len(versions)-1])
-			}
-
-			meta := new(common.Release)
-			err := proto.Unmarshal(item, meta)
-			if err != nil {
-				return err
-			}
-
-			result = append(result, meta)
-			return nil
-		})
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-func GetRemoteMod(ctx context.Context, id string) (*common.ModMeta, error) {
-	var mod common.ModMeta
-	err := view(ctx, func(tx *bolt.Tx) error {
-		encoded := tx.Bucket(remoteModsBucket).Get([]byte(id))
-		if encoded == nil {
-			return eris.New("mod not found")
-		}
-
-		return proto.Unmarshal(encoded, &mod)
-	})
-	if err != nil {
-		return nil, err
-	}
-	return &mod, nil
-}
-
-func GetRemoteModRelease(ctx context.Context, id string, version string) (*common.Release, error) {
-	mod := new(common.Release)
-	err := db.View(func(tx *bolt.Tx) error {
-		item := tx.Bucket(remoteModsBucket).Get([]byte(id + "#" + version))
-		if item == nil {
-			return eris.New("mod not found")
-		}
-
-		return proto.Unmarshal(item, mod)
-	})
-	if err != nil {
-		return nil, err
-	}
-	return mod, nil
-}
-
-func GetVersionsForRemoteMod(ctx context.Context, id string) ([]string, error) {
-	result := remoteVersionIdx.Lookup(id)
-
-	if len(result) < 1 {
-		return nil, eris.Errorf("No versions found for mod %s", id)
-	}
-
-	return result, nil
-}
-
-type RemoteMods struct{}
-
-var _ ModProvider = (*RemoteMods)(nil)
-
-func (RemoteMods) GetVersionsForMod(id string) ([]string, error) {
-	return GetVersionsForRemoteMod(context.Background(), id)
-}
-
-func (RemoteMods) GetModMetadata(id, version string) (*common.Release, error) {
-	return GetRemoteModRelease(context.Background(), id, version)
 }

@@ -14,8 +14,16 @@ import (
 )
 
 type ModProvider interface {
-	GetVersionsForMod(string) ([]string, error)
-	GetModMetadata(string, string) (*common.Release, error)
+	GetVersionsForMod(context.Context, string) ([]string, error)
+	GetModRelease(context.Context, string, string) (*common.Release, error)
+	GetMods(context.Context, uint32) ([]*common.Release, error)
+	GetMod(context.Context, string) (*common.ModMeta, error)
+}
+
+type genericModProvider struct {
+	bucket       []byte
+	versionIndex *StringListIndex
+	typeIndex    *StringListIndex
 }
 
 var (
@@ -25,6 +33,13 @@ var (
 	// TODO maybe add a Uint8ListIndex?
 	localTypeIdx = NewStringListIndex("local_mod_types", nil)
 	importMutex  = sync.Mutex{}
+
+	// LocalMods implements a ModProvider to access local mods
+	LocalMods = genericModProvider{
+		bucket:       localModsBucket,
+		versionIndex: localVersionIdx,
+		typeIndex:    localTypeIdx,
+	}
 )
 
 func modVersionSorter(_ string, versions []string) error {
@@ -181,15 +196,15 @@ func SaveLocalModRelease(ctx context.Context, release *common.Release) error {
 	return bucket.Put([]byte(release.Modid+"#"+release.Version), encoded)
 }
 
-func GetLocalMods(ctx context.Context, taskRef uint32) ([]*common.Release, error) {
+func (p genericModProvider) GetMods(ctx context.Context, taskRef uint32) ([]*common.Release, error) {
 	var result []*common.Release
 
 	err := db.View(func(tx *bolt.Tx) error {
 		// Retrieve IDs and the latest version for all known local mods
-		bucket := tx.Bucket(localModsBucket)
+		bucket := tx.Bucket(p.bucket)
 		result = make([]*common.Release, 0)
 
-		return localVersionIdx.ForEach(func(modID string, versions []string) error {
+		return p.versionIndex.ForEach(func(modID string, versions []string) error {
 			item := bucket.Get([]byte(modID + "#" + versions[len(versions)-1]))
 			if item == nil {
 				return eris.Errorf("Failed to find mod %s from index", modID+"#"+versions[len(versions)-1])
@@ -212,10 +227,10 @@ func GetLocalMods(ctx context.Context, taskRef uint32) ([]*common.Release, error
 	return result, nil
 }
 
-func GetMod(ctx context.Context, id string) (*common.ModMeta, error) {
+func (p genericModProvider) GetMod(ctx context.Context, id string) (*common.ModMeta, error) {
 	var mod common.ModMeta
 	err := view(ctx, func(tx *bolt.Tx) error {
-		encoded := tx.Bucket(localModsBucket).Get([]byte(id))
+		encoded := tx.Bucket(p.bucket).Get([]byte(id))
 		if encoded == nil {
 			return eris.New("mod not found")
 		}
@@ -228,10 +243,10 @@ func GetMod(ctx context.Context, id string) (*common.ModMeta, error) {
 	return &mod, nil
 }
 
-func GetModRelease(ctx context.Context, id string, version string) (*common.Release, error) {
+func (p genericModProvider) GetModRelease(ctx context.Context, id string, version string) (*common.Release, error) {
 	mod := new(common.Release)
 	err := db.View(func(tx *bolt.Tx) error {
-		item := tx.Bucket(localModsBucket).Get([]byte(id + "#" + version))
+		item := tx.Bucket(p.bucket).Get([]byte(id + "#" + version))
 		if item == nil {
 			return eris.New("mod not found")
 		}
@@ -244,8 +259,8 @@ func GetModRelease(ctx context.Context, id string, version string) (*common.Rele
 	return mod, nil
 }
 
-func GetVersionsForMod(ctx context.Context, id string) ([]string, error) {
-	result := localVersionIdx.Lookup(id)
+func (p genericModProvider) GetVersionsForMod(ctx context.Context, id string) ([]string, error) {
+	result := p.versionIndex.Lookup(id)
 
 	if len(result) < 1 {
 		return nil, eris.Errorf("No versions found for mod %s", id)
@@ -254,17 +269,7 @@ func GetVersionsForMod(ctx context.Context, id string) ([]string, error) {
 	return result, nil
 }
 
-type LocalMods struct{}
-
-var _ ModProvider = (*LocalMods)(nil)
-
-func (LocalMods) GetVersionsForMod(id string) ([]string, error) {
-	return GetVersionsForMod(context.Background(), id)
-}
-
-func (LocalMods) GetModMetadata(id, version string) (*common.Release, error) {
-	return GetModRelease(context.Background(), id, version)
-}
+var _ ModProvider = (*genericModProvider)(nil)
 
 func SaveUserSettingsForMod(ctx context.Context, id, version string, settings *client.UserSettings) error {
 	return db.Update(func(tx *bolt.Tx) error {

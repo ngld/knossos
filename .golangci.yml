@@ -2,7 +2,7 @@ linters:
   disable-all: false
   fast: false
   enable:
-    - golint
+    - revive
     - govet
     - megacheck
     - dogsled
@@ -23,3 +23,6 @@ linters-settings:
   goconst:
     min-len: 10
     min-occurrences: 3
+
+  exhaustive:
+    default-signifies-exhaustive: true

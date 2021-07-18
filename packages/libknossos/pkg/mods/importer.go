@@ -466,7 +466,7 @@ func ImportMods(ctx context.Context, modFiles []string) error {
 	api.Log(ctx, api.LogInfo, "Building dependency snapshots")
 	err = storage.BatchUpdate(ctx, func(ctx context.Context) error {
 		for _, rel := range releases {
-			snapshot, err := GetDependencySnapshot(ctx, storage.LocalMods{}, rel)
+			snapshot, err := GetDependencySnapshot(ctx, storage.LocalMods, rel)
 			if err != nil {
 				api.Log(ctx, api.LogError, "failed to build snapshot for %s (%s): %+v", rel.Modid, rel.Version, err)
 				continue

@@ -26,19 +26,19 @@ import (
 )
 
 func (kn *knossosServer) GetModInstallInfo(ctx context.Context, req *client.ModInfoRequest) (*client.InstallInfoResponse, error) {
-	release, err := storage.GetRemoteModRelease(ctx, req.Id, req.Version)
+	release, err := storage.RemoteMods.GetModRelease(ctx, req.Id, req.Version)
 	if err != nil {
 		return nil, err
 	}
 	release.Packages = mods.FilterUnsupportedPackages(ctx, release.Packages)
 
 	// Remote mods don't have a dependency snpashot so we'll have to create a new snapshot
-	snapshot, err := mods.GetDependencySnapshot(ctx, storage.RemoteMods{}, release)
+	snapshot, err := mods.GetDependencySnapshot(ctx, storage.RemoteMods, release)
 	if err != nil {
 		return nil, err
 	}
 
-	mod, err := storage.GetRemoteMod(ctx, req.Id)
+	mod, err := storage.RemoteMods.GetMod(ctx, req.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -76,12 +76,12 @@ func (kn *knossosServer) GetModInstallInfo(ctx context.Context, req *client.ModI
 	}
 
 	for modid, version := range snapshot {
-		mod, err := storage.GetRemoteMod(ctx, modid)
+		mod, err := storage.RemoteMods.GetMod(ctx, modid)
 		if err != nil {
 			return nil, err
 		}
 
-		rel, err := storage.GetRemoteModRelease(ctx, modid, version)
+		rel, err := storage.RemoteMods.GetModRelease(ctx, modid, version)
 		if err != nil {
 			return nil, err
 		}
@@ -165,12 +165,12 @@ func (kn *knossosServer) InstallMod(ctx context.Context, req *client.InstallModR
 
 		dlItems := make([]*downloader.QueueItem, 0)
 		for _, mod := range req.Mods {
-			modMeta, err := storage.GetRemoteMod(ctx, mod.Modid)
+			modMeta, err := storage.RemoteMods.GetMod(ctx, mod.Modid)
 			if err != nil {
 				return eris.Wrapf(err, "failed to read metadata for %s", mod.Modid)
 			}
 
-			relMeta, err := storage.GetRemoteModRelease(ctx, mod.Modid, mod.Version)
+			relMeta, err := storage.RemoteMods.GetModRelease(ctx, mod.Modid, mod.Version)
 			if err != nil {
 				return eris.Wrapf(err, "failed to read release metadata for %s %s", mod.Modid, mod.Version)
 			}
@@ -316,7 +316,7 @@ func (kn *knossosServer) InstallMod(ctx context.Context, req *client.InstallModR
 
 			for _, rel := range newRelMeta {
 				// Keep previously installed packages
-				oldRel, err := storage.GetModRelease(ctx, rel.Modid, rel.Version)
+				oldRel, err := storage.LocalMods.GetModRelease(ctx, rel.Modid, rel.Version)
 				if err == nil {
 					for _, oldPkg := range oldRel.Packages {
 						found := false
@@ -386,7 +386,7 @@ func (kn *knossosServer) InstallMod(ctx context.Context, req *client.InstallModR
 				// The user-requested mod will receive the full snapshot but dependencies usually only need a subset.
 				// For example, FSO's dep snapshot would only contain FSO while the MVPs' snapshot would only contain
 				// the MVPs and FSO and any other mods the MVPs might depend on.
-				rel.DependencySnapshot, err = mods.GetDependencySnapshot(ctx, storage.RemoteMods{}, rel)
+				rel.DependencySnapshot, err = mods.GetDependencySnapshot(ctx, storage.RemoteMods, rel)
 				if err != nil {
 					return eris.Wrapf(err, "failed to build dependency snpashot for %s (%s)", modMetas[rel.Modid].Title, rel.Version)
 				}

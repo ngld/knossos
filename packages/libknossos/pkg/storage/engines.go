@@ -86,7 +86,7 @@ func SaveEngineFlags(ctx context.Context, path string, flags *JSONFlags) error {
 }
 
 func GetEngineFlags(ctx context.Context, path string) (*JSONFlags, error) {
-	var flags *JSONFlags = nil
+	var flags *JSONFlags
 	err := view(ctx, func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(engineFlagsBucket)
 		encoded := bucket.Get([]byte("file#" + path))

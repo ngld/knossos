@@ -66,8 +66,8 @@ func (kn *knossosServer) ScanLocalMods(ctx context.Context, task *client.TaskReq
 	return &client.SuccessResponse{Success: true}, nil
 }
 
-func (kn *knossosServer) GetLocalMods(ctx context.Context, _ *client.NullMessage) (*client.SimpleModList, error) {
-	releases, err := storage.GetLocalMods(ctx, 0)
+func buildModList(ctx context.Context, modProvider storage.ModProvider) (*client.SimpleModList, error) {
+	releases, err := modProvider.GetMods(ctx, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +78,7 @@ func (kn *knossosServer) GetLocalMods(ctx context.Context, _ *client.NullMessage
 	for idx, rel := range releases {
 		modInfo, found := modMap[rel.Modid]
 		if !found {
-			modInfo, err = storage.GetMod(ctx, rel.Modid)
+			modInfo, err = modProvider.GetMod(ctx, rel.Modid)
 			if err != nil {
 				return nil, err
 			}
@@ -101,18 +101,22 @@ func (kn *knossosServer) GetLocalMods(ctx context.Context, _ *client.NullMessage
 	}, nil
 }
 
+func (kn *knossosServer) GetLocalMods(ctx context.Context, _ *client.NullMessage) (*client.SimpleModList, error) {
+	return buildModList(ctx, storage.LocalMods)
+}
+
 func (kn *knossosServer) GetModInfo(ctx context.Context, req *client.ModInfoRequest) (*client.ModInfoResponse, error) {
-	mod, err := storage.GetMod(ctx, req.Id)
+	mod, err := storage.LocalMods.GetMod(ctx, req.Id)
 	if err != nil {
 		return nil, err
 	}
 
-	release, err := storage.GetModRelease(ctx, req.Id, req.Version)
+	release, err := storage.LocalMods.GetModRelease(ctx, req.Id, req.Version)
 	if err != nil {
 		return nil, err
 	}
 
-	versions, err := storage.GetVersionsForMod(ctx, req.Id)
+	versions, err := storage.LocalMods.GetVersionsForMod(ctx, req.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -128,14 +132,14 @@ func (kn *knossosServer) GetModInfo(ctx context.Context, req *client.ModInfoRequ
 }
 
 func (kn *knossosServer) GetModDependencies(ctx context.Context, req *client.ModInfoRequest) (*client.ModDependencySnapshot, error) {
-	mod, err := storage.GetModRelease(ctx, req.Id, req.Version)
+	mod, err := storage.LocalMods.GetModRelease(ctx, req.Id, req.Version)
 	if err != nil {
 		return nil, err
 	}
 
 	versions := make(map[string]*client.ModDependencySnapshot_ModInfo)
 	for modID := range mod.DependencySnapshot {
-		localVersions, err := storage.GetVersionsForMod(ctx, modID)
+		localVersions, err := storage.LocalMods.GetVersionsForMod(ctx, modID)
 		if err != nil {
 			return nil, err
 		}
@@ -152,7 +156,7 @@ func (kn *knossosServer) GetModDependencies(ctx context.Context, req *client.Mod
 }
 
 func (kn *knossosServer) GetModFlags(ctx context.Context, req *client.ModInfoRequest) (*client.FlagInfo, error) {
-	mod, err := storage.GetModRelease(ctx, req.Id, req.Version)
+	mod, err := storage.LocalMods.GetModRelease(ctx, req.Id, req.Version)
 	if err != nil {
 		return nil, err
 	}
@@ -205,7 +209,7 @@ func (kn *knossosServer) SaveModFlags(ctx context.Context, req *client.SaveFlags
 }
 
 func (kn *knossosServer) LaunchMod(ctx context.Context, req *client.LaunchModRequest) (*client.SuccessResponse, error) {
-	mod, err := storage.GetModRelease(ctx, req.Modid, req.Version)
+	mod, err := storage.LocalMods.GetModRelease(ctx, req.Modid, req.Version)
 	if err != nil {
 		return nil, err
 	}

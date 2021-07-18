@@ -93,7 +93,7 @@ func GetDependencySnapshot(ctx context.Context, mods storage.ModProvider, releas
 
 				_, present := constraints[dep.Modid]
 				if !present {
-					modVersions, err := mods.GetVersionsForMod(dep.Modid)
+					modVersions, err := mods.GetVersionsForMod(ctx, dep.Modid)
 					if err != nil {
 						return nil, eris.Wrapf(err, "failed to retrieve versions for %s", dep.Modid)
 					}
@@ -104,7 +104,7 @@ func GetDependencySnapshot(ctx context.Context, mods storage.ModProvider, releas
 						return nil, eris.Wrapf(err, "failed to resolve dependency %s (%s)", dep.Modid, con)
 					}
 
-					depRel, err := mods.GetModMetadata(dep.Modid, version)
+					depRel, err := mods.GetModRelease(ctx, dep.Modid, version)
 					if err != nil {
 						return nil, eris.Wrapf(err, "failed to fetch metadata for mod %s (%s)", dep.Modid, version)
 					}
@@ -160,7 +160,7 @@ func GetDependencySnapshot(ctx context.Context, mods storage.ModProvider, releas
 
 	api.Log(ctx, api.LogDebug, "Resolving constraints")
 	for modid, cons := range constraints {
-		versions, err := mods.GetVersionsForMod(modid)
+		versions, err := mods.GetVersionsForMod(ctx, modid)
 		if err != nil {
 			return nil, eris.Wrapf(err, "failed to look up versions for mod %s", modid)
 		}

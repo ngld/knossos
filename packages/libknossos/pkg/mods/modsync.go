@@ -93,7 +93,7 @@ func processRemoteMod(ctx context.Context, params storage.RemoteImportCallbackPa
 	}
 
 	var versionHash []byte
-	localVersions, err := storage.GetVersionsForRemoteMod(ctx, entry.Modid)
+	localVersions, err := storage.RemoteMods.GetVersionsForMod(ctx, entry.Modid)
 	if err == nil {
 		versionHash, err = calcVersionsChecksum(ctx, localVersions)
 		if err != nil {
