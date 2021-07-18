@@ -14,13 +14,15 @@ window.knRemoveMessageListener = (cb: Listener) => {
 
 function openWS() {
   const ws = new WebSocket('ws://localhost:8100/ws');
-  ws.addEventListener('message', async (ev) => {
+  ws.addEventListener('message', (ev) => {
     if (ev.data instanceof Blob) {
-      const content = await ev.data.arrayBuffer();
+      void (async () => {
+        const content = await (ev.data as Blob).arrayBuffer();
 
-      for (const listener of listeners) {
-        listener([content]);
-      }
+        for (const listener of listeners) {
+          listener([content]);
+        }
+      })();
     }
   });
 

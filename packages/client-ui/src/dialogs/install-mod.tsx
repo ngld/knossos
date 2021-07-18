@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react';
 import { observer } from 'mobx-react-lite';
-import { fromPromise } from 'mobx-utils';
 import styled from 'astroturf/react';
 import {
   Classes,
-  Alert,
   Button,
   Dialog,
   Callout,
@@ -120,7 +118,9 @@ function processDependencies(
   // process dependencies for user selection
   for (const mod of tree) {
     for (const node of mod.childNodes ?? []) {
-      if (!node.nodeData) continue;
+      if (!node.nodeData) {
+        continue;
+      }
       const pkg = node.nodeData.package;
 
       if (userSelected[node.nodeData.modid + '#' + pkg.name]) {
@@ -143,7 +143,9 @@ function processDependencies(
 
     for (const mod of tree) {
       for (const node of mod.childNodes ?? []) {
-        if (!node.nodeData || node.nodeData.selected) continue;
+        if (!node.nodeData || node.nodeData.selected) {
+          continue;
+        }
         const pkg = node.nodeData.package;
 
         if (needed[node.nodeData.modid + '#' + pkg.name]) {
@@ -161,16 +163,18 @@ function processDependencies(
   // update the package labels
   for (const mod of tree) {
     for (const node of mod.childNodes ?? []) {
-      if (!node.nodeData) continue;
+      if (!node.nodeData) {
+        continue;
+      }
       const pkg = node.nodeData.package;
-      const required = pkg.type == PackageType.REQUIRED;
+      const required = pkg.type === PackageType.REQUIRED;
 
       node.label = (
         <Checkbox
           checked={node.nodeData.selected}
           disabled={required}
           onClick={() => {
-            const selID = node.nodeData?.modid + '#' + pkg.name;
+            const selID = `${node.nodeData?.modid ?? '_missingID'}#${pkg.name}`;
             userSelected[selID] = !userSelected[selID];
             processDependencies(userSelected, tree, setState);
             setState((prev) => ({ ...prev, userSelected, nodes: tree }));
@@ -202,8 +206,8 @@ const InstallMod = observer(function InstallMod(props: InstallModProps): React.R
     notes: '',
   });
   useEffect(() => {
-    getInstallInfo(gs, props, setState);
-  }, []);
+    void getInstallInfo(gs, props, setState);
+  }, [gs, props]);
 
   return (
     <Dialog
@@ -320,10 +324,10 @@ function triggerModInstallation(gs: GlobalState, state: InstallState, props: Ins
     }
   }
 
-  gs.client.installMod({
+  void gs.client.installMod({
     modid: props.modid ?? '',
     version: props.version ?? '',
-    ref: gs.tasks.startTask("Installing mod " + state.title),
+    ref: gs.tasks.startTask('Installing mod ' + state.title),
     mods: Object.values(mods),
-  })
+  });
 }

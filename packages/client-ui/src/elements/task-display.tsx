@@ -1,26 +1,10 @@
-import { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Classes, Button, Dialog, ProgressBar, Text } from '@blueprintjs/core';
 import { CiTimesLine } from '@meronex/icons/ci';
 import { Tooltip2 } from '@blueprintjs/popover2';
 import { observer } from 'mobx-react-lite';
-import { LogMessage } from '@api/client';
 import { useGlobalState } from '../lib/state';
-import { TaskState, logLevelMap } from '../lib/task-tracker';
-
-function getLogTime(task: TaskState, line: LogMessage): string {
-  const time = line.time;
-  if (!time) {
-    return '00:00';
-  }
-
-  const duration = time.seconds - task.started;
-  const minutes = Math.floor(duration / 60);
-  const seconds = duration % 60;
-
-  let result = (minutes < 10 ? '0' : '') + String(minutes) + ':';
-  result += (seconds < 10 ? '0' : '') + String(seconds);
-  return result;
-}
+import { TaskState } from '../lib/task-tracker';
 
 interface LogBoxProps {
   task: TaskState;
@@ -50,7 +34,7 @@ function LogBox({ task }: LogBoxProps): React.ReactElement {
     }
 
     return () => void 0;
-  }, [boxRef.current]);
+  }, [boxRef, task.logContainer]);
 
   const scrollHandler = () => {
     const box = boxRef.current;
@@ -61,9 +45,10 @@ function LogBox({ task }: LogBoxProps): React.ReactElement {
   };
 
   // Make sure TailwindCSS includes this class
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _ = 'font-mono';
   return (
-    <div ref={boxRef} className="overflow-y-auto max-h-56 bg-base text-xs" onScroll={scrollHandler}></div>
+    <div ref={boxRef} className="overflow-y-auto max-h-56 bg-base text-xs" onScroll={scrollHandler} />
   );
 }
 

@@ -117,15 +117,19 @@ export class TaskTracker extends EventEmitter {
       return;
     }
 
+    let msg: LogMessage;
+    let line: HTMLDivElement;
+    let lineText: HTMLSpanElement;
+
     switch (ev.payload.oneofKind) {
       case 'message':
         // task.logMessages.push(ev.payload.message);
-        const msg = ev.payload.message;
-        const line = document.createElement('div');
+        msg = ev.payload.message;
+        line = document.createElement('div');
         line.setAttribute('title', msg.sender);
         line.setAttribute('class', 'log-' + (logLevelMap[msg.level] ?? 'info').toLowerCase());
 
-        const lineText = document.createElement('span');
+        lineText = document.createElement('span');
         lineText.setAttribute('class', 'font-mono');
         lineText.innerText = `[${getLogTime(task, msg)}]:`;
 
