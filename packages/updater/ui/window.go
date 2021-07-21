@@ -56,7 +56,7 @@ func render() {
 	})
 	imgui.SetNextWindowSize(viewport.Size())
 
-	imgui.BeginV("Default", nil, imgui.WindowFlagsNoDecoration|imgui.WindowFlagsNoMove|imgui.WindowFlagsNoResize|imgui.WindowFlagsNoSavedSettings)
+	imgui.BeginV("MainWindow", nil, imgui.WindowFlagsNoDecoration|imgui.WindowFlagsNoMove|imgui.WindowFlagsNoResize|imgui.WindowFlagsNoSavedSettings)
 
 	switch state {
 	case stateIntro:

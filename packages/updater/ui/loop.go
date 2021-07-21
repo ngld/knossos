@@ -30,7 +30,8 @@ func RunApp(title string, width, height int32) error {
 	}
 	defer sdl.Quit()
 
-	window, err := sdl.CreateWindow(title, sdl.WINDOWPOS_CENTERED, sdl.WINDOWPOS_CENTERED, width, height, sdl.WINDOW_OPENGL|sdl.WINDOW_RESIZABLE|sdl.WINDOW_ALLOW_HIGHDPI)
+	window, err := sdl.CreateWindow(title, sdl.WINDOWPOS_CENTERED, sdl.WINDOWPOS_CENTERED, width, height,
+		sdl.WINDOW_OPENGL|sdl.WINDOW_RESIZABLE|sdl.WINDOW_ALLOW_HIGHDPI)
 	if err != nil {
 		return eris.Wrap(err, "failed to create window")
 	}
@@ -154,7 +155,11 @@ func RunApp(title string, width, height int32) error {
 		imgui.Render()
 
 		renderer.PreRender([3]float32{0.0, 0.0, 0.0})
-		renderer.Render([2]float32{float32(displayWidth), float32(displayHeight)}, [2]float32{float32(frameWidth), float32(frameHeight)}, imgui.RenderedDrawData())
+		renderer.Render(
+			[2]float32{float32(displayWidth), float32(displayHeight)},
+			[2]float32{float32(frameWidth), float32(frameHeight)},
+			imgui.RenderedDrawData(),
+		)
 		window.GLSwap()
 
 		// Process callbacks

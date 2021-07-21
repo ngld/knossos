@@ -248,7 +248,7 @@ def configure():
     updater_cmds = []
     if OS == "windows":
         updater_goldflags += " -H windowsgui -extldflags -static"
-        updater_cmds.append('cp %s ../../build/updater' % resolve_path(msys2_path, 'mingw64/bin/SDL2.dll'))
+        updater_cmds.append('cp %s ../../build/updater' % str(resolve_path(msys2_path, 'mingw64/bin/SDL2.dll')).replace('\\', '/'))
 
     task(
         "updater-build",

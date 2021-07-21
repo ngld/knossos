@@ -12,7 +12,8 @@ func resetConsole() error {
 	outHdl := windows.Handle(os.Stdout.Fd())
 	err := windows.GetConsoleMode(outHdl, &mode)
 	if err != nil {
-		return err
+		// not running in a valid console; ignore
+		return nil
 	}
 
 	if mode&windows.ENABLE_VIRTUAL_TERMINAL_PROCESSING == 0 {

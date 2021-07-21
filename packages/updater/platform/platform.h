@@ -3,6 +3,12 @@
 
 #include <stdint.h>
 
+#ifdef __cplusplus
+#define EXPORT extern "C"
+#else
+#define EXPORT extern
+#endif
+
 typedef void (*DialogCallback)(int, const char*);
 typedef struct {
   uint8_t code;

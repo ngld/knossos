@@ -27,7 +27,7 @@ jobs:
 
       - name: Generate timestamp
         id: timestamp
-        run: echo "::set-output name=timestamp::$(date +'%Y%d%m%H%M')"
+        run: echo "::set-output name=timestamp::$(date +'%Y%m%d%H%M')"
 
       - name: Generate updater version
         id: version
