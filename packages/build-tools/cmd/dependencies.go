@@ -134,7 +134,7 @@ func getProgressBar(length int64, desc string) *pb.ProgressBar {
 	bar := pb.Full.Start64(length)
 	bar.Set("prefix", desc)
 	bar.Set(pb.Bytes, true)
-	bar.SetTemplateString(`{{string . "prefix"}}{{counters . }} {{bar . }} {{percent . }} {{speed . "%s/s" "? MiB/s"}} {{rtime . "ETA %s"}}`)
+	bar.SetTemplateString(`{{string . "prefix"}} {{counters . }} {{bar . }} {{percent . }} {{speed . "%s/s" "? MiB/s"}} {{rtime . "ETA %s"}}`)
 
 	if os.Getenv("CI") == "true" {
 		bar.SetRefreshRate(10 * time.Second)
@@ -173,29 +173,17 @@ func getConfig(projectRoot string) (depConfig, string, map[string]string, error)
 	return cfg, string(cfgData), stamps, nil
 }
 
-func evalConditions(meta *depSpec, vars map[string]string) bool {
-	for _, condition := range strings.Split(meta.Condition, ",") {
-		if condition == "" {
-			continue
-		}
-
-		value, ok := vars[strings.TrimSpace(condition)]
-		if !ok || value == "" {
-			return false
-		}
+func evalConditions(meta *depSpec, vars map[string]bool) (bool, error) {
+	if meta.Condition == "" {
+		return true, nil
 	}
 
-	for _, condition := range strings.Split(meta.Rejections, ",") {
-		if condition == "" {
-			continue
-		}
-
-		value, ok := vars[strings.TrimSpace(condition)]
-		if ok && value != "" {
-			return false
-		}
+	expr, err := pkg.ParseBoolExpr(meta.Condition)
+	if err != nil {
+		return false, eris.Wrapf(err, "failed to evalute %s", meta.Condition)
 	}
-	return true
+
+	return expr.Eval(vars), nil
 }
 
 func checkForUpdates(cfg depConfig) error {
@@ -355,6 +343,13 @@ func downloadAndExtract(cmd *cobra.Command, cfg depConfig, cfgData string, stamp
 		vars["ci"] = "true"
 	}
 
+	boolVars := make(map[string]bool)
+	for k, v := range vars {
+		if v != "" {
+			boolVars[k] = true
+		}
+	}
+
 	changes := map[string]string{}
 	cfgLines := strings.Split(cfgData, "\n")
 	lineLength := make([]int, len(cfgLines))
@@ -373,8 +368,11 @@ func downloadAndExtract(cmd *cobra.Command, cfg depConfig, cfgData string, stamp
 		})
 
 		stampToken := meta.URL + "#" + meta.Sha256
-		skip := !evalConditions(&meta, vars)
-		if skip && !update {
+		shouldProcess, err := evalConditions(&meta, boolVars)
+		if err != nil {
+			return eris.Wrapf(err, "failed to evaluate condition for %s", name)
+		}
+		if !shouldProcess && !update {
 			continue
 		}
 
@@ -390,7 +388,7 @@ func downloadAndExtract(cmd *cobra.Command, cfg depConfig, cfgData string, stamp
 		//   We can reach this point for a file we should be skipping if we're updating checksums since those have to
 		//   be updated for all platforms. However, the checksum should only change if the URL changed and we have
 		//   already confirmed that this didn't happen.
-		if skip {
+		if !shouldProcess {
 			// This dependency would usually skipped but we got here because update is true
 			if ok && "skip-"+stampToken == stamp {
 				// The URL and hash haven't changed, nothing to do here
@@ -429,6 +427,7 @@ func downloadAndExtract(cmd *cobra.Command, cfg depConfig, cfgData string, stamp
 
 		hash := sha256.New()
 		bar := getProgressBar(resp.ContentLength, "     download")
+		defer bar.Finish()
 		for {
 			n, err := resp.Body.Read(buf)
 			if err != nil && n < 1 {
@@ -464,7 +463,7 @@ func downloadAndExtract(cmd *cobra.Command, cfg depConfig, cfgData string, stamp
 			}
 		}
 
-		if skip && update {
+		if !shouldProcess && update {
 			stamps[name] = "skip-" + stampToken
 			continue
 		}
@@ -514,6 +513,8 @@ func downloadAndExtract(cmd *cobra.Command, cfg depConfig, cfgData string, stamp
 			if err != nil {
 				return err
 			}
+			bar.SetCurrent(resp.ContentLength)
+			bar.Finish()
 		}
 
 		if runtime.GOOS != "windows" {
