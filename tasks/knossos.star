@@ -53,8 +53,11 @@ def knossos_configure(binext, libext, generator):
             libarchive_ldflags += " %s.a" % resolve_path(msys2_path, "mingw64/lib", lib)
 
         libarchive_ldflags = libarchive_ldflags.replace("\\", "/")
-    elif OS != "linux":
-        libarchive_ldflags += " -liconv -lz /usr/local/opt/xz/lib/liblzma.a /usr/local/opt/zstd/lib/libzstd.a"
+    elif OS == "darwin":
+        if ARCH == "arm64":
+            libarchive_ldflags += " -liconv -lz /opt/homebrew/opt/xz/lib/liblzma.a /opt/homebrew/opt/zstd/lib/libzstd.a"
+        else:
+            libarchive_ldflags += " -liconv -lz /usr/local/opt/xz/lib/liblzma.a /usr/local/opt/zstd/lib/libzstd.a"
     else:
         libarchive_ldflags += " " + " ".join([
             find_library(["liblzma"]),
@@ -140,6 +143,13 @@ import "C"
     else:
         build_cmd = "cmake --build ."
 
+    if ARCH == "amd64":
+        kn_arch = "x86_64"
+    elif ARCH == "arm64":
+        kn_arch = "arm64"
+    else:
+        kn_arch = "x86"
+
     task(
         "client-build",
         desc = "Builds the Knossos client",
@@ -149,9 +159,9 @@ import "C"
             "cd build/client",
             """
     if [ ! -f CMakeCache.txt ] || [ ! -f compile_commands.json ]; then
-        cmake -G"{generator}" -DCMAKE_BUILD_TYPE={cef_build} -DCMAKE_EXPORT_COMPILE_COMMANDS=1 ../../packages/client
+        cmake -G"{generator}" -DCMAKE_BUILD_TYPE={cef_build} -DPROJECT_ARCH={kn_arch} -DCMAKE_EXPORT_COMPILE_COMMANDS=1 ../../packages/client
     fi
-    """.format(generator = generator, cef_build = cef_build),
+    """.format(generator = generator, cef_build = cef_build, kn_arch = kn_arch),
             merge_compile_commands,
             build_cmd,
         ],

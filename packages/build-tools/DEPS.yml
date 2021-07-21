@@ -64,8 +64,7 @@ deps:
 
   cef-linux-full:
     sha256: 42784df935496bf9fa0fd7fe94d4dd9d542f1b6812b8bc13c9e610752037a28d
-    if: linux && amd64
-    ifNot: ci
+    if: linux && amd64 && !ci
     url: https://cef-builds.spotifycdn.com/cef_binary_{CEF}_linux64.tar.bz2
     strip: 1
     dest: third_party/cef
@@ -79,23 +78,35 @@ deps:
 
   cef-darwin-full:
     sha256: aa653b662af9d4aa7d6cad8e14c1a99f3665c13f1577b02cf271924f391ebe78
-    if: darwin && (amd64 || arm64)
-    ifNot: ci
+    if: darwin && (amd64 || arm64) && !ci
     url: https://cef-builds.spotifycdn.com/cef_binary_{CEF}_macosx64.tar.bz2
+    strip: 1
+    dest: third_party/cef
+
+  cef-darwin-arm64-full:
+    sha256: 8e873e3b1a544c1cd7147e85f990d72d75037102e24494d4ad2978335df33a4e
+    if: darwin && arm64 && !ci
+    url: https://cef-builds.spotifycdn.com/cef_binary_{CEF}_macosarm64.tar.bz2
     strip: 1
     dest: third_party/cef
 
   cef-darwin:
     sha256: b851b139d71a61c687e9cdaad610b16be1089c3ede2da5308d8baf8e643985b2
-    if: darwin && (amd64 || arm64) && ci
+    if: darwin && amd64 && ci
     url: https://cef-builds.spotifycdn.com/cef_binary_{CEF}_macosx64_minimal.tar.bz2
+    strip: 1
+    dest: third_party/cef
+
+  cef-darwin-arm64:
+    sha256: 607c7b9f0ffe556823c5140595d67fb501e72ac51e73aad45b55105fe8d20a55
+    if: darwin && arm64 && ci
+    url: https://cef-builds.spotifycdn.com/cef_binary_{CEF}_macosarm64_minimal.tar.bz2
     strip: 1
     dest: third_party/cef
 
   cef-win64-full:
     sha256: 5e7902b2a24d74f335b74b07328eb51599ad79a108905593be5f95ebc7440d54
-    if: windows && amd64
-    ifNot: ci
+    if: windows && amd64 && !ci
     url: https://cef-builds.spotifycdn.com/cef_binary_{CEF}_windows64.tar.bz2
     strip: 1
     dest: third_party/cef
@@ -121,8 +132,7 @@ deps:
 
   msys2:
     sha256: 1f2cfd8e13b0382096e53ead6fd52d0b656a1f81e1b5d82f44cb4ce8ab68755e
-    if: windows && amd64
-    ifNot: ci
+    if: windows && amd64 && !ci
     url: http://repo.msys2.org/distrib/x86_64/msys2-base-x86_64-{MSYS_BUILD}.sfx.exe
     sfxArgs: "-y -othird_party"
     dest: third_party/msys64

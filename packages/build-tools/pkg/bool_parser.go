@@ -39,11 +39,23 @@ func (n boolVar) Eval(vars map[string]bool) bool {
 }
 
 type boolParen struct {
-	node BoolNode
+	node    BoolNode
+	negated bool
 }
 
 func (n boolParen) Eval(vars map[string]bool) bool {
+	if n.negated {
+		return !n.node.Eval(vars)
+	}
 	return n.node.Eval(vars)
+}
+
+type boolNegate struct {
+	node BoolNode
+}
+
+func (n boolNegate) Eval(vars map[string]bool) bool {
+	return !n.node.Eval(vars)
 }
 
 var (
@@ -57,6 +69,7 @@ func ParseBoolExpr(input string) (BoolNode, error) {
 	state := uint8(0)
 	buffer := make([]rune, 0, 10)
 	expect := ' '
+	shouldNegate := false
 
 	for {
 		char, _, err := scanner.ReadRune()
@@ -82,7 +95,13 @@ func ParseBoolExpr(input string) (BoolNode, error) {
 
 			if char == ' ' || char == '\t' || char == '|' || char == '&' {
 				// end of var name
-				stack = append(stack, boolVar{name: string(buffer)})
+				node := BoolNode(boolVar{name: string(buffer)})
+				if shouldNegate {
+					shouldNegate = false
+					node = boolNegate{node: node}
+				}
+
+				stack = append(stack, node)
 				buffer = buffer[:0]
 
 				state = 1
@@ -91,6 +110,11 @@ func ParseBoolExpr(input string) (BoolNode, error) {
 					expect = char
 				}
 
+				continue
+			}
+
+			if char == '!' {
+				shouldNegate = !shouldNegate
 				continue
 			}
 
@@ -136,8 +160,14 @@ func ParseBoolExpr(input string) (BoolNode, error) {
 				continue
 			}
 
+			if char == '!' {
+				shouldNegate = !shouldNegate
+				continue
+			}
+
 			if char == '(' {
-				stack = append(stack, boolParen{node: nil})
+				stack = append(stack, boolParen{node: nil, negated: shouldNegate})
+				shouldNegate = false
 				state = 0
 				continue
 			}
@@ -154,15 +184,20 @@ func ParseBoolExpr(input string) (BoolNode, error) {
 
 			if char == ' ' || char == '\t' || char == '|' || char == '&' || char == ')' {
 				// end of var name
-				varName := string(buffer)
+				varNode := BoolNode(boolVar{name: string(buffer)})
 				buffer = buffer[:0]
+
+				if shouldNegate {
+					shouldNegate = false
+					varNode = boolNegate{node: varNode}
+				}
 
 				switch node := stack[top].(type) {
 				case boolAnd:
-					node.right = boolVar{name: varName}
+					node.right = varNode
 					stack[top] = node
 				case boolOr:
-					node.right = boolVar{name: varName}
+					node.right = varNode
 					stack[top] = node
 				default:
 					return nil, eris.Errorf("unexpected stack top, expected boolAnd or boolOr but found %v", stack[top])
@@ -176,9 +211,13 @@ func ParseBoolExpr(input string) (BoolNode, error) {
 
 				if char == ')' {
 					preTop := len(stack) - 2
-					_, ok := stack[preTop].(boolParen)
+					parenNode, ok := stack[preTop].(boolParen)
 					if !ok {
 						return nil, eris.Errorf("unexpected ), current node on stack is %v", stack[preTop])
+					}
+
+					if parenNode.negated {
+						stack[top] = boolNegate{node: stack[top]}
 					}
 
 					// replace the paren node with the current top node
@@ -220,15 +259,25 @@ func ParseBoolExpr(input string) (BoolNode, error) {
 	}
 
 	if len(buffer) > 0 {
-		switch node := stack[0].(type) {
-		case boolAnd:
-			node.right = boolVar{name: string(buffer)}
-			stack[0] = node
-		case boolOr:
-			node.right = boolVar{name: string(buffer)}
-			stack[0] = node
-		default:
-			return nil, eris.Errorf("found var string after node %v", stack[0])
+		varNode := BoolNode(boolVar{name: string(buffer)})
+
+		if shouldNegate {
+			varNode = boolNegate{node: varNode}
+		}
+
+		if len(stack) == 0 {
+			stack = append(stack, varNode)
+		} else {
+			switch node := stack[0].(type) {
+			case boolAnd:
+				node.right = varNode
+				stack[0] = node
+			case boolOr:
+				node.right = varNode
+				stack[0] = node
+			default:
+				return nil, eris.Errorf("found var string after node %v", stack[0])
+			}
 		}
 	}
 

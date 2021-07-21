@@ -133,11 +133,28 @@ func TestInvalidStrings(t *testing.T) {
 }
 
 func TestChains(t *testing.T) {
-	exprs := []string{"a && b && c", "a || b && c", "a && (b || c) && d", "(a && b) || (c && d)", "darwin && (amd64 || arm64) && ci"}
+	exprs := []string{"a && b && c", "a || b && c", "a && (b || c) && d", "(a && !b) || (c && d)", "darwin && (amd64 || !arm64) && ci"}
 	for _, expr := range exprs {
 		_, err := ParseBoolExpr(expr)
 		if err != nil {
 			t.Fatalf("%s failed with %s", expr, err)
 		}
+	}
+}
+
+func TestNegate(t *testing.T) {
+	expr, err := ParseBoolExpr("!a")
+	if err != nil {
+		t.Fatalf("!a failed with %s", err)
+	}
+
+	vars := map[string]bool{"a": true}
+	if expr.Eval(vars) {
+		t.Fatal("a=true didn't fail but should've")
+	}
+
+	vars["a"] = false
+	if !expr.Eval(vars) {
+		t.Fatal("a=false failed")
 	}
 }
