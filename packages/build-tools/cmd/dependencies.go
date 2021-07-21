@@ -137,7 +137,8 @@ func getProgressBar(length int64, desc string) *pb.ProgressBar {
 	bar.SetTemplateString(`{{string . "prefix"}} {{counters . }} {{bar . }} {{percent . }} {{speed . "%s/s" "? MiB/s"}} {{rtime . "ETA %s"}}`)
 
 	if os.Getenv("CI") == "true" {
-		bar.SetRefreshRate(10 * time.Second)
+		bar.SetTemplateString(`{{string . "prefix"}} {{counters . }} {{bar . }} {{percent . }} {{speed . "%s/s" "? MiB/s"}} {{rtime . "ETA %s"}}\n`)
+		bar.SetRefreshRate(1 * time.Minute)
 	}
 
 	return bar
@@ -723,6 +724,10 @@ func extractTar(r io.Reader, f *os.File, bar *pb.ProgressBar, projectRoot string
 		destHandle, dest, err := openExtractorDest(destPath, item.Name, ds)
 		if err != nil {
 			return err
+		}
+
+		if destHandle == nil {
+			continue
 		}
 		defer destHandle.Close()
 
