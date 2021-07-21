@@ -54,7 +54,10 @@ module.exports = function (env, args) {
           test: /\.css$/,
           use: [
             (production ? MiniCssExtractPlugin.loader : 'style-loader'),
-            'css-loader',
+            {
+              loader: 'css-loader',
+              options: {esModule: false},
+            },
             'postcss-loader',
           ],
         },
