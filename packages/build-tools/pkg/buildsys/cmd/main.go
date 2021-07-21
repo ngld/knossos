@@ -140,7 +140,7 @@ var RootCmd = &cobra.Command{
 						logger.Fatal().Err(err).Msgf("Failed to check loaded script %s", path)
 					}
 
-					if cacheInfo.ModTime().Sub(info.ModTime()) < 0 {
+					if info == nil || cacheInfo.ModTime().Sub(info.ModTime()) < 0 {
 						// script is newer than our cache
 						rebuildCache = true
 						break
