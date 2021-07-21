@@ -159,8 +159,9 @@ def nebula_configure(binext):
         cmds = container_bin_cmds + [
             "cd build/nebula",
             "rm -rf templates front",
-            "cp -r ../../packages/server/{Dockerfile,config.toml,templates} .",
-            "cp -r ../../packages/front/dist/prod front",
+            "mkdir templates",
+            "bash -c 'cp -r ../../packages/server/{Dockerfile,config.toml,templates} .'",
+            "bash -c 'cp -r ../../packages/front/dist/prod front'",
             "docker build -tghcr.io/ngld/knossos/nebula:latest .",
         ]
     )
