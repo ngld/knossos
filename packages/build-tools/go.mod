@@ -6,6 +6,7 @@ require (
 	github.com/Microsoft/go-winio v0.5.0 // indirect
 	github.com/aidarkhanov/nanoid v1.0.8
 	github.com/andybalholm/brotli v1.0.2
+	github.com/cheggaaa/pb/v3 v3.0.8 // indirect
 	github.com/containerd/containerd v1.5.2 // indirect
 	github.com/cortesi/modd v0.0.0-20210323234521-b35eddab86cc
 	github.com/cortesi/moddwatch v0.0.0-20210323234936-df014e95c743 // indirect

@@ -22,8 +22,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cheggaaa/pb/v3"
 	"github.com/rotisserie/eris"
-	"github.com/schollz/progressbar/v3"
 	"github.com/spf13/cobra"
 	"github.com/ulikunitz/xz"
 	"gopkg.in/yaml.v3"
@@ -52,9 +52,9 @@ type depSpec struct {
 	URL        string
 	Dest       string
 	Sha256     string
-	Strip      int
 	SfxArgs    string   `yaml:"sfxArgs,omitempty"`
 	MarkExec   []string `yaml:"markExec,omitempty"`
+	Strip      int
 }
 
 type depConfig struct {
@@ -130,24 +130,17 @@ func init() {
 	rootCmd.AddCommand(checkDepsCmd)
 }
 
-func getProgressBar(length int64, desc string) *progressbar.ProgressBar {
-	if os.Getenv("CI") == "true" {
-		return progressbar.NewOptions64(length, progressbar.OptionSetVisibility(false))
-		/*
-			Sadly this still leaves a bunch of newlines on GH's log.
+func getProgressBar(length int64, desc string) *pb.ProgressBar {
+	bar := pb.Full.Start64(length)
+	bar.Set("prefix", desc)
+	bar.Set(pb.Bytes, true)
+	bar.SetTemplateString(`{{string . "prefix"}}{{counters . }} {{bar . }} {{percent . }} {{speed . "%s/s" "? MiB/s"}} {{rtime . "ETA %s"}}`)
 
-			return progressbar.NewOptions64(length, progressbar.OptionSetDescription(desc),
-				progressbar.OptionSetWriter(os.Stderr), progressbar.OptionShowBytes(true),
-				progressbar.OptionShowCount(), progressbar.OptionOnCompletion(func() {
-					fmt.Fprint(os.Stderr, "\n")
-				}),
-				// Only show the result once at the end
-				progressbar.OptionThrottle(1*time.Hour),
-			)
-		*/
+	if os.Getenv("CI") == "true" {
+		bar.SetRefreshRate(10 * time.Second)
 	}
 
-	return progressbar.DefaultBytes(length, desc)
+	return bar
 }
 
 func getConfig(projectRoot string) (depConfig, string, map[string]string, error) {
@@ -214,7 +207,8 @@ func checkForUpdates(cfg depConfig) error {
 			continue
 		}
 
-		if spec.Github.Project != "" {
+		switch {
+		case spec.Github.Project != "":
 			apiURL := "https://api.github.com/repos/" + spec.Github.Project + "/releases"
 			resp, err := http.Get(apiURL)
 			if err != nil {
@@ -240,7 +234,7 @@ func checkForUpdates(cfg depConfig) error {
 					pkg.PrintSubtask(fmt.Sprintf("%s -> %s", version, latestVersion))
 				}
 			}
-		} else if spec.JSON.URL != "" {
+		case spec.JSON.URL != "":
 			if spec.JSON.Key == "" {
 				pkg.PrintError("Missing key!")
 				continue
@@ -296,7 +290,7 @@ func checkForUpdates(cfg depConfig) error {
 			if valueRef.String() != version {
 				pkg.PrintSubtask(version + " -> " + valueRef.String())
 			}
-		} else if spec.Regex.URL != "" {
+		case spec.Regex.URL != "":
 			if spec.Regex.Pattern == "" {
 				pkg.PrintError("Pattern is missing!")
 				continue
@@ -343,12 +337,6 @@ func checkForUpdates(cfg depConfig) error {
 	return nil
 }
 
-type yamlChange struct {
-	Start       int
-	End         int
-	Replacement string
-}
-
 func downloadAndExtract(cmd *cobra.Command, cfg depConfig, cfgData string, stamps map[string]string, projectRoot string) error {
 	client := &http.Client{
 		Timeout: time.Minute * 30,
@@ -380,9 +368,8 @@ func downloadAndExtract(cmd *cobra.Command, cfg depConfig, cfgData string, stamp
 			value, ok := vars[varName[1:len(varName)-1]]
 			if ok {
 				return value
-			} else {
-				return ""
 			}
+			return ""
 		})
 
 		stampToken := meta.URL + "#" + meta.Sha256
@@ -461,7 +448,7 @@ func downloadAndExtract(cmd *cobra.Command, cfg depConfig, cfgData string, stamp
 				return eris.Wrapf(err, "Failed to write download to file %s", tempPath)
 			}
 
-			bar.Write(buf[:n])
+			bar.Add(n)
 		}
 		bar.Finish()
 		resp.Body.Close()
@@ -518,7 +505,10 @@ func downloadAndExtract(cmd *cobra.Command, cfg depConfig, cfgData string, stamp
 				return err
 			}
 
-			tempHandle.Seek(0, io.SeekStart)
+			_, err = tempHandle.Seek(0, io.SeekStart)
+			if err != nil {
+				return err
+			}
 			bar = getProgressBar(resp.ContentLength, "      extract")
 			err = extractor(tempHandle, bar, projectRoot, name, meta)
 			if err != nil {
@@ -579,14 +569,17 @@ func downloadAndExtract(cmd *cobra.Command, cfg depConfig, cfgData string, stamp
 			}
 		}
 
-		ioutil.WriteFile(filepath.Join(projectRoot, "packages", "build-tools", "DEPS.yml"), []byte(generated), os.FileMode(0660))
+		err = ioutil.WriteFile(filepath.Join(projectRoot, "packages", "build-tools", "DEPS.yml"), []byte(generated), os.FileMode(0660))
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
 type (
-	archiveExtractor func(*os.File, *progressbar.ProgressBar, string, string, depSpec) error
+	archiveExtractor func(*os.File, *pb.ProgressBar, string, string, depSpec) error
 )
 
 func openExtractorDest(destPath string, item string, ds depSpec) (*os.File, string, error) {
@@ -614,7 +607,7 @@ func openExtractorDest(destPath string, item string, ds depSpec) (*os.File, stri
 
 func getExtractor(url string) (archiveExtractor, error) {
 	if strings.HasSuffix(url, ".zip") {
-		return func(f *os.File, bar *progressbar.ProgressBar, projectRoot string, name string, ds depSpec) error {
+		return func(f *os.File, bar *pb.ProgressBar, projectRoot string, name string, ds depSpec) error {
 			stat, err := f.Stat()
 			if err != nil {
 				return err
@@ -647,11 +640,10 @@ func getExtractor(url string) (archiveExtractor, error) {
 				}
 				defer itemHandle.Close()
 
-				pos := int64(0)
 				for {
 					n, err := itemHandle.Read(buf)
 					if err != nil && n < 1 {
-						if err == io.EOF {
+						if eris.Is(err, io.EOF) {
 							break
 						}
 						return eris.Wrapf(err, "Failed to read archive entry %s", item.Name)
@@ -662,8 +654,7 @@ func getExtractor(url string) (archiveExtractor, error) {
 						return eris.Wrapf(err, "Failed to write extracted file %s", dest)
 					}
 
-					pos += int64(n)
-					bar.Set64(pos)
+					bar.Add(n)
 				}
 
 				itemHandle.Close()
@@ -675,7 +666,7 @@ func getExtractor(url string) (archiveExtractor, error) {
 	}
 
 	if strings.HasSuffix(url, ".tar.gz") {
-		return func(f *os.File, bar *progressbar.ProgressBar, projectRoot string, name string, ds depSpec) error {
+		return func(f *os.File, bar *pb.ProgressBar, projectRoot string, name string, ds depSpec) error {
 			reader, err := gzip.NewReader(f)
 			if err != nil {
 				return err
@@ -687,7 +678,7 @@ func getExtractor(url string) (archiveExtractor, error) {
 	}
 
 	if strings.HasSuffix(url, ".tar.bz2") {
-		return func(f *os.File, bar *progressbar.ProgressBar, projectRoot string, name string, ds depSpec) error {
+		return func(f *os.File, bar *pb.ProgressBar, projectRoot string, name string, ds depSpec) error {
 			reader := bzip2.NewReader(f)
 
 			return extractTar(reader, f, bar, projectRoot, name, ds)
@@ -695,7 +686,7 @@ func getExtractor(url string) (archiveExtractor, error) {
 	}
 
 	if strings.HasSuffix(url, ".tar.xz") {
-		return func(f *os.File, bar *progressbar.ProgressBar, projectRoot, name string, ds depSpec) error {
+		return func(f *os.File, bar *pb.ProgressBar, projectRoot, name string, ds depSpec) error {
 			reader, err := xz.NewReader(f)
 			if err != nil {
 				return err
@@ -708,7 +699,7 @@ func getExtractor(url string) (archiveExtractor, error) {
 	return nil, eris.New("Archive format not supported")
 }
 
-func extractTar(r io.Reader, f *os.File, bar *progressbar.ProgressBar, projectRoot string, name string, ds depSpec) error {
+func extractTar(r io.Reader, f *os.File, bar *pb.ProgressBar, projectRoot string, name string, ds depSpec) error {
 	buf := make([]byte, 4096)
 	archive := tar.NewReader(r)
 	destPath := filepath.Join(projectRoot, ds.Dest)
@@ -716,7 +707,7 @@ func extractTar(r io.Reader, f *os.File, bar *progressbar.ProgressBar, projectRo
 	for {
 		item, err := archive.Next()
 		if err != nil {
-			if err == io.EOF {
+			if eris.Is(err, io.EOF) {
 				break
 			}
 
@@ -748,12 +739,15 @@ func extractTar(r io.Reader, f *os.File, bar *progressbar.ProgressBar, projectRo
 			continue
 		}
 
-		os.Chmod(dest, fi.Mode())
+		err = os.Chmod(dest, fi.Mode())
+		if err != nil {
+			return eris.Wrapf(err, "failed to change permissions for %s", dest)
+		}
 
 		for {
 			n, err := archive.Read(buf)
 			if err != nil && n < 1 {
-				if err == io.EOF {
+				if eris.Is(err, io.EOF) {
 					break
 				}
 				return eris.Wrapf(err, "Failed to read archive entry %s", item.Name)
@@ -766,7 +760,7 @@ func extractTar(r io.Reader, f *os.File, bar *progressbar.ProgressBar, projectRo
 
 			pos, err := f.Seek(0, io.SeekCurrent)
 			if err == nil {
-				bar.Set64(pos)
+				bar.SetCurrent(pos)
 			}
 		}
 
