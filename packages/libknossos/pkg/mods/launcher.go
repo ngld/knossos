@@ -179,14 +179,26 @@ func LaunchMod(ctx context.Context, mod *common.Release, settings *client.UserSe
 		return err
 	}
 
-	parentVersions, err := storage.LocalMods.GetVersionsForMod(ctx, modMeta.Parent)
-	if err != nil {
-		return err
-	}
+	parentFolder := ""
+	if modMeta.Parent != "FS2" && modMeta.Parent != "" {
+		parentVersions, err := storage.LocalMods.GetVersionsForMod(ctx, modMeta.Parent)
+		if err != nil {
+			return err
+		}
 
-	parent, err := storage.LocalMods.GetModRelease(ctx, modMeta.Parent, parentVersions[len(parentVersions)-1])
-	if err != nil {
-		return err
+		parent, err := storage.LocalMods.GetModRelease(ctx, modMeta.Parent, parentVersions[len(parentVersions)-1])
+		if err != nil {
+			return err
+		}
+
+		parentFolder = parent.Folder
+	} else {
+		globalSettings, err := storage.GetSettings(ctx)
+		if err != nil {
+			return eris.Wrap(err, "failed to load settings")
+		}
+
+		parentFolder = filepath.Join(globalSettings.LibraryPath, "FS2")
 	}
 
 	// Build the -mod flag
@@ -217,7 +229,7 @@ func LaunchMod(ctx context.Context, mod *common.Release, settings *client.UserSe
 		// For now, we just use all installed packages.
 
 		for _, pkg := range rel.Packages {
-			flagPath, err := filepath.Rel(parent.Folder, filepath.Join(rel.Folder, pkg.Folder))
+			flagPath, err := filepath.Rel(parentFolder, filepath.Join(rel.Folder, pkg.Folder))
 			if err != nil {
 				return err
 			}
@@ -262,7 +274,7 @@ func LaunchMod(ctx context.Context, mod *common.Release, settings *client.UserSe
 	proc := exec.Command(binary)
 	proc.Stdout = os.Stdout
 	proc.Stderr = os.Stderr
-	proc.Dir = parent.Folder
+	proc.Dir = parentFolder
 
 	api.Log(ctx, api.LogInfo, "Launching %s in %s", binary, proc.Dir)
 
