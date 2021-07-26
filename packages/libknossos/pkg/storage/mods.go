@@ -232,7 +232,7 @@ func (p genericModProvider) GetMod(ctx context.Context, id string) (*common.ModM
 	err := view(ctx, func(tx *bolt.Tx) error {
 		encoded := tx.Bucket(p.bucket).Get([]byte(id))
 		if encoded == nil {
-			return eris.New("mod not found")
+			return eris.Errorf("mod %s not found", id)
 		}
 
 		return proto.Unmarshal(encoded, &mod)
@@ -248,7 +248,7 @@ func (p genericModProvider) GetModRelease(ctx context.Context, id string, versio
 	err := db.View(func(tx *bolt.Tx) error {
 		item := tx.Bucket(p.bucket).Get([]byte(id + "#" + version))
 		if item == nil {
-			return eris.New("mod not found")
+			return eris.Errorf("mod %s %s not found", id, version)
 		}
 
 		return proto.Unmarshal(item, mod)
