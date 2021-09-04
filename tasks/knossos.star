@@ -133,6 +133,7 @@ import "C"
         cmds = [
             "go build %s -o ../../build/libknossos/libknossos%s -buildmode c-shared ./api" % (libkn_flags, libext),
             "tool gen-dyn-loader ../../build/libknossos/libknossos.h ../../build/libknossos/dynknossos.h",
+            "cp ./api/cef_bridge.h ../../build/libknossos",
         ],
     )
 

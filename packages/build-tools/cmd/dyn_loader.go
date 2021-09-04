@@ -91,18 +91,20 @@ func genLoader(headerFile, dynHeader string) error {
 	inPreamble := false
 	for _, line := range headerLines {
 		line = strings.TrimLeft(line, " ")
-		if inPreamble && !strings.HasPrefix(line, "extern ") {
+		if inPreamble && !strings.HasPrefix(line, "extern ") && !strings.HasPrefix(line, "EXTERN ") {
 			if line == "/* End of preamble from import \"C\" comments.  */" {
 				inPreamble = false
 			} else {
-				header.WriteString(line + "\n")
+				if !strings.HasPrefix(line, "#line") {
+					header.WriteString(line + "\n")
+				}
 			}
 		} else if strings.HasPrefix(line, "#define ") ||
 			strings.HasPrefix(line, "typedef ") ||
 			strings.HasPrefix(line, "#include ") ||
 			strings.HasPrefix(line, "//") {
 			header.WriteString(fixTypes(line) + "\n")
-		} else if strings.HasPrefix(line, "extern ") && !strings.HasPrefix(line, "extern \"C\"") {
+		} else if (strings.HasPrefix(line, "extern ") && !strings.HasPrefix(line, "extern \"C\"")) || strings.HasPrefix(line, "EXTERN ") {
 			if strings.HasPrefix(line, "extern __declspec(dllexport) ") {
 				line = "extern " + line[29:]
 			}

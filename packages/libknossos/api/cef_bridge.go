@@ -1,98 +1,14 @@
 package main
 
-// //nolint:gocritic // inserting the space gocritic requests would be nice but breaks the cgo build
-//#include <stdlib.h>
-//#include <stdint.h>
-//#include <string.h>
+// #include "cef_bridge.h"
 //
-//typedef void (*KnossosLogCallback)(uint8_t level, char* message, int length);
-//typedef void (*KnossosMessageCallback)(void* message, int length);
+// #define KNOSSOS_LOG_DEBUG 1
+// #define KNOSSOS_LOG_INFO 2
+// #define KNOSSOS_LOG_WARNING 3
+// #define KNOSSOS_LOG_ERROR 4
+// #define KNOSSOS_LOG_FATAL 5
 //
-//typedef struct {
-//  const char* settings_path;
-//  const char* resource_path;
-//  int settings_len;
-//  int resource_len;
-//  KnossosLogCallback log_cb;
-//  KnossosMessageCallback message_cb;
-//} KnossosInitParams;
-//
-//typedef struct {
-//	char* header_name;
-//  char* value;
-//  size_t header_len;
-//  size_t value_len;
-//} KnossosHeader;
-//
-//typedef struct {
-//  KnossosHeader* headers;
-//	void* response_data;
-//  int status_code;
-//  uint8_t header_count;
-//  size_t response_length;
-//} KnossosResponse;
-//
-//#ifndef GO_CGO_EXPORT_PROLOGUE_H
-//
-//#ifdef __MINGW32__
-//#define EXTERN extern __declspec(dllexport)
-//#else
-//#define EXTERN extern
-//#endif
-//
-//static void call_log_cb(KnossosLogCallback cb, uint8_t level, char* message, int length) {
-//	cb(level, message, length);
-//}
-//
-//static void call_message_cb(KnossosMessageCallback cb, void* message, int length) {
-//  cb(message, length);
-//}
-//
-//static KnossosResponse* make_response() {
-//  return (KnossosResponse*) malloc(sizeof(KnossosResponse));
-//}
-//
-//static KnossosHeader* make_header_array(uint8_t length) {
-//  return (KnossosHeader*) malloc(sizeof(KnossosHeader) * length);
-//}
-//
-//static void set_header(KnossosHeader* harray, uint8_t idx, _GoString_ name, _GoString_ value) {
-//  KnossosHeader* hdr = &harray[idx];
-//  hdr->header_len = _GoStringLen(name);
-//  hdr->header_name = (char*)malloc(hdr->header_len);
-//  memcpy(hdr->header_name, _GoStringPtr(name), hdr->header_len);
-//
-//  hdr->value_len = _GoStringLen(value);
-//  hdr->value = (char*)malloc(hdr->value_len);
-//  memcpy(hdr->value, _GoStringPtr(value), hdr->value_len);
-//}
-//
-//static void set_body(KnossosResponse* response, _GoString_ body) {
-//  response->response_length = _GoStringLen(body);
-//  response->response_data = (void*)malloc(response->response_length);
-//  memcpy(response->response_data, _GoStringPtr(body), response->response_length);
-//}
-//
-//EXTERN void KnossosFreeKnossosResponse(KnossosResponse* response) {
-//  for (int i = 0; i < response->header_count; i++) {
-//    KnossosHeader *hdr = &response->headers[i];
-//    free(hdr->header_name);
-//    free(hdr->value);
-//  }
-//  if (response->header_count > 0) free(response->headers);
-//  if (response->response_length > 0) free(response->response_data);
-//  free(response);
-//}
-//
-//#else
-//extern void KnossosFreeKnossosResponse(KnossosResponse* response);
-//#endif
-//
-//#define KNOSSOS_LOG_DEBUG 1
-//#define KNOSSOS_LOG_INFO 2
-//#define KNOSSOS_LOG_WARNING 3
-//#define KNOSSOS_LOG_ERROR 4
-//#define KNOSSOS_LOG_FATAL 5
+// EXTERN void KnossosFreeKnossosResponse(KnossosResponse* response);
 import "C"
 
 import (
@@ -135,6 +51,10 @@ var (
 	messageCb    C.KnossosMessageCallback
 	server       http.Handler
 )
+
+func makeResponse() *C.KnossosResponse {
+	return (*C.KnossosResponse)(C.malloc(C.size_t(unsafe.Sizeof(C.KnossosResponse{}))))
+}
 
 func Log(level api.LogLevel, msg string, args ...interface{}) {
 	finalMsg := fmt.Sprintf(msg, args...)
@@ -224,7 +144,7 @@ func handleLocalFile(fileRef *common.FileRef) (*C.KnossosResponse, error) {
 			return nil, err
 		}
 
-		resp := C.make_response()
+		resp := makeResponse()
 		resp.status_code = C.int(200)
 		resp.header_count = C.uint8_t(0)
 
@@ -234,7 +154,7 @@ func handleLocalFile(fileRef *common.FileRef) (*C.KnossosResponse, error) {
 		resp.response_length = C.size_t(len(data))
 		return resp, nil
 	} else {
-		resp := C.make_response()
+		resp := makeResponse()
 		resp.status_code = C.int(404)
 		resp.header_count = C.uint8_t(0)
 		resp.response_length = 0
@@ -290,14 +210,21 @@ func KnossosHandleRequest(urlPtr *C.char, urlLen C.int, bodyPtr unsafe.Pointer, 
 			// Cancel any background operation still attached to the request context
 			cancel()
 
-			resp := C.make_response()
+			resp := makeResponse()
 			resp.status_code = C.int(twirpResp.statusCode)
 			resp.header_count = C.uint8_t(len(twirpResp.headers))
 			resp.headers = C.make_header_array(resp.header_count)
 
 			idx := C.uint8_t(0)
 			for k, v := range twirpResp.headers {
-				C.set_header(resp.headers, idx, k, strings.Join(v, ", "))
+				hdr := &((*[256]C.KnossosHeader)(unsafe.Pointer(resp.headers)))[idx]
+				hdr.header_len = C.size_t(len(k))
+				hdr.header_name = C.CString(k)
+
+				value := strings.Join(v, ", ")
+				hdr.value_len = C.size_t(len(value))
+				hdr.value = C.CString(value)
+
 				idx++
 			}
 
@@ -314,13 +241,21 @@ func KnossosHandleRequest(urlPtr *C.char, urlLen C.int, bodyPtr unsafe.Pointer, 
 	// Cleanup the unused context
 	cancel()
 
-	resp := C.make_response()
+	resp := makeResponse()
 	resp.status_code = 503
 	resp.header_count = 1
-	resp.headers = C.make_header_array(1)
+	hdr := C.make_header_array(1)
+	resp.headers = hdr
 
-	C.set_header(resp.headers, 0, "Content-Type", "text/plain")
-	C.set_body(resp, fmt.Sprintf("Error: %+v", err))
+	hdr.header_len = C.size_t(len("Content-Type"))
+	hdr.header_name = C.CString("Content-Type")
+
+	hdr.value_len = C.size_t(len("text/plain"))
+	hdr.value = C.CString("text/plain")
+
+	response := fmt.Sprintf("Error: %+v", err)
+	resp.response_length = C.size_t(len(response))
+	resp.response_data = unsafe.Pointer(C.CString(response))
 
 	return resp
 }

@@ -157,7 +157,13 @@ func (kn *knossosServer) InstallMod(ctx context.Context, req *client.InstallModR
 			return eris.Wrap(err, "failed to read settings")
 		}
 
-		tempFolder, err := os.MkdirTemp(filepath.Join(settings.LibraryPath, "temp"), "mod-install")
+		tempFolder := filepath.Join(settings.LibraryPath, "temp")
+		err = os.MkdirAll(tempFolder, 0770)
+		if err != nil {
+			return eris.Wrap(err, "failed to create temp folder")
+		}
+
+		tempFolder, err = os.MkdirTemp(tempFolder, "mod-install")
 		if err != nil {
 			return eris.Wrap(err, "failed to create temp folder")
 		}
