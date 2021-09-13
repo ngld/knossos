@@ -122,6 +122,9 @@ def find_static_lib(names, display_name = None):
                 return a_path
 
     warn("Could not find static library for %s! Please make sure it's installed." % display_name)
+
+    if names[0].startswith("lib"):
+        names[0] = names[0][3:]
     return "-l%s" % names[0]
 
 def find_library(names, display_name = None):
