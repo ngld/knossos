@@ -8,6 +8,9 @@ level = "debug"
 address = "127.0.0.1:8200"
 base_url = "http://127.0.0.1:8200"
 
+[keys]
+version_update_key = "ExampleKey"
+
 [mail]
 from = "noreply@fsnebula.org"
 server = "localhost"
