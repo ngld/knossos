@@ -4,6 +4,9 @@
             "path": ".."
         },
         {
+            "path": "../tasks",
+        },
+        {
             "path": "../packages/api"
         },
         {
