@@ -34,7 +34,6 @@ static DialogResult error(const char *msg) {
 }
 
 extern "C" DialogResult OpenFolderDialog(const char *title, const char *folder) {
-
   IFileOpenDialog *dialog;
   auto hr =
       CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_ALL,
