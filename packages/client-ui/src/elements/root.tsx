@@ -15,6 +15,7 @@ import { Switch, Route, Redirect, useHistory, useLocation } from 'react-router-d
 import ErrorBoundary from './error-boundary';
 import HoverLink from './hover-link';
 import { GlobalState, useGlobalState } from '../lib/state';
+import { initStartup } from '../dialogs/startup';
 import TaskDisplay from './task-display';
 import LocalModList from '../pages/local-mod-list';
 import RemoteModList from '../pages/remote-mod-list';
@@ -141,6 +142,8 @@ export default function Root(): React.ReactElement {
   });
 
   useEffect(() => {
+    initStartup(gs);
+
     void (async () => {
       try {
         const result = await gs.client.getVersion({});

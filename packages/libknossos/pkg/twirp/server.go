@@ -4,9 +4,11 @@ import (
 	"context"
 	"net/http"
 	"runtime"
+	"strings"
 
 	"github.com/ngld/knossos/packages/api/client"
 	"github.com/ngld/knossos/packages/libknossos/pkg/api"
+	"github.com/ngld/knossos/packages/libknossos/pkg/platform"
 	"github.com/ngld/knossos/packages/libknossos/pkg/storage"
 	"github.com/rotisserie/eris"
 	"github.com/twitchtv/twirp"
@@ -60,4 +62,17 @@ func (kn *knossosServer) GetVersion(ctx context.Context, _ *client.NullMessage) 
 		Version: api.Version,
 		Commit:  api.Commit,
 	}, nil
+}
+
+func (kn *knossosServer) OpenLink(ctx context.Context, req *client.OpenLinkRequest) (*client.SuccessResponse, error) {
+	if !strings.HasPrefix(req.Link, "http://") && !strings.HasPrefix(req.Link, "https://") {
+		return nil, eris.Errorf("invalid link %s", req.Link)
+	}
+
+	err := platform.OpenLink(req.Link)
+	if err != nil {
+		return nil, eris.Wrap(err, "failed to open link")
+	}
+
+	return &client.SuccessResponse{Success: true}, nil
 }

@@ -60,7 +60,7 @@ public:
     return true;
   }
 
-  bool IsFrameless(CefRefPtr<CefWindow> window) OVERRIDE { return true; }
+  bool IsFrameless(CefRefPtr<CefWindow> window) OVERRIDE { return main_browser_; }
 
   CefRect GetInitialBounds(CefRefPtr<CefWindow> window) OVERRIDE {
     CefRect screen_size = KnossosHandler::GetInstance()->GetScreenSize();

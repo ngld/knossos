@@ -11,7 +11,6 @@ import { DefaultContext as IconConfig } from '@meronex/icons';
 
 import Root from './elements/root';
 import { GlobalState, StateProvider } from './lib/state';
-import {runUpdateCheck} from './dialogs/updater';
 
 FocusStyleManager.onlyShowFocusOnTabs();
 IconConfig.className = 'icon';
@@ -24,7 +23,6 @@ if (process.env.NODE_ENV !== 'production' && !window.knIsApp) {
 }
 
 const gs = new GlobalState();
-setTimeout(() => runUpdateCheck(gs), 500);
 
 ReactDOM.render(
   <StateProvider value={gs}>

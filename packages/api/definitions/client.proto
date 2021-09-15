@@ -23,7 +23,7 @@ message SuccessResponse {
 message LaunchModRequest {
   string modid = 1;
   string version = 2;
-  }
+}
 
 message TaskRequest {
   uint32 ref = 1;
@@ -36,11 +36,12 @@ message WakeupResponse {
 }
 
 message Settings {
-	string libraryPath = 1;
-	bool updateCheck = 2;
-	bool errorReports = 3;
-	int32 maxDownloads = 4;
-	int32 bandwidthLimit = 5;
+  bool first_run_done = 6;
+	string library_path = 1;
+	bool update_check = 2;
+	bool error_reports = 3;
+	int32 max_downloads = 4;
+	int32 bandwidth_limit = 5;
 }
 
 message SimpleModList {
@@ -154,6 +155,24 @@ message InstallModRequest {
   repeated Mod mods = 4;
 }
 
+message UpdaterInfoResult {
+  string updater = 1;
+  string knossos = 2;
+}
+
+message VersionResult {
+  string version = 1;
+  string commit = 2;
+}
+
+message OpenLinkRequest {
+  string link = 1;
+}
+
+message FixLibraryFolderPathPayload {
+  string path = 1;
+}
+
 // event messages
 
 message ClientSentEvent {
@@ -193,16 +212,6 @@ message TaskResult {
   string error = 2;
 }
 
-message UpdaterInfoResult {
-  string updater = 1;
-  string knossos = 2;
-}
-
-message VersionResult {
-  string version = 1;
-  string commit = 2;
-}
-
 // RPC methods
 
 service Knossos {
@@ -225,4 +234,6 @@ service Knossos {
   rpc UpdateUpdater (TaskRequest) returns (SuccessResponse) {};
   rpc UpdateKnossos (TaskRequest) returns (SuccessResponse) {};
   rpc GetVersion (NullMessage) returns (VersionResult) {};
+  rpc OpenLink (OpenLinkRequest) returns (SuccessResponse) {};
+  rpc FixLibraryFolderPath (FixLibraryFolderPathPayload) returns (FixLibraryFolderPathPayload) {};
 }

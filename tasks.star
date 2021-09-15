@@ -1,1 +1,3 @@
-load("//tasks/main.star")
+load("//tasks/main.star", c = "configure")
+
+configure = c
