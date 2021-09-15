@@ -160,6 +160,12 @@ func InitIntroWindow() {
 
 	versions = filtered
 	selectedVersion = versions[0]
+
+	if len(os.Args) >= 3 && os.Args[1] == "--auto" {
+		installPath = os.Args[2]
+		state = stateInstalling
+		PerformInstallation(installPath, selectedVersion, token)
+	}
 }
 
 func progressWindow() {

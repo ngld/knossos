@@ -7,7 +7,7 @@ import {
   CiFilterLine,
   CiCogLine,
 } from '@meronex/icons/ci';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { observer } from 'mobx-react-lite';
 import { Tooltip2 } from '@blueprintjs/popover2';
 import cx from 'classnames';
@@ -94,7 +94,8 @@ const ModContainer = observer(function ModContainer(): React.ReactElement {
     >
       <ErrorBoundary>
         <Switch>
-          <Redirect from="/" to="/play" exact />
+          <Redirect exact from="/" to="/play" />
+          <Redirect exact from="/index.html" to="/play" />
           <Route path="/play" component={LocalModList} />
           <Route path="/explore" component={RemoteModList} />
           <Route path="/settings">
@@ -125,18 +126,38 @@ const OverlayRenderer = observer(function OverlayRenderer({
   );
 });
 
+interface VersionInfo {
+  version: string;
+  commit: string;
+}
+
 export default function Root(): React.ReactElement {
   const gs = useGlobalState();
   const history = useHistory();
   const [isMaximized, setMaximized] = useState<boolean>(false);
+  const [versionInfo, setVersionInfo] = useState<VersionInfo>({
+    version: "",
+    commit: "",
+  });
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const result = await gs.client.getVersion({});
+        setVersionInfo(result.response);
+      } catch (e) {
+        console.error('failed to fetch knossos version', e);
+      }
+    })();
+  }, []);
 
   return (
     <div className="flex flex-col h-full">
       <div className="flex-initial">
         <div className="pt-5 pl-5 text-3xl text-white font-inria title-bar pb-1">
           <span>Knossos</span>
-          <span className="ml-10">1.0.0</span>
-          <span className="ml-1 text-sm align-top">+c3fa30</span>
+          <span className="ml-10">{versionInfo.version}</span>
+          <span className="ml-1 text-sm align-top">+{versionInfo.commit}</span>
         </div>
 
         <div className="absolute top-0 right-0 text-white text-3xl traffic-lights">

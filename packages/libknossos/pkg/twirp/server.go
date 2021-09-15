@@ -54,3 +54,10 @@ func (kn *knossosServer) SaveSettings(ctx context.Context, settings *client.Sett
 
 	return &client.SuccessResponse{Success: true}, nil
 }
+
+func (kn *knossosServer) GetVersion(ctx context.Context, _ *client.NullMessage) (*client.VersionResult, error) {
+	return &client.VersionResult{
+		Version: api.Version,
+		Commit:  api.Commit,
+	}, nil
+}

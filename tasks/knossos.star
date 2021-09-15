@@ -104,7 +104,7 @@ import "C"
     libkn_defines["Commit"] = execute("git rev-parse HEAD")[:10]
 
     if local_nebula:
-        libkn_defines["TwirpEndpoint"] = "http://localhost:8200/twirp"
+        libkn_defines["TwirpEndpoint"] = "http://localhost:8200/"
         libkn_defines["SyncEndpoint"] = "http://localhost:8200/sync"
 
     for k, v in libkn_defines.items():

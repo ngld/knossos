@@ -8,7 +8,7 @@ import { TaskTracker } from './task-tracker';
 import { API_URL } from './constants';
 
 interface OverlayProps {
-  onFinished: () => void;
+  onFinished?: () => void;
 }
 
 export class GlobalState {
@@ -39,8 +39,8 @@ export class GlobalState {
     makeAutoObservable(this);
   }
 
-  launchOverlay(component: React.FunctionComponent<OverlayProps> | React.ComponentClass<OverlayProps>, props: Record<string, unknown>): void {
-    this.overlays.push([component, props]);
+  launchOverlay<T extends OverlayProps = OverlayProps>(component: React.FunctionComponent<T> | React.ComponentClass<T> | ((props: T) => React.ReactNode), props: T): void {
+    this.overlays.push([component as React.FunctionComponent<OverlayProps>, props as Record<string, unknown>]);
   }
 
   removeOverlay(index: number): void {

@@ -193,6 +193,16 @@ message TaskResult {
   string error = 2;
 }
 
+message UpdaterInfoResult {
+  string updater = 1;
+  string knossos = 2;
+}
+
+message VersionResult {
+  string version = 1;
+  string commit = 2;
+}
+
 // RPC methods
 
 service Knossos {
@@ -211,4 +221,8 @@ service Knossos {
   rpc GetRemoteModInfo (ModInfoRequest) returns (ModInfoResponse) {};
   rpc GetModInstallInfo (ModInfoRequest) returns (InstallInfoResponse) {};
   rpc InstallMod (InstallModRequest) returns (SuccessResponse) {};
+  rpc CheckForProgramUpdates (NullMessage) returns (UpdaterInfoResult) {};
+  rpc UpdateUpdater (TaskRequest) returns (SuccessResponse) {};
+  rpc UpdateKnossos (TaskRequest) returns (SuccessResponse) {};
+  rpc GetVersion (NullMessage) returns (VersionResult) {};
 }

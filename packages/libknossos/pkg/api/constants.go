@@ -8,7 +8,7 @@ var (
 	Commit = "ffffff"
 	// TwirpEndpoint points to Nebula's Twirp endpoint. This can be used to quickly switch between production
 	// and dev environments.
-	TwirpEndpoint = "https://nu.fsnebula.org/twirp"
+	TwirpEndpoint = "https://nu.fsnebula.org/"
 	// SyncEndpoint points to Nebula's modsync endpoint
 	SyncEndpoint = "https://nu.fsnebula.org/sync"
 )
