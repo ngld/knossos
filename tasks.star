@@ -244,11 +244,15 @@ def configure():
     nebula_configure(binext)
     knossos_configure(binext, libext, generator)
 
-    updater_goldflags = "-s -w"
+    if build == "Release":
+        updater_goldflags = "-s -w"
+    else:
+        updater_goldflags = ""
+
     updater_cmds = []
     if OS == "windows":
         updater_goldflags += " -H windowsgui -extldflags -static"
-        updater_cmds.append('cp %s ../../build/updater' % str(resolve_path(msys2_path, 'mingw64/bin/SDL2.dll')).replace('\\', '/'))
+        #updater_cmds.append('cp %s ../../build/updater' % str(resolve_path(msys2_path, 'mingw64/bin/SDL2.dll')).replace('\\', '/'))
 
     task(
         "updater-build",
