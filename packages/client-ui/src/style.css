@@ -25,6 +25,8 @@ body {
 
 .traffic-lights {
     -webkit-app-region: no-drag;
+    position: absolute;
+    z-index: 22;
 }
 
 .font-inria {
