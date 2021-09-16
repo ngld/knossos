@@ -15,21 +15,21 @@ class KnossosApp : public CefApp, public CefBrowserProcessHandler, public CefRen
 
   // CefApp methods:
   virtual CefRefPtr<CefBrowserProcessHandler> GetBrowserProcessHandler()
-      OVERRIDE {
+      override {
     return this;
   }
-  virtual CefRefPtr<CefRenderProcessHandler> GetRenderProcessHandler() OVERRIDE {
+  virtual CefRefPtr<CefRenderProcessHandler> GetRenderProcessHandler() override {
     return this;
   };
 
   // CefBrowserProcessHandler methods:
-  virtual void OnContextInitialized() OVERRIDE;
-  virtual void OnBeforeCommandLineProcessing(const CefString& process_type, CefRefPtr<CefCommandLine> command_line) OVERRIDE;
+  virtual void OnContextInitialized() override;
+  virtual void OnBeforeCommandLineProcessing(const CefString& process_type, CefRefPtr<CefCommandLine> command_line) override;
 
 #ifndef OS_MAC
   // CefRenderProcessHandler methods:
-  virtual void OnWebKitInitialized() OVERRIDE;
-  virtual bool OnProcessMessageReceived(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, CefProcessId source_process, CefRefPtr<CefProcessMessage> message) OVERRIDE;
+  virtual void OnWebKitInitialized() override;
+  virtual bool OnProcessMessageReceived(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, CefProcessId source_process, CefRefPtr<CefProcessMessage> message) override;
 #endif
 
   void InitializeSettings(CefSettings &settings, std::string appDataPath);

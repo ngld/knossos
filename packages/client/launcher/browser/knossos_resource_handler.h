@@ -13,15 +13,15 @@ class KnossosResourceHandler : public CefResourceRequestHandler,
   // CefResourceRequestHandler methods:
   virtual CefRefPtr<CefResourceHandler> GetResourceHandler(CefRefPtr<CefBrowser> browser,
     CefRefPtr<CefFrame> frame,
-    CefRefPtr<CefRequest> request) OVERRIDE {
+    CefRefPtr<CefRequest> request) override {
     return this;
   }
 
   // CefResourceHandler methods:
-  virtual void Cancel() OVERRIDE;
-  virtual void GetResponseHeaders(CefRefPtr<CefResponse> response, int64& response_length, CefString& redirectUrl) OVERRIDE;
-  virtual bool Open(CefRefPtr<CefRequest> request, bool& handle_request, CefRefPtr<CefCallback> callback) OVERRIDE;
-  virtual bool Read(void* data_out, int bytes_to_read, int& bytes_read, CefRefPtr<CefResourceReadCallback> callback) OVERRIDE;
+  virtual void Cancel() override;
+  virtual void GetResponseHeaders(CefRefPtr<CefResponse> response, int64& response_length, CefString& redirectUrl) override;
+  virtual bool Open(CefRefPtr<CefRequest> request, bool& handle_request, CefRefPtr<CefCallback> callback) override;
+  virtual bool Read(void* data_out, int bytes_to_read, int& bytes_read, CefRefPtr<CefResourceReadCallback> callback) override;
 
 private:
   size_t pos;

@@ -10,10 +10,10 @@ public:
   explicit KnossosDevToolsWindowDelegate(CefRefPtr<CefBrowserView> browser_view)
         : browser_view_(browser_view) {}
 
-  void OnWindowCreated(CefRefPtr<CefWindow> window) OVERRIDE;
-  void OnWindowDestroyed(CefRefPtr<CefWindow> window) OVERRIDE;
+  void OnWindowCreated(CefRefPtr<CefWindow> window) override;
+  void OnWindowDestroyed(CefRefPtr<CefWindow> window) override;
 
-  CefRect GetInitialBounds(CefRefPtr<CefWindow> window) OVERRIDE;
+  CefRect GetInitialBounds(CefRefPtr<CefWindow> window) override;
 private:
   CefRefPtr<CefBrowserView> browser_view_;
 

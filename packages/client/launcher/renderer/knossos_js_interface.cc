@@ -14,7 +14,7 @@
 class KnossosApiV8Handler : public CefV8Handler {
   bool Execute(const CefString &name, CefRefPtr<CefV8Value> object,
                const CefV8ValueList &arguments, CefRefPtr<CefV8Value> &retval,
-               CefString &exception) OVERRIDE {
+               CefString &exception) override {
     if (name == "knShowDevTools") {
       if (arguments.size() == 0) {
         CefRefPtr<CefProcessMessage> msg =
@@ -139,7 +139,7 @@ private:
 
 class SimpleBufferReleaser : public CefV8ArrayBufferReleaseCallback {
 public:
-  virtual void ReleaseBuffer(void *buffer) OVERRIDE { std::free(buffer); }
+  virtual void ReleaseBuffer(void *buffer) override { std::free(buffer); }
 
 private:
   IMPLEMENT_REFCOUNTING(SimpleBufferReleaser);
