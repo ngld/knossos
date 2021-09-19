@@ -151,7 +151,7 @@ func main() {
 	}
 
 	dbConfig.ConnConfig.Logger = nblog.PgxLogger{}
-	dbConfig.ConnConfig.LogLevel = pgx.LogLevelInfo
+	dbConfig.ConnConfig.LogLevel = pgx.LogLevelWarn
 	pool, err := pgxpool.ConnectConfig(context.Background(), dbConfig)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to open DB connection")
@@ -217,10 +217,25 @@ TRUNCATE files CASCADE;
 
 	q := queries.NewQuerier(tx)
 
+	modIDs := map[string]bool{}
+	for _, mod := range data.Mods {
+		modIDs[mod.ID] = true
+	}
+
 	count := len(data.Mods)
 	aidCache := map[string]int32{}
+modLoop:
 	for i, mod := range data.Mods {
 		log.Info().Msgf("Mod %4d of %d", i, count)
+
+		for _, pkg := range mod.Packages {
+			for _, dep := range pkg.Dependencies {
+				if !modIDs[dep.ID] {
+					log.Warn().Msgf("Mod %s (%s, %s) depends on ID %s which does not exist! Skipping...", mod.Title, mod.Version, mod.ID, dep.ID)
+					continue modLoop
+				}
+			}
+		}
 
 		aid, ok := aidCache[mod.ID]
 		if !ok {
@@ -328,6 +343,10 @@ TRUNCATE files CASCADE;
 			archiveBatch := new(pgx.Batch)
 
 			for _, dep := range pkg.Dependencies {
+				if !modIDs[dep.ID] {
+					log.Fatal().Msgf("Mod %s (%s, %s) depends on ID %s which does not exist", mod.Title, mod.Version, mod.ID, dep.ID)
+				}
+
 				q.CreatePackageDependencyBatch(pkgBatch, queries.CreatePackageDependencyParams{
 					PackageID: pid,
 					Modid:     dep.ID,
@@ -399,6 +418,7 @@ TRUNCATE files CASCADE;
 
 			archiveMap := make(map[string]int32)
 			archiveResults := tx.SendBatch(ctx, archiveBatch)
+			rowIdx := 0
 			for idx := 0; idx < archiveBatch.Len(); idx++ {
 				rows, err := archiveResults.Query()
 				if err != nil {
@@ -406,7 +426,6 @@ TRUNCATE files CASCADE;
 				}
 
 				var archiveID int32
-				rowIdx := 0
 				for rows.Next() {
 					err = rows.Scan(&archiveID)
 					if err != nil {
@@ -421,7 +440,12 @@ TRUNCATE files CASCADE;
 			archiveResults.Close()
 
 			for idx, item := range pkg.Filelist {
-				pkg.Filelist[idx].ArchiveID = archiveMap[item.Archive]
+				aid, ok := archiveMap[item.Archive]
+				if !ok {
+					log.Fatal().Msgf("Failed to find archive %s in archive map for file %s", item.Archive, item.Filename)
+				}
+
+				pkg.Filelist[idx].ArchiveID = aid
 			}
 
 			count, err := CopyFromFiles(ctx, tx, pid, pkg.Filelist)
