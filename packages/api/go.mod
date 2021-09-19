@@ -1,6 +1,6 @@
 module github.com/ngld/knossos/packages/api
 
-go 1.15
+go 1.17
 
 require (
 	github.com/pkg/errors v0.9.1 // indirect

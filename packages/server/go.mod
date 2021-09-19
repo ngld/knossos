@@ -1,6 +1,6 @@
 module github.com/ngld/knossos/packages/server
 
-go 1.15
+go 1.17
 
 require (
 	github.com/Masterminds/semver/v3 v3.1.1
@@ -14,7 +14,6 @@ require (
 	github.com/jackc/pgtype v1.8.0
 	github.com/jackc/pgx/v4 v4.12.0
 	github.com/jordan-wright/email v4.0.1-0.20210109023952-943e75fe5223+incompatible
-	github.com/kr/text v0.2.0 // indirect
 	github.com/ngld/knossos/packages/api v0.0.0-20210718163256-09871a18e506
 	github.com/rotisserie/eris v0.5.1
 	github.com/rs/zerolog v1.23.0
@@ -27,9 +26,19 @@ require (
 	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97 // indirect
 	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c // indirect
 	google.golang.org/protobuf v1.27.1
-	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
+)
+
+require (
+	github.com/BurntSushi/toml v0.3.1 // indirect
+	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
+	github.com/jackc/pgio v1.0.0 // indirect
+	github.com/jackc/pgpassfile v1.0.0 // indirect
+	github.com/jackc/pgproto3/v2 v2.1.1 // indirect
+	github.com/jackc/pgservicefile v0.0.0-20200714003250-2b9c44734f2b // indirect
+	github.com/jackc/puddle v1.1.3 // indirect
+	golang.org/x/text v0.3.6 // indirect
 )
 
 replace github.com/ngld/knossos/packages/api => ../api
