@@ -4,12 +4,12 @@ set -e
 
 cd "$(dirname "$0")"
 
-needed_version="$(< .go-version)"
-current_version="$(go version | cut -d " " -f 2 | cut -b 3-)"
-
 if [ -d third_party/go/bin ]; then
     export PATH="$PWD/third_party/go/bin:$PATH"
 fi
+
+needed_version="$(cat .go-version)"
+current_version="$(go version | cut -d " " -f 3 | cut -b 3-)"
 
 if ! command -v go > /dev/null 2>&1; then
     echo "Please install the Golang toolchain and run this script again. Make sure you install version $current_version."
