@@ -55,7 +55,9 @@ def knossos_configure(binext, libext, generator):
         libkn_goldflags += " -s -w"
         libkn_defines["releaseBuild"] = "true"
 
-    libkn_defines["Commit"] = execute("git rev-parse HEAD")[:10]
+    commit_info = execute("git rev-parse HEAD")
+    if commit_info:
+        libkn_defines["Commit"] = commit_info[:10]
 
     if local_nebula:
         libkn_defines["TwirpEndpoint"] = "http://localhost:8200/"
