@@ -7,6 +7,7 @@ vars:
   BROTLI: 1.0.9
   NINJA: 1.10.2
   GOLANG_CI: 1.42.1
+  INNOEXTRACT: 1.9
 
 update-checks:
   PROTOC:
@@ -37,6 +38,9 @@ update-checks:
   GOLANG_CI:
     github:
       project: golangci/golangci-lint
+  INNOEXTRACT:
+    github:
+      project: dscharrer/innoextract
 
 deps:
   protoc-linux:
@@ -186,3 +190,9 @@ deps:
     url: https://github.com/golangci/golangci-lint/releases/download/v{GOLANG_CI}/golangci-lint-{GOLANG_CI}-windows-amd64.zip
     strip: 1
     dest: third_party/golangci
+
+  innoextract:
+    sha256: 6344a69fc1ed847d4ed3e272e0da5998948c6b828cb7af39c6321aba6cf88126
+    url: https://constexpr.org/innoextract/files/innoextract-{INNOEXTRACT}.tar.gz
+    strip: 1
+    dest: third_party/innoextract

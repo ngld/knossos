@@ -9,8 +9,6 @@ require (
 	github.com/andybalholm/brotli v1.0.3
 	github.com/cheggaaa/pb/v3 v3.0.8
 	github.com/containerd/containerd v1.5.4 // indirect
-	github.com/cortesi/modd v0.0.0-20210323234521-b35eddab86cc
-	github.com/cortesi/moddwatch v0.0.0-20210323234936-df014e95c743 // indirect
 	github.com/docker/docker v20.10.7+incompatible // indirect
 	github.com/fatih/color v1.12.0 // indirect
 	github.com/golang/protobuf v1.5.2
@@ -34,7 +32,9 @@ require (
 	golang.org/x/net v0.0.0-20210716203947-853a461950ff // indirect
 	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c
 	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b // indirect
+	golang.org/x/tools v0.1.5
 	google.golang.org/genproto v0.0.0-20210721163202-f1cecdd8b78a // indirect
+	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 	mvdan.cc/sh/v3 v3.3.0
 )

@@ -10,6 +10,12 @@
 			"request": "attach",
 			"mode": "local",
 			"processId": "${command:pickGoProcess}"
-		}
+		},
+    {
+      "name": "Debug C++ Knossos (Windows)",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${workspaceRoot}/build/client/launcher/Release/knossos.exe"
+    }
 	]
 }
