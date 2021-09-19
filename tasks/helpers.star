@@ -33,7 +33,7 @@ def protoc(args, go=None, twirp=None, ts=None):
 
     return cmd
 
-def cmake_task(name, desc = "", inputs = [], outputs = [], script = None, windows_script = None, unix_script = None):
+def cmake_task(name, desc = "", inputs = [], outputs = [], script = None, windows_script = None, unix_script = None, **kwargs):
     """A wrapper around task() that sets common options for CMake projects
 
     Args:
@@ -44,6 +44,9 @@ def cmake_task(name, desc = "", inputs = [], outputs = [], script = None, window
       script: the script that will call CMake
       windows_script: If script is None, this script will be used instead on Windows.
       unix_script: If script is None, this script will be used instead on Unix (Linux / macOS).
+      **kwargs: passed on to task()
+    Returns:
+      the generated task
     """
     if OS == "windows":
         if not script:
@@ -68,7 +71,7 @@ def cmake_task(name, desc = "", inputs = [], outputs = [], script = None, window
                 ],
             )
 
-        task(
+        return task(
             name,
             desc = desc + " (uses MSYS2)",
             deps = ["fetch-deps", "bootstrap-mingw64"],
@@ -82,13 +85,15 @@ def cmake_task(name, desc = "", inputs = [], outputs = [], script = None, window
             cmds = [
                 ("cd", resolve_path(msys2_path)),
                 ("usr/bin/bash", "-lc", '"$(cygpath "%s")"' % resolve_path(script)),
+                merge_compile_commands,
             ],
+            **kwargs,
         )
     else:
         if not script:
             script = unix_script
 
-        task(
+        return task(
             name,
             desc = desc,
             deps = ["fetch-deps"],
@@ -96,7 +101,9 @@ def cmake_task(name, desc = "", inputs = [], outputs = [], script = None, window
             outputs = outputs,
             cmds = [
                 ("sh", resolve_path(script)),
+                merge_compile_commands,
             ],
+            **kwargs,
         )
 
 def find_static_lib(names, display_name = None):

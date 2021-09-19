@@ -23,6 +23,7 @@ import (
 	"github.com/ngld/knossos/packages/libknossos/pkg/mods"
 	"github.com/ngld/knossos/packages/libknossos/pkg/storage"
 	"github.com/rotisserie/eris"
+	"google.golang.org/protobuf/proto"
 )
 
 func (kn *knossosServer) GetModInstallInfo(ctx context.Context, req *client.ModInfoRequest) (*client.InstallInfoResponse, error) {
@@ -196,16 +197,37 @@ func (kn *knossosServer) InstallMod(ctx context.Context, req *client.InstallModR
 				}
 
 				if _, present := newMeta[mod.Modid]; !present {
-					newMeta[mod.Modid] = modMeta
+					data, err := proto.Marshal(modMeta)
+					if err != nil {
+						return eris.Wrapf(err, "failed to serialise mod %s", modMeta.Modid)
+					}
+
+					var metaCopy common.ModMeta
+					err = proto.Unmarshal(data, &metaCopy)
+					if err != nil {
+						return eris.Wrapf(err, "failed to deserialise mod %s", modMeta.Modid)
+					}
+
+					newMeta[mod.Modid] = &metaCopy
 				}
 
+				modMeta = newMeta[mod.Modid]
 				relKey := mod.Modid + "#" + relMeta.Version
 				if _, present := newRelMeta[relKey]; !present {
 					// Create a copy of the release without packages; we'll add the installed packages later
-					relCopy := new(common.Release)
-					*relCopy = *relMeta
+					data, err := proto.Marshal(relMeta)
+					if err != nil {
+						return eris.Wrapf(err, "failed to serialise mod release %s (%s)", modMeta.Modid, relMeta.Version)
+					}
+
+					var relCopy common.Release
+					err = proto.Unmarshal(data, &relCopy)
+					if err != nil {
+						return eris.Wrapf(err, "failed to deserialise mod release %s (%s)", modMeta.Modid, relMeta.Version)
+					}
+
 					relCopy.Packages = make([]*common.Package, 0)
-					newRelMeta[relKey] = relCopy
+					newRelMeta[relKey] = &relCopy
 				}
 
 				newRelMeta[relKey].Packages = append(newRelMeta[relKey].Packages, pkg)

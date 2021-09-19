@@ -48,7 +48,12 @@ async function initSequence(
 
     const r = await gs.client.getSettings({});
     if (!r.response.firstRunDone) {
-      gs.launchOverlay<FirstRunWizardProps>(FirstRunWizard, {});
+      const idx = gs.launchOverlay<FirstRunWizardProps>(FirstRunWizard, {
+        onFinished() {
+          gs.removeOverlay(idx);
+          initSequence(gs, setOpen, setLabel);
+        },
+      });
       return;
     }
 

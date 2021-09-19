@@ -8,8 +8,10 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.4.2
+	github.com/mattn/go-sqlite3 v1.14.8
 	github.com/ngld/knossos/packages/api v0.0.0-20210718163256-09871a18e506
 	github.com/ngld/knossos/packages/libarchive v0.0.0-20210718163256-09871a18e506
+	github.com/ngld/knossos/packages/libinnoextract v0.0.0-00010101000000-000000000000
 	github.com/rotisserie/eris v0.5.1
 	github.com/rs/zerolog v1.23.0
 	github.com/twitchtv/twirp v8.1.0+incompatible
@@ -22,3 +24,5 @@ require (
 replace github.com/ngld/knossos/packages/api => ../api
 
 replace github.com/ngld/knossos/packages/libarchive => ../libarchive
+
+replace github.com/ngld/knossos/packages/libinnoextract => ../libinnoextract

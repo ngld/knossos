@@ -8,7 +8,7 @@ cd build/libarchive
 
 export PATH="/mingw64/bin:$PATH"
 
-if [ ! -f CMakeCache.txt ]; then
+if [ ! -f build.ninja ]; then
     args=(
         -DCMAKE_BUILD_TYPE=Release
         -Wno-dev
@@ -36,7 +36,7 @@ if [ ! -f CMakeCache.txt ]; then
         ../../third_party/libarchive
     )
 
-    cmake -G"Unix Makefiles" "${args[@]}"
+    cmake -GNinja "${args[@]}"
 fi
 
-make -j4 archive_static
+ninja archive_static

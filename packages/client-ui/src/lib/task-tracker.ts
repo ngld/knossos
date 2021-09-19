@@ -136,9 +136,20 @@ export class TaskTracker extends EventEmitter {
         lineText.innerText = `[${getLogTime(task, msg)}]:`;
 
         line.appendChild(lineText);
-        line.appendChild(document.createTextNode(' ' + msg.message));
+        line.innerHTML += '&nbsp;' + msg.message
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/\n/g, '<br>')
+          .replace(/\t/g, '    ')
+          .replace(/ [ ]+/g, (m) => {
+            let result = '';
+            for (let i = 0; i < m.length; i++) {
+              result += '&nbsp;';
+            }
+            return result;
+          });
 
-        line.innerHTML = line.innerHTML.replace(/\n/g, '<br>');
         task.logContainer.appendChild(line);
         break;
       case 'progress':

@@ -39,8 +39,10 @@ export class GlobalState {
     makeAutoObservable(this);
   }
 
-  launchOverlay<T extends OverlayProps = OverlayProps>(component: React.FunctionComponent<T> | React.ComponentClass<T> | ((props: T) => React.ReactNode), props: T): void {
+  launchOverlay<T extends OverlayProps = OverlayProps>(component: React.FunctionComponent<T> | React.ComponentClass<T> | ((props: T) => React.ReactNode), props: T): number {
+    const idx = this.overlays.length;
     this.overlays.push([component as React.FunctionComponent<OverlayProps>, props as Record<string, unknown>]);
+    return idx;
   }
 
   removeOverlay(index: number): void {

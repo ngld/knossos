@@ -173,6 +173,21 @@ message FixLibraryFolderPathPayload {
   string path = 1;
 }
 
+message HandleRetailFilesRequest {
+  enum Operation {
+    UNKNOWN = 0;
+    AUTO_STEAM = 1;
+    AUTO_GOG = 2;
+    MANUAL_GOG = 3;
+    MANUAL_FOLDER = 4;
+  }
+
+  Operation op = 1;
+  string installer_path = 2;
+  string library_path = 4;
+  uint32 ref = 3;
+}
+
 // event messages
 
 message ClientSentEvent {
@@ -236,4 +251,5 @@ service Knossos {
   rpc GetVersion (NullMessage) returns (VersionResult) {};
   rpc OpenLink (OpenLinkRequest) returns (SuccessResponse) {};
   rpc FixLibraryFolderPath (FixLibraryFolderPathPayload) returns (FixLibraryFolderPathPayload) {};
+  rpc HandleRetailFiles (HandleRetailFilesRequest) returns (SuccessResponse) {};
 }

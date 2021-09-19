@@ -3,6 +3,8 @@ package twirp
 import (
 	"context"
 	"net/http"
+	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -75,4 +77,16 @@ func (kn *knossosServer) OpenLink(ctx context.Context, req *client.OpenLinkReque
 	}
 
 	return &client.SuccessResponse{Success: true}, nil
+}
+
+func (kn *knossosServer) FixLibraryFolderPath(ctx context.Context, req *client.FixLibraryFolderPathPayload) (*client.FixLibraryFolderPathPayload, error) {
+	for _, name := range []string{"knossos", "knossos.exe"} {
+		_, err := os.Stat(filepath.Join(req.Path, name))
+		if err == nil {
+			// This is the Knossos folder, this'll cause issues so let's just change the path to point to a subfolder.
+			return &client.FixLibraryFolderPathPayload{Path: filepath.Join(req.Path, "library")}, nil
+		}
+	}
+
+	return &client.FixLibraryFolderPathPayload{Path: req.Path}, nil
 }

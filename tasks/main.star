@@ -46,6 +46,7 @@ load("options.star", "build", "generator_opt", "msys2_path")
 load("helpers.star", "protoc", "yarn")
 load("nebula.star", "nebula_configure")
 load("knossos.star", "knossos_configure")
+load("third_party.star", "third_party_configure")
 
 def configure():
     generator = generator_opt
@@ -242,6 +243,7 @@ def configure():
     )
 
     nebula_configure(binext)
+    third_party_configure(binext, libext, generator)
     knossos_configure(binext, libext, generator)
 
     if build == "Release":

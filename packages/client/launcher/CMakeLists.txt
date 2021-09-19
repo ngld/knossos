@@ -18,12 +18,24 @@ endif()
 
 find_path(libknossos "libknossos.${libext}" PATHS "../../../build/libknossos/" REQUIRED)
 set(libknossos "${libknossos}/libknossos.${libext}")
+
+find_path(libinnoextract_dir "libinnoextract.${libext}" PATHS "../../../build/libinnoextract/" REQUIRED)
 ## BRAIN END
 
 #if(MSVC AND NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
 #  # Clang-cl doesn't support the /MP option
 #  list(REMOVE_ITEM CEF_COMPILER_FLAGS /MP)
 #endif()
+
+macro(copy_file target file_path target_dir)
+  add_custom_command(
+    TARGET ${target}
+    POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${file_path}" "${target_dir}"
+    VERBATIM
+    DEPENDS "${file_path}"
+  )
+endmacro()
 
 #
 # Source files.
@@ -145,22 +157,20 @@ if(OS_LINUX)
   if (EXISTS "${CEF_BINARY_DIR}/libminigbm.so")
     COPY_FILES("${CEF_TARGET}" "libminigbm.so" "${CEF_BINARY_DIR}" "${CEF_TARGET_OUT_DIR}")
   endif()
-  add_custom_command(
-    TARGET ${CEF_TARGET}
-    POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${libknossos}" "${CEF_TARGET_OUT_DIR}"
-    VERBATIM
-    DEPENDS "${libknossos}"
-  )
+
+  copy_file(${CEF_TARGET} ${libknossos} ${CEF_TARGET_OUT_DIR})
+  copy_file(${CEF_TARGET} "${libinnoextract_dir}/libinnoextract.so" ${CEF_TARGET_OUT_DIR})
 
   if(${CMAKE_BUILD_TYPE} STREQUAL "Release")
-    # Strip the libcef.so library on release builds to save a *lot* of space.
-    add_custom_command(
-      TARGET ${CEF_TARGET}
-      POST_BUILD
-      COMMAND strip "${CEF_TARGET_OUT_DIR}/libcef.so"
-      VERBATIM
-    )
+    # Strip the libraries on release builds to save a *lot* of space.
+    foreach(filename libcef.so libknossos.so libinnoextract.so)
+      add_custom_command(
+        TARGET ${CEF_TARGET}
+        POST_BUILD
+        COMMAND strip "${CEF_TARGET_OUT_DIR}/${filename}"
+        VERBATIM
+      )
+    endforeach()
   endif()
 
   # Set SUID permissions on the chrome-sandbox target.
@@ -272,12 +282,8 @@ if(OS_MAC)
   set(PREFIXES "mac/")
   COPY_MAC_RESOURCES("${KNOSSOS_RESOURCES_SRCS}" "${PREFIXES}" "${CEF_TARGET}" "${CMAKE_CURRENT_SOURCE_DIR}" "${CEF_APP}")
 
-  add_custom_command(
-    TARGET ${CEF_TARGET}
-    POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${libknossos}" "${CEF_APP}/Contents/MacOS" VERBATIM
-    DEPENDS "${libknossos}"
-  )
+  copy_file(${CEF_TARGET} "${libknossos}" "${CEF_APP}/Contents/MacOS")
+  copy_file(${CEF_TARGET} "${libinnoextract_dir}/libinnoextract.dylib" "${CEF_APP}/Contents/MacOS")
 endif()
 
 
@@ -310,10 +316,19 @@ if(OS_WINDOWS)
   COPY_FILES("${CEF_TARGET}" "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "${CEF_TARGET_OUT_DIR}")
   COPY_FILES("${CEF_TARGET}" "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "${CEF_TARGET_OUT_DIR}")
 
-  add_custom_command(
-    TARGET ${CEF_TARGET}
-    POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${libknossos}" "${CEF_TARGET_OUT_DIR}" VERBATIM
-    DEPENDS "${libknossos}"
-  )
+  copy_file(${CEF_TARGET} "${libknossos}" ${CEF_TARGET_OUT_DIR})
+  copy_file(${CEF_TARGET} "${libinnoextract_dir}/libinnoextract.dll" ${CEF_TARGET_OUT_DIR})
+  copy_file(${CEF_TARGET} "${libinnoextract_dir}/libwinpthread-1.dll" ${CEF_TARGET_OUT_DIR})
+
+  if(${CMAKE_BUILD_TYPE} STREQUAL "Release")
+    # Strip the libraries on release builds to save a *lot* of space.
+    foreach(filename libcef.dll libknossos.dll libinnoextract.dll)
+      add_custom_command(
+        TARGET ${CEF_TARGET}
+        POST_BUILD
+        COMMAND strip "${CEF_TARGET_OUT_DIR}/${filename}"
+        VERBATIM
+      )
+    endforeach()
+  endif()
 endif()
