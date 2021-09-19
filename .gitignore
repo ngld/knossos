@@ -3,6 +3,7 @@
 dist/
 .cache
 .task
+.skip-go-version-check
 
 # generated sources
 *.pb.go
