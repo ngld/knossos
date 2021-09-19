@@ -3,10 +3,17 @@ package cmd
 import (
 	"encoding/json"
 	"io/ioutil"
+	"strings"
 
 	"github.com/rotisserie/eris"
 	"github.com/spf13/cobra"
 )
+
+type ccItem struct {
+	Command   string `json:"command"`
+	Directory string `json:"directory"`
+	File      string `json:"file"`
+}
 
 var mergeCompileCommansCmd = &cobra.Command{
 	Use:   "merge-compile-commands <output file> <input files...>",
@@ -16,8 +23,8 @@ var mergeCompileCommansCmd = &cobra.Command{
 			return eris.Errorf("Expected at least 2 arguments but got %d!", len(args))
 		}
 
-		output := make([]interface{}, 0)
-		var chunk []interface{}
+		output := make([]ccItem, 0)
+		var chunk []ccItem
 		for _, fpath := range args[1:] {
 			data, err := ioutil.ReadFile(fpath)
 			if err != nil {
@@ -30,6 +37,20 @@ var mergeCompileCommansCmd = &cobra.Command{
 			}
 
 			output = append(output, chunk...)
+		}
+
+		// Tell clangd about /mingw64/include
+		for idx, item := range output {
+			parts := strings.SplitN(item.Command, " ", 2)
+			if strings.HasSuffix(parts[0], "msys64\\mingw64\\bin\\gcc.exe") {
+				msysPath := strings.TrimSuffix(parts[0], "bin\\gcc.exe")
+				item.Command += " -I" + msysPath + "include"
+				output[idx] = item
+			} else if strings.HasSuffix(parts[0], "msys64\\mingw64\\bin\\g++.exe") {
+				msysPath := strings.TrimSuffix(parts[0], "bin\\g++.exe")
+				item.Command += " -I" + msysPath + "include"
+				output[idx] = item
+			}
 		}
 
 		data, err := json.MarshalIndent(output, "", "  ")

@@ -1,6 +1,7 @@
 package mods
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -57,11 +58,15 @@ func getBinaryForEngine(ctx context.Context, engine *common.Release) (string, er
 
 	for _, pkg := range engine.Packages {
 		for _, exe := range pkg.Executables {
-			if exe.Label == "" && !exe.Debug && exe.Priority > binaryScore {
+			if exe.Label == "" && !exe.Debug && exe.Priority >= binaryScore {
 				binaryScore = exe.Priority
 				binaryPath = filepath.Join(engine.Folder, pkg.Folder, exe.Path)
 			}
 		}
+	}
+
+	if binaryPath == "" {
+		return "", eris.Errorf("no binary found in %s %s", engine.Modid, engine.Version)
 	}
 
 	return binaryPath, nil
@@ -84,6 +89,14 @@ func getJSONFlagsForBinary(ctx context.Context, binaryPath string) (*storage.JSO
 	// Ignore the error if it's only about the exit code being 1 because that's normal.
 	if err != nil && proc.ProcessState.ExitCode() != 1 {
 		return nil, eris.Wrapf(err, "failed to run %s", binaryPath)
+	}
+
+	// Check if FSO printed the legacy warning before the JSON and strip it.
+	if bytes.HasPrefix(out, []byte("FSO is running in legacy config mode. Please either update")) {
+		idx := bytes.Index(out, []byte("{"))
+		if idx > -1 {
+			out = out[idx:]
+		}
 	}
 
 	api.Log(ctx, api.LogInfo, "Got: %s", out)
@@ -166,6 +179,13 @@ func LaunchMod(ctx context.Context, mod *common.Release, settings *client.UserSe
 		if err != nil {
 			return eris.Wrapf(err, "failed to find binary for engine %s (%s)", engine.Modid, engine.Version)
 		}
+
+		knSettings, err := storage.GetSettings(ctx)
+		if err != nil {
+			return eris.Wrap(err, "failed to load settings")
+		}
+
+		binary = filepath.Join(knSettings.LibraryPath, "bin", binary)
 	}
 
 	// Use the user's command line if one is set for this mod and fall back to the mod default otherwise.
@@ -229,12 +249,16 @@ func LaunchMod(ctx context.Context, mod *common.Release, settings *client.UserSe
 		// For now, we just use all installed packages.
 
 		for _, pkg := range rel.Packages {
-			flagPath, err := filepath.Rel(parentFolder, filepath.Join(rel.Folder, pkg.Folder))
-			if err != nil {
-				return err
-			}
+			if filepath.IsAbs(rel.Folder) || filepath.IsAbs(pkg.Folder) {
+				flagPath, err := filepath.Rel(parentFolder, filepath.Join(rel.Folder, pkg.Folder))
+				if err != nil {
+					return err
+				}
 
-			modFlag = append(modFlag, flagPath)
+				modFlag = append(modFlag, flagPath)
+			} else {
+				modFlag = append(modFlag, filepath.Join(rel.Folder, pkg.Folder))
+			}
 		}
 	}
 

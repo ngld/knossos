@@ -33,4 +33,4 @@ if [ ! -f CMakeCache.txt ]; then
         ../../third_party/libarchive
 fi
 
-make -j4 archive_static
+make -j$(nproc) archive_static

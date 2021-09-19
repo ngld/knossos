@@ -4,6 +4,9 @@
             "path": ".."
         },
         {
+            "path": "../tasks",
+        },
+        {
             "path": "../packages/api"
         },
         {
@@ -29,6 +32,9 @@
         },
         {
             "path": "../packages/libarchive"
+        },
+        {
+            "path": "../packages/libinnoextract"
         },
         {
             "path": "../third_party"

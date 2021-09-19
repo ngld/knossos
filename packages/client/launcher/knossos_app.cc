@@ -39,7 +39,7 @@ public:
                                  bool main_browser)
       : main_browser_(main_browser), browser_view_(browser_view) {}
 
-  void OnWindowCreated(CefRefPtr<CefWindow> window) OVERRIDE {
+  void OnWindowCreated(CefRefPtr<CefWindow> window) override {
     // Add the browser view and show the window.
     window->AddChildView(browser_view_);
     window->Show();
@@ -48,11 +48,11 @@ public:
     browser_view_->RequestFocus();
   }
 
-  void OnWindowDestroyed(CefRefPtr<CefWindow> window) OVERRIDE {
+  void OnWindowDestroyed(CefRefPtr<CefWindow> window) override {
     browser_view_ = nullptr;
   }
 
-  bool CanClose(CefRefPtr<CefWindow> window) OVERRIDE {
+  bool CanClose(CefRefPtr<CefWindow> window) override {
     // Allow the window to close if the browser says it's OK.
     CefRefPtr<CefBrowser> browser = browser_view_->GetBrowser();
     if (browser)
@@ -60,9 +60,9 @@ public:
     return true;
   }
 
-  bool IsFrameless(CefRefPtr<CefWindow> window) OVERRIDE { return true; }
+  bool IsFrameless(CefRefPtr<CefWindow> window) override { return main_browser_; }
 
-  CefRect GetInitialBounds(CefRefPtr<CefWindow> window) OVERRIDE {
+  CefRect GetInitialBounds(CefRefPtr<CefWindow> window) override {
     CefRect screen_size = KnossosHandler::GetInstance()->GetScreenSize();
     CefRect window_size(0, 0, 1200, 800);
 
@@ -86,7 +86,7 @@ public:
 
   bool OnPopupBrowserViewCreated(CefRefPtr<CefBrowserView> browser_view,
                                  CefRefPtr<CefBrowserView> popup_browser_view,
-                                 bool is_devtools) OVERRIDE {
+                                 bool is_devtools) override {
     if (is_devtools) {
       CefWindow::CreateTopLevelWindow(
           new KnossosDevToolsWindowDelegate(popup_browser_view));

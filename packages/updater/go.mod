@@ -1,6 +1,6 @@
 module github.com/ngld/knossos/packages/updater
 
-go 1.16
+go 1.17
 
 require (
 	github.com/Masterminds/semver/v3 v3.1.1
@@ -8,7 +8,7 @@ require (
 	github.com/inkyblackness/imgui-go/v4 v4.2.0
 	github.com/ngld/knossos/packages/libarchive v0.0.0-20210718163256-09871a18e506
 	github.com/rotisserie/eris v0.5.1
-	github.com/veandco/go-sdl2 v0.5.0-alpha.1.0.20210608033534-0f56bbcebb54
+	github.com/veandco/go-sdl2 v0.4.0
 )
 
 replace github.com/ngld/knossos/packages/libarchive => ../libarchive

@@ -1,5 +1,5 @@
-load("helpers.star", "cmake_task", "find_library", "get_golangci_flags", "merge_compile_commands", "yarn")
-load("options.star", "build", "msys2_path")
+load("helpers.star", "get_golangci_flags", "merge_compile_commands", "yarn")
+load("options.star", "build")
 
 kn_args = option("client_args", "", help = "The parameters to pass to Knossos in the client-run target")
 local_nebula = option("use_local_nebula", "true" if build == "Debug" else "false", help = "Use localhost:8200 instead of nu.fsnebula.org (enabled by default for Debug builds)") == "true"
@@ -35,52 +35,6 @@ def knossos_configure(binext, libext, generator):
         cmds = [yarn("client:watch")],
     )
 
-    libarchive_ldflags = ""
-
-    # platform specific filename for libarchive
-    if OS == "windows":
-        libarchive_ldflags += str(resolve_path("build/libarchive/libarchive/libarchive_static.a"))
-    else:
-        libarchive_ldflags += str(resolve_path("build/libarchive/libarchive/libarchive.a"))
-
-    if OS != "darwin":
-        libarchive_ldflags += " -Wl,--no-undefined"
-
-    if OS == "windows":
-        # force static linking on windows
-        libs = ["liblzma", "libzstd", "libz", "libiconv"]
-        for lib in libs:
-            libarchive_ldflags += " %s.a" % resolve_path(msys2_path, "mingw64/lib", lib)
-
-        libarchive_ldflags = libarchive_ldflags.replace("\\", "/")
-    elif OS == "darwin":
-        if ARCH == "arm64":
-            libarchive_ldflags += " -liconv -lz /opt/homebrew/opt/xz/lib/liblzma.a /opt/homebrew/opt/zstd/lib/libzstd.a"
-        else:
-            libarchive_ldflags += " -liconv -lz /usr/local/opt/xz/lib/liblzma.a /usr/local/opt/zstd/lib/libzstd.a"
-    else:
-        libarchive_ldflags += " " + " ".join([
-            find_library(["liblzma"]),
-            find_library(["libzstd"]),
-            find_library(["libz", "zlib"], "zlib"),
-        ])
-
-    write_file("packages/libarchive/cgo_flags.go", """
-package libarchive
-
-// #cgo LDFLAGS: %s
-import "C"
-""" % libarchive_ldflags)
-
-    cmake_task(
-        "libarchive-build",
-        desc = "Builds libarchive with CMake",
-        inputs = ["third_party/libarchive/libarchive/**/*.{c,h}"],
-        outputs = ["build/libarchive/libarchive/*.a"],
-        windows_script = "packages/libarchive/msys2-build.sh",
-        unix_script = "packages/libarchive/unix-build.sh",
-    )
-
     task(
         "libknossos-lint",
         desc = "Lints libknossos with golangci-lint",
@@ -104,7 +58,7 @@ import "C"
     libkn_defines["Commit"] = execute("git rev-parse HEAD")[:10]
 
     if local_nebula:
-        libkn_defines["TwirpEndpoint"] = "http://localhost:8200/twirp"
+        libkn_defines["TwirpEndpoint"] = "http://localhost:8200/"
         libkn_defines["SyncEndpoint"] = "http://localhost:8200/sync"
 
     for k, v in libkn_defines.items():
@@ -115,12 +69,13 @@ import "C"
     task(
         "libknossos-build",
         desc = "Builds libknossos (client-side, non-UI logic)",
-        deps = ["build-tool", "proto-build", "libarchive-build"],
+        deps = ["build-tool", "proto-build", "libarchive-build", "libinnoextract-build"],
         base = "packages/libknossos",
         inputs = [
             "../../.tools/tool%s" % binext,
             "**/*.go",
             "../libarchive/**/*.go",
+            "../libinnoextract/**/*.go",
         ],
         outputs = [
             "../../build/libknossos/libknossos%s" % libext,
@@ -131,8 +86,9 @@ import "C"
             "CC": "gcc",
         },
         cmds = [
-            "go build %s -o ../../build/libknossos/libknossos%s -buildmode c-shared ./api" % (libkn_flags, libext),
+            "go build %s -o ../../build/libknossos/libknossos%s -trimpath -buildmode c-shared ./api" % (libkn_flags, libext),
             "tool gen-dyn-loader ../../build/libknossos/libknossos.h ../../build/libknossos/dynknossos.h",
+            "cp ./api/cef_bridge.h ../../build/libknossos",
         ],
     )
 
@@ -192,12 +148,13 @@ import "C"
     task(
         "client-ws-build",
         hidden = True,
-        deps = ["proto-build", "libarchive-build"],
+        deps = ["proto-build", "libarchive-build", "libinnoextract-build"],
         base = "packages/libknossos",
         inputs = [
             "../../.tools/tool%s" % binext,
             "**/*.go",
             "../libarchive/**/*.go",
+            "../libinnoextract/**/*.go",
         ],
         outputs = [
             "../../build/libknossos/dev-server%s" % binext,

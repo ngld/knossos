@@ -13,6 +13,7 @@ export interface TaskState {
   started: number;
   logMessages: LogMessage[];
   logContainer: HTMLDivElement,
+  finishCb?: (success: boolean) => void;
 }
 
 export const logLevelMap: Record<LogMessage_LogLevel, string> = {} as Record<
@@ -89,7 +90,7 @@ export class TaskTracker extends EventEmitter {
     return () => knRemoveMessageListener(listener);
   }
 
-  startTask(label: string): number {
+  startTask(label: string, finishCb?: (success: boolean) => void): number {
     const id = this._idCounter++;
     const task = {
       id,
@@ -101,6 +102,7 @@ export class TaskTracker extends EventEmitter {
       started: Math.floor(Date.now() / 1000),
       logMessages: [],
       logContainer: document.createElement('div'),
+      finishCb,
     } as TaskState;
 
     this.taskMap[id] = task;
@@ -134,9 +136,20 @@ export class TaskTracker extends EventEmitter {
         lineText.innerText = `[${getLogTime(task, msg)}]:`;
 
         line.appendChild(lineText);
-        line.appendChild(document.createTextNode(' ' + msg.message));
+        line.innerHTML += '&nbsp;' + msg.message
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/\n/g, '<br>')
+          .replace(/\t/g, '    ')
+          .replace(/ [ ]+/g, (m) => {
+            let result = '';
+            for (let i = 0; i < m.length; i++) {
+              result += '&nbsp;';
+            }
+            return result;
+          });
 
-        line.innerHTML = line.innerHTML.replace(/\n/g, '<br>');
         task.logContainer.appendChild(line);
         break;
       case 'progress':
@@ -161,6 +174,9 @@ export class TaskTracker extends EventEmitter {
             task.error = true;
           } else {
             task.progress = 1;
+          }
+          if (task.finishCb) {
+            task.finishCb(taskResult.success);
           }
         }
         break;

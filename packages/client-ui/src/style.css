@@ -25,6 +25,8 @@ body {
 
 .traffic-lights {
     -webkit-app-region: no-drag;
+    position: absolute;
+    z-index: 22;
 }
 
 .font-inria {
@@ -42,6 +44,10 @@ body {
 /* workaround because the backdrop can overlay a dialog's scroll bar (see https://github.com/palantir/blueprint/issues/3930) */
 .bp3-overlay-backdrop {
     pointer-events: none;
+}
+
+.bp3-running-text ul {
+    list-style-type: disc;
 }
 
 .large-dialog {

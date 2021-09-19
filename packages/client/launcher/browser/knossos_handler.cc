@@ -174,7 +174,7 @@ bool KnossosHandler::OnProcessMessageReceived(
     auto accepted_list = args->GetList(2);
     std::vector<std::string> accepted;
     for (size_t i = 0; i < accepted_list->GetSize(); i++) {
-      accepted[i] = accepted_list->GetString(i);
+      accepted.push_back(accepted_list->GetString(i));
     }
 
     OpenFileDialog(browser, args->GetString(0), args->GetString(1), accepted,
@@ -189,7 +189,7 @@ bool KnossosHandler::OnProcessMessageReceived(
     auto accepted_list = args->GetList(2);
     std::vector<std::string> accepted;
     for (size_t i = 0; i < accepted_list->GetSize(); i++) {
-      accepted[i] = accepted_list->GetString(i);
+      accepted.push_back(accepted_list->GetString(i));
     }
 
     SaveFileDialog(browser, args->GetString(0), args->GetString(1), accepted,

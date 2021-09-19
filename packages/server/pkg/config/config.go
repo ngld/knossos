@@ -29,6 +29,9 @@ type Config struct {
 		SaltLength  uint32 `default:"16"`
 		KeyLength   uint32 `default:"32"`
 	}
+	Keys struct {
+		VersionUpdateKey string `usage:"The token used by the CI to update release versions"`
+	}
 	Mail struct {
 		From       string `usage:"Mail sender"`
 		Server     string `usage:"SMTP server"`

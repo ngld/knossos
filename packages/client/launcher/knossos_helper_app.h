@@ -14,13 +14,13 @@ class KnossosHelperApp : public CefApp, public CefRenderProcessHandler {
   ~KnossosHelperApp() {};
 
   // CefApp methods:
-  virtual CefRefPtr<CefRenderProcessHandler> GetRenderProcessHandler() OVERRIDE {
+  virtual CefRefPtr<CefRenderProcessHandler> GetRenderProcessHandler() override {
     return this;
   };
 
   // CefRenderProcessHandler methods:
-  virtual bool OnProcessMessageReceived(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, CefProcessId source_process, CefRefPtr<CefProcessMessage> message) OVERRIDE;
-  virtual void OnWebKitInitialized() OVERRIDE;
+  virtual bool OnProcessMessageReceived(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, CefProcessId source_process, CefRefPtr<CefProcessMessage> message) override;
+  virtual void OnWebKitInitialized() override;
 
  private:
   // Include the default reference counting implementation.

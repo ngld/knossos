@@ -283,7 +283,7 @@ export default observer(function ModDetailsPage(
                     </HTMLSelect>
                   </h1>
                 </div>
-                <RefImage className="object-contain w-full max-h-300px" src={response.release?.banner} />
+                <RefImage className="object-contain w-full h-300px" src={response.release?.banner} />
               </div>
               <Tabs renderActiveTabPanelOnly={true}>
                 <Tab

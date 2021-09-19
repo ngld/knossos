@@ -93,7 +93,7 @@ export default observer(function RemoteModDetailsPage(
                   </h1>
                 </div>
                 {mod.release?.banner && (
-                  <RefImage className="object-contain w-full max-h-300px" src={mod.release?.banner} />
+                  <RefImage className="object-contain w-full h-300px" src={mod.release?.banner} />
                 )}
               </div>
               <Tabs renderActiveTabPanelOnly={true}>

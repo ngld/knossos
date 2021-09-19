@@ -114,9 +114,9 @@ func buildReleaseFromRow(ctx context.Context, q queries.Querier, row queries.Get
 		return nil, eris.Wrapf(err, "failed to fetch package executables for release %d (%s)", *row.ID, *row.Modid)
 	}
 
-	exeMap := make(map[int32][]*queries.GetPublicPackageExecutablesByReleaseIDRow)
+	exeMap := make(map[int32][]queries.GetPublicPackageExecutablesByReleaseIDRow)
 	for _, exe := range pkgExes {
-		exeMap[*exe.PackageID] = append(exeMap[*exe.PackageID], &exe)
+		exeMap[*exe.PackageID] = append(exeMap[*exe.PackageID], exe)
 	}
 
 	rel.Packages = make([]*common.Package, len(pkgs))

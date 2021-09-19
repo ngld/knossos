@@ -13,5 +13,5 @@ github.com/rotisserie/eris v0.5.1/go.mod h1:JmkIDhvuvDk1kDFGe5RZ3LXIrkEGEN0E6Hsk
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.3.0 h1:TivCn/peBQ7UY8ooIcPgZFpTNSz0Q2U6UrFlUfqbe0Q=
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
-github.com/veandco/go-sdl2 v0.5.0-alpha.1.0.20210608033534-0f56bbcebb54 h1:j6qJT4rFnNnnxSqbYnNGTwRtb/34YKDiy+odV5Kh8aE=
-github.com/veandco/go-sdl2 v0.5.0-alpha.1.0.20210608033534-0f56bbcebb54/go.mod h1:OROqMhHD43nT4/i9crJukyVecjPNYYuCofep6SNiAjY=
+github.com/veandco/go-sdl2 v0.4.0 h1:l9q6K+Dvpd/VlZdw2ufApKnWhAQqx9UL8Zrvbjtm3Lw=
+github.com/veandco/go-sdl2 v0.4.0/go.mod h1:FB+kTpX9YTE+urhYiClnRzpOXbiWgaU3+5F2AB78DPg=

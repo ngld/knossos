@@ -3,10 +3,14 @@ package twirp
 import (
 	"context"
 	"net/http"
+	"os"
+	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/ngld/knossos/packages/api/client"
 	"github.com/ngld/knossos/packages/libknossos/pkg/api"
+	"github.com/ngld/knossos/packages/libknossos/pkg/platform"
 	"github.com/ngld/knossos/packages/libknossos/pkg/storage"
 	"github.com/rotisserie/eris"
 	"github.com/twitchtv/twirp"
@@ -53,4 +57,36 @@ func (kn *knossosServer) SaveSettings(ctx context.Context, settings *client.Sett
 	}
 
 	return &client.SuccessResponse{Success: true}, nil
+}
+
+func (kn *knossosServer) GetVersion(ctx context.Context, _ *client.NullMessage) (*client.VersionResult, error) {
+	return &client.VersionResult{
+		Version: api.Version,
+		Commit:  api.Commit,
+	}, nil
+}
+
+func (kn *knossosServer) OpenLink(ctx context.Context, req *client.OpenLinkRequest) (*client.SuccessResponse, error) {
+	if !strings.HasPrefix(req.Link, "http://") && !strings.HasPrefix(req.Link, "https://") {
+		return nil, eris.Errorf("invalid link %s", req.Link)
+	}
+
+	err := platform.OpenLink(req.Link)
+	if err != nil {
+		return nil, eris.Wrap(err, "failed to open link")
+	}
+
+	return &client.SuccessResponse{Success: true}, nil
+}
+
+func (kn *knossosServer) FixLibraryFolderPath(ctx context.Context, req *client.FixLibraryFolderPathPayload) (*client.FixLibraryFolderPathPayload, error) {
+	for _, name := range []string{"knossos", "knossos.exe"} {
+		_, err := os.Stat(filepath.Join(req.Path, name))
+		if err == nil {
+			// This is the Knossos folder, this'll cause issues so let's just change the path to point to a subfolder.
+			return &client.FixLibraryFolderPathPayload{Path: filepath.Join(req.Path, "library")}, nil
+		}
+	}
+
+	return &client.FixLibraryFolderPathPayload{Path: req.Path}, nil
 }

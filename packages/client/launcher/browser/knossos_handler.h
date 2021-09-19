@@ -25,30 +25,30 @@ public:
   static KnossosHandler *GetInstance();
 
   // CefClient methods:
-  virtual CefRefPtr<CefDisplayHandler> GetDisplayHandler() OVERRIDE {
+  virtual CefRefPtr<CefDisplayHandler> GetDisplayHandler() override {
     return this;
   }
-  virtual CefRefPtr<CefLifeSpanHandler> GetLifeSpanHandler() OVERRIDE {
+  virtual CefRefPtr<CefLifeSpanHandler> GetLifeSpanHandler() override {
     return this;
   }
-  virtual CefRefPtr<CefLoadHandler> GetLoadHandler() OVERRIDE { return this; }
-  virtual CefRefPtr<CefContextMenuHandler> GetContextMenuHandler() OVERRIDE {
+  virtual CefRefPtr<CefLoadHandler> GetLoadHandler() override { return this; }
+  virtual CefRefPtr<CefContextMenuHandler> GetContextMenuHandler() override {
     return this;
   }
-  virtual CefRefPtr<CefRequestHandler> GetRequestHandler() OVERRIDE {
+  virtual CefRefPtr<CefRequestHandler> GetRequestHandler() override {
     return this;
   }
-  virtual CefRefPtr<CefDragHandler> GetDragHandler() OVERRIDE { return this; }
+  virtual CefRefPtr<CefDragHandler> GetDragHandler() override { return this; }
 
   virtual bool
   OnProcessMessageReceived(CefRefPtr<CefBrowser> browser,
                            CefRefPtr<CefFrame> frame,
                            CefProcessId source_process,
-                           CefRefPtr<CefProcessMessage> message) OVERRIDE;
+                           CefRefPtr<CefProcessMessage> message) override;
 
   // CefDisplayHandler methods:
   virtual void OnTitleChange(CefRefPtr<CefBrowser> browser,
-                             const CefString &title) OVERRIDE;
+                             const CefString &title) override;
 
   // CefLifeSpanHandler methods:
   /*virtual bool OnBeforePopup( CefRefPtr< CefBrowser > browser, CefRefPtr<
@@ -57,42 +57,42 @@ public:
    * target_disposition, bool user_gesture, const CefPopupFeatures&
    * popupFeatures, CefWindowInfo& windowInfo, CefRefPtr< CefClient >& client,
    * CefBrowserSettings& settings, CefRefPtr< CefDictionaryValue >& extra_info,
-   * bool* no_javascript_access ) OVERRIDE;*/
-  virtual void OnAfterCreated(CefRefPtr<CefBrowser> browser) OVERRIDE;
-  virtual bool DoClose(CefRefPtr<CefBrowser> browser) OVERRIDE;
-  virtual void OnBeforeClose(CefRefPtr<CefBrowser> browser) OVERRIDE;
+   * bool* no_javascript_access ) override;*/
+  virtual void OnAfterCreated(CefRefPtr<CefBrowser> browser) override;
+  virtual bool DoClose(CefRefPtr<CefBrowser> browser) override;
+  virtual void OnBeforeClose(CefRefPtr<CefBrowser> browser) override;
 
   // CefLoadHandler methods:
   virtual void OnLoadError(CefRefPtr<CefBrowser> browser,
                            CefRefPtr<CefFrame> frame, ErrorCode errorCode,
                            const CefString &errorText,
-                           const CefString &failedUrl) OVERRIDE;
+                           const CefString &failedUrl) override;
 
   // CefContextMenuHandler methods:
   virtual void OnBeforeContextMenu(CefRefPtr<CefBrowser> browser,
                                    CefRefPtr<CefFrame> frame,
                                    CefRefPtr<CefContextMenuParams> params,
-                                   CefRefPtr<CefMenuModel> model) OVERRIDE;
+                                   CefRefPtr<CefMenuModel> model) override;
   virtual bool
   OnContextMenuCommand(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame,
                        CefRefPtr<CefContextMenuParams> params, int command_id,
-                       CefContextMenuHandler::EventFlags event_flags) OVERRIDE;
+                       CefContextMenuHandler::EventFlags event_flags) override;
 
   // CefRequestHandler methods:
   virtual bool OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
                               CefRefPtr<CefFrame> frame,
                               CefRefPtr<CefRequest> request, bool user_gesture,
-                              bool is_redirect) OVERRIDE;
+                              bool is_redirect) override;
   virtual CefRefPtr<CefResourceRequestHandler> GetResourceRequestHandler(
       CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame,
       CefRefPtr<CefRequest> request, bool is_navigation, bool is_download,
       const CefString &request_initiator,
-      bool &disable_default_handling) OVERRIDE;
+      bool &disable_default_handling) override;
 
   // CefDragHandler methods:
   void OnDraggableRegionsChanged(
       CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame,
-      const std::vector<CefDraggableRegion> &regions) OVERRIDE;
+      const std::vector<CefDraggableRegion> &regions) override;
 
   // Request that all existing browser windows close.
   void CloseAllBrowsers(bool force_close);

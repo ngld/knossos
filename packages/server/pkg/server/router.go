@@ -50,11 +50,12 @@ func corsMiddleware(next http.Handler, origins []string) http.Handler {
 }
 
 func startMux(pool *pgxpool.Pool, q *queries.DBQuerier, cfg *config.Config) error {
-	server := api.NewNebulaServer(nebula{
+	neb := nebula{
 		Pool: pool,
 		Q:    q,
 		Cfg:  cfg,
-	})
+	}
+	server := api.NewNebulaServer(neb)
 
 	staticRoot, err := filepath.Abs(cfg.HTTP.StaticRoot)
 	if err != nil {
@@ -72,6 +73,8 @@ func startMux(pool *pgxpool.Pool, q *queries.DBQuerier, cfg *config.Config) erro
 	r.PathPrefix("/sync/").Handler(http.StripPrefix("/sync/", http.FileServer(http.Dir(syncRoot))))
 	r.PathPrefix("/js/").Handler(http.FileServer(staticFS))
 	r.PathPrefix("/css/").Handler(http.FileServer(staticFS))
+
+	registerVersionRoutes(neb, r)
 
 	r.PathPrefix("/").HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 		f, err := staticFS.Open("index.html")

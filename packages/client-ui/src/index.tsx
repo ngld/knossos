@@ -22,8 +22,10 @@ if (process.env.NODE_ENV !== 'production' && !window.knIsApp) {
   }
 }
 
+const gs = new GlobalState();
+
 ReactDOM.render(
-  <StateProvider value={new GlobalState()}>
+  <StateProvider value={gs}>
     <BrowserRouter>
       <Root />
     </BrowserRouter>

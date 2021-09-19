@@ -137,6 +137,10 @@ message ModInstallResponse {
   repeated Release releases = 2;
 }
 
+message VersionsResponse {
+  map<string, string> versions = 1;
+}
+
 service Nebula {
   rpc Login (LoginRequest) returns (LoginResponse) {};
   rpc CheckToken (NullRequest) returns (SessionResponse) {};
@@ -150,4 +154,6 @@ service Nebula {
   rpc GetModDetails (ModDetailsRequest) returns (ModDetailsResponse) {};
 
   rpc RequestModInstall (ModInstallRequest) returns (ModInstallResponse) {};
+
+  rpc GetVersions (NullRequest) returns (VersionsResponse) {};
 }

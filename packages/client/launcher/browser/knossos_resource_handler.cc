@@ -95,6 +95,13 @@ bool KnossosResourceHandler::Open(CefRefPtr<CefRequest> request,
       }
     }
 
+    if (!KnossosHandleRequest) {
+      std::free(body_contents);
+      LOG(ERROR) << "Got request for libknossos but it wasn't initialised, yet!";
+      kn_response = 0;
+      return true;
+    }
+
     // FIXME This call can block which shouldn't happen on the IO thread. Instead, we should post to a background thread,
     // and call the passed callback once we're done.
     kn_response = KnossosHandleRequest((char*)url.c_str(), (int)url.size(), body_contents, (int)body_size);
