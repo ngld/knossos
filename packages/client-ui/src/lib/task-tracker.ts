@@ -172,8 +172,10 @@ export class TaskTracker extends EventEmitter {
 
           if (!taskResult.success) {
             task.error = true;
+            task.status = 'Failed';
           } else {
             task.progress = 1;
+            task.status = 'Done';
           }
           if (task.finishCb) {
             task.finishCb(taskResult.success);
