@@ -7,12 +7,16 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/ngld/knossos/packages/api/client"
+	"github.com/ngld/knossos/packages/api/common"
 	"github.com/ngld/knossos/packages/libinnoextract"
 	"github.com/ngld/knossos/packages/libknossos/pkg/api"
 	"github.com/ngld/knossos/packages/libknossos/pkg/platform"
+	"github.com/ngld/knossos/packages/libknossos/pkg/storage"
 	"github.com/rotisserie/eris"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func (kn *knossosServer) HandleRetailFiles(ctx context.Context, req *client.HandleRetailFilesRequest) (*client.SuccessResponse, error) {
@@ -186,6 +190,67 @@ func copyFromGameFolder(ctx context.Context, libraryPath, gameFolder string, mov
 
 			done += float64(read)
 		}
+	}
+
+	err = storage.SaveLocalMod(ctx, &common.ModMeta{
+		Modid: "FS2",
+		Title: "Retail FS2",
+		Type:  common.ModType_TOTAL_CONVERSION,
+	})
+	if err != nil {
+		return eris.Wrap(err, "failed to create Retail FS2 entry")
+	}
+
+	releaseDate, err := time.Parse("2006-01-02", "1999-09-30")
+	if err != nil {
+		panic("How?!")
+	}
+
+	updateDate, err := time.Parse("2006-01-02", "1999-12-03")
+	if err != nil {
+		panic("How?!")
+	}
+
+	retailRel := &common.Release{
+		Modid:   "FS2",
+		Version: "1.20.0",
+		Folder:  "FS2",
+		Description: strings.Replace(strings.Replace(`[b][i]The year is 2367, thirty two years after the Great War. Or at least that is what YOU thought was the Great War.
+		The endless line of Shivan capital ships, bombers and fighters with super advanced technology was nearly overwhelming.\n\n
+		As the Terran and Vasudan races finish rebuilding their decimated societies, a disturbance lurks in the not-so-far
+		reaches of the Gamma Draconis system.\n\nYour nemeses have arrived... and they are wondering what happened to
+		their scouting party.[/i][/b]\n\n[hr]FreeSpace 2 is a 1999 space combat simulation computer game developed by Volition as
+		the sequel to Descent: FreeSpace – The Great War. It was completed ahead of schedule in less than a year, and
+		released to very positive reviews.\n\nThe game continues on the story from Descent: FreeSpace, once again
+		thrusting the player into the role of a pilot fighting against the mysterious aliens, the Shivans. While defending
+		the human race and its alien Vasudan allies, the player also gets involved in putting down a rebellion. The game
+		features large numbers of fighters alongside gigantic capital ships in a battlefield fraught with beams, shells and
+		missiles in detailed star systems and nebulae.`, "\n", "", -1), "\\n", "\n", -1),
+		ReleaseThread: "http://www.hard-light.net/forums/index.php",
+		Videos:        []string{"https://www.youtube.com/watch?v=ufViyhrXzTE"},
+		Released:      timestamppb.New(releaseDate),
+		Updated:       timestamppb.New(updateDate),
+		Packages: []*common.Package{{
+			Name:   "Content",
+			Type:   common.PackageType_REQUIRED,
+			Folder: ".",
+			Dependencies: []*common.Dependency{{
+				Modid:      "FSO",
+				Constraint: ">=3.8.0-2",
+			}},
+		}},
+	}
+
+	// TODO: Install FSO first
+	/*retailSnapshot, err := mods.GetDependencySnapshot(ctx, storage.LocalMods, retailRel)
+	if err != nil {
+		return eris.Wrap(err, "failed to build dependency snapshot for FS2")
+	}
+
+	retailRel.DependencySnapshot = retailSnapshot*/
+	err = storage.SaveLocalModRelease(ctx, retailRel)
+	if err != nil {
+		return eris.Wrap(err, "failed to create FS2 release")
 	}
 
 	api.Log(ctx, api.LogInfo, "Done")

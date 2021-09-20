@@ -235,10 +235,10 @@ export default observer(function ModDetailsPage(
   props: RouteComponentProps<ModDetailsParams>,
 ): React.ReactElement {
   const gs = useGlobalState();
-  const modDetails = useMemo(() => fromPromise(getModDetails(gs, props.match.params)), [
-    gs,
-    props.match.params,
-  ]);
+  const modDetails = useMemo(
+    () => fromPromise(getModDetails(gs, props.match.params)),
+    [gs, props.match.params],
+  );
 
   const rawDesc = (modDetails.value as ModInfoResponse)?.release?.description;
   const description = useMemo(() => {
@@ -283,7 +283,17 @@ export default observer(function ModDetailsPage(
                     </HTMLSelect>
                   </h1>
                 </div>
-                <RefImage className="object-contain w-full h-300px" src={response.release?.banner} />
+                {props.match.params.modid === 'FS2' ? (
+                  <img
+                    src={require('../resources/banner-retail.png').default}
+                    className="object-contain w-full h-300px"
+                  />
+                ) : (
+                  <RefImage
+                    className="object-contain w-full h-300px"
+                    src={response.release?.banner}
+                  />
+                )}
               </div>
               <Tabs renderActiveTabPanelOnly={true}>
                 <Tab
@@ -308,7 +318,8 @@ export default observer(function ModDetailsPage(
                     </div>
                   }
                 />
-                {(response.mod?.type === ModType.MOD || response.mod?.type === ModType.TOTAL_CONVERSION) && (
+                {(response.mod?.type === ModType.MOD ||
+                  response.mod?.type === ModType.TOTAL_CONVERSION) && (
                   <Tab
                     id="flags"
                     title="Flags"

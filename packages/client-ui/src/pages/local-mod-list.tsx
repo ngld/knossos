@@ -40,6 +40,8 @@ export default observer(function LocalModList(props: LocalModListProps): React.R
               <div key={mod.modid} className="mod-tile bg-important flex flex-col overflow-hidden">
                 {mod.teaser?.fileid ? (
                   <img src={API_URL + '/ref/' + mod.teaser?.fileid} />
+                ) : mod.modid === 'FS2' ? (
+                  <img src={require('../resources/mod-retail.png').default} />
                 ) : (
                   <img src={ModstockImage} />
                 )}
