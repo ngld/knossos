@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/rotisserie/eris"
+	"github.com/veandco/go-sdl2/sdl"
 
 	"github.com/ngld/knossos/packages/api/client"
 	"github.com/ngld/knossos/packages/api/common"
@@ -32,6 +33,25 @@ func smartJoin(path ...string) string {
 	}
 
 	return filepath.Join(result...)
+}
+
+func getPrefPath(ctx context.Context) string {
+	// TODO: support portable mode
+
+	// See https://github.com/scp-fs2open/fs2open.github.com/blob/18754fafc138591d2edfd0bc88ae02a6807091b7/code/osapi/osapi.cpp#L44
+	return sdl.GetPrefPath("HardLightProductions", "FreeSpaceOpen")
+}
+
+func touchINI(ctx context.Context) error {
+	iniPath := filepath.Join(getPrefPath(ctx), "fs2_open.ini")
+
+	f, err := os.OpenFile(iniPath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0660)
+	if err != nil {
+		return eris.Wrapf(err, "failed to open %s", iniPath)
+	}
+
+	f.Close()
+	return nil
 }
 
 func getEngineForMod(ctx context.Context, mod *common.Release) (*common.Release, error) {
@@ -94,6 +114,12 @@ func getJSONFlagsForBinary(ctx context.Context, binaryPath string) (*storage.JSO
 	if flags != nil {
 		api.Log(ctx, api.LogInfo, "Using cached flags for %s", binaryPath)
 		return flags, nil
+	}
+
+	// Make sure FSO is not running in legacy mode
+	err = touchINI(ctx)
+	if err != nil {
+		return nil, eris.Wrap(err, "failed to touch fs2_open.ini")
 	}
 
 	api.Log(ctx, api.LogInfo, "Running \"%s -parse_cmdline_only -get_flags json_v1\"", binaryPath)
@@ -280,12 +306,7 @@ func LaunchMod(ctx context.Context, mod *common.Release, settings *client.UserSe
 	cmdline += strings.Join(modFlag, ",")
 	cmdline += "\""
 
-	flags, err := getJSONFlagsForBinary(ctx, binary)
-	if err != nil {
-		return err
-	}
-
-	cmdlineFile := filepath.Join(flags.PrefPath, "data", "cmdline_fso.cfg")
+	cmdlineFile := filepath.Join(getPrefPath(ctx), "data", "cmdline_fso.cfg")
 	cmdlineFolder := filepath.Dir(cmdlineFile)
 	err = os.MkdirAll(cmdlineFolder, 0770)
 	if err != nil {
@@ -307,6 +328,12 @@ func LaunchMod(ctx context.Context, mod *common.Release, settings *client.UserSe
 	err = hdl.Close()
 	if err != nil {
 		return err
+	}
+
+	// Make sure FSO is not running in legacy mode
+	err = touchINI(ctx)
+	if err != nil {
+		return eris.Wrap(err, "failed to touch fs2_open.ini")
 	}
 
 	proc := exec.Command(binary)

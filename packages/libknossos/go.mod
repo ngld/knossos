@@ -15,6 +15,7 @@ require (
 	github.com/rotisserie/eris v0.5.1
 	github.com/rs/zerolog v1.23.0
 	github.com/twitchtv/twirp v8.1.0+incompatible
+	github.com/veandco/go-sdl2 v0.4.10 // indirect
 	go.etcd.io/bbolt v1.3.6
 	golang.org/x/net v0.0.0-20210716203947-853a461950ff
 	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c
