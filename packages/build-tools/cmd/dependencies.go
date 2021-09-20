@@ -137,7 +137,7 @@ func getProgressBar(length int64, desc string) *pb.ProgressBar {
 	bar.SetTemplateString(`{{string . "prefix"}} {{counters . }} {{bar . }} {{percent . }} {{speed . "%s/s" "? MiB/s"}} {{rtime . "ETA %s"}}`)
 
 	if os.Getenv("CI") == "true" {
-		bar.SetTemplateString(`{{string . "prefix"}} {{counters . }} {{bar . }} {{percent . }} {{speed . "%s/s" "? MiB/s"}} {{rtime . "ETA %s"}}\n`)
+		bar.SetTemplateString(`{{string . "prefix"}} {{counters . }} {{bar . }} {{percent . }} {{speed . "%s/s" "? MiB/s"}} {{rtime . "ETA %s"}}` + "\n")
 		bar.SetRefreshRate(1 * time.Minute)
 	}
 
