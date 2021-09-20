@@ -237,7 +237,11 @@ func ImportMods(ctx context.Context, modFiles []string) error {
 
 						err = os.Rename(src, dest)
 						if err != nil {
-							return eris.Wrapf(err, "failed to move %s to %s", src, dest)
+							if eris.Is(err, os.ErrNotExist) {
+								api.Log(ctx, api.LogWarn, "file %s seems to be missing, please verify the file integrity for %s once the import is done", src, mod.Title)
+							} else {
+								return eris.Wrapf(err, "failed to move %s to %s", src, dest)
+							}
 						}
 					}
 				}
