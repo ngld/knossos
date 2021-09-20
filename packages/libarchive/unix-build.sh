@@ -16,7 +16,10 @@ if [ ! -f CMakeCache.txt ]; then
         link_opts="$link_opts -DZSTD_LIBRARY=/usr/local/opt/zstd/lib/libzstd.a"
     fi
 
-    cmake -G"Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -Wno-dev \
+    cmake -G"Unix Makefiles" \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+        -Wno-dev \
         -DENABLE_ACL=OFF \
         -DENABLE_BZip2=OFF \
         -DENABLE_CNG=OFF \

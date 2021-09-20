@@ -11,6 +11,7 @@ export PATH="/mingw64/bin:$PATH"
 if [ ! -f build.ninja ]; then
     args=(
         -DCMAKE_BUILD_TYPE=Release
+        -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
         -Wno-dev
         # Enable only necessary features
         -DENABLE_ACL=OFF
