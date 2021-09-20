@@ -100,7 +100,7 @@ def cmake_task(name, desc = "", inputs = [], outputs = [], script = None, window
             inputs = inputs + [script],
             outputs = outputs,
             cmds = [
-                ("sh", resolve_path(script)),
+                ("bash", resolve_path(script)),
                 merge_compile_commands,
             ],
             **kwargs,

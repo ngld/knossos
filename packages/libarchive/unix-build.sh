@@ -6,7 +6,7 @@ cd "$(dirname "$0")"/../..
 mkdir -p build/libarchive
 cd build/libarchive
 
-if [ ! -f CMakeCache.txt ]; then
+if [ ! -f Makefile ]; then
     link_opts=""
     if [ -f /usr/local/opt/xz/lib/liblzma.a ]; then
         link_opts="$link_opts -DLIBLZMA_LIBRARY=/usr/local/opt/xz/lib/liblzma.a"
