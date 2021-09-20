@@ -22,7 +22,7 @@ async function performLaunch(gs: GlobalState, props: LaunchModProps): Promise<vo
 interface LaunchModProps {
   modid?: string;
   version?: string;
-  onFinished: () => void;
+  onFinished?: () => void;
 }
 
 const LaunchMod = observer(function LaunchMod(props: LaunchModProps): React.ReactElement {

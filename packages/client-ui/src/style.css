@@ -50,6 +50,15 @@ body {
     list-style-type: disc;
 }
 
+/* improve error callouts in dialogs */
+.bp3-alert-contents {
+    width: 100%;
+}
+
+.bp3-alert-contents > .bp3-callout > pre {
+    white-space: break-spaces;
+}
+
 .large-dialog {
     width: 800px;
     max-width: 800px;
