@@ -219,9 +219,10 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           if [ "$RUNNER_OS" = 'macOS' ]; then
-            brew install xz
+            brew install xz boost
           elif [ "$RUNNER_OS" = 'Linux' ]; then
-            sudo apt-get install -y libgtk-3-dev liblzma-dev libzstd-dev zlib1g-dev libxss-dev libxxf86vm-dev libasound2-dev
+            sudo apt-get install -y libgtk-3-dev liblzma-dev libzstd-dev zlib1g-dev libxss-dev libxxf86vm-dev \
+              libasound2-dev libboost-{iostreams,filesystem,date-time,system,program-options}1.71-dev
           fi
 
       - name: Configure build
