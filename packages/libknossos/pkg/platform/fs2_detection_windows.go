@@ -18,6 +18,8 @@ import (
 
 func DetectSteamInstallation(ctx context.Context) (string, error) {
 	api.Log(ctx, api.LogInfo, "Looking for Steam installation")
+	api.SetProgress(ctx, 0, "Looking for Steam installation")
+
 	key, err := registry.OpenKey(registry.CURRENT_USER, `SOFTWARE\Valve\Steam`, registry.QUERY_VALUE)
 	if err != nil {
 		return "", eris.Wrap(err, "failed to read steam path from registry")
@@ -38,7 +40,9 @@ func DetectSteamInstallation(ctx context.Context) (string, error) {
 	} else {
 		libRegex := regexp.MustCompile(`"path"\s+"([^"]+)"`)
 		for _, match := range libRegex.FindAllStringSubmatch(string(content), -1) {
-			steamLibraries = append(steamLibraries, strings.Replace(match[1], "\\\\", "\\", -1))
+			libPath := strings.Replace(match[1], "\\\\", "\\", -1)
+			libPath = filepath.Join(libPath, "steamapps", "common")
+			steamLibraries = append(steamLibraries, libPath)
 		}
 	}
 
@@ -52,6 +56,8 @@ type gogConfig struct {
 
 func DetectGOGInstallation(ctx context.Context) (string, error) {
 	api.Log(ctx, api.LogInfo, "Looking for GOG Galaxy installation")
+	api.SetProgress(ctx, 0, "Looking for GOG Galaxy installation")
+
 	/*galaxyPath, err := readRegKey(windows.HKEY_LOCAL_MACHINE, "SOFTWARE/WOW6432Node/GOG.com/GalaxyClient/paths", "client")
 	if err != nil {
 		return "", eris.Wrap(err, "failed to read galaxy path from registry")
@@ -100,6 +106,7 @@ func checkLibraryFolders(ctx context.Context, folders []string) (string, error) 
 	for _, folder := range folders {
 		for _, variant := range []string{"Freespace 2", "Freespace2", "freespace2", "freespace 2"} {
 			gameFolder := filepath.Join(folder, variant)
+			api.Log(ctx, api.LogDebug, "Checking %s", gameFolder)
 			_, err := os.Stat(filepath.Join(gameFolder, "root_fs2.vp"))
 			if err == nil {
 				return gameFolder, nil
