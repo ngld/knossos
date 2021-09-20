@@ -4,6 +4,7 @@ import { observer } from 'mobx-react-lite';
 import { fromPromise } from 'mobx-utils';
 import { History } from 'history';
 import { SimpleModList_Item } from '@api/client';
+import { ModType } from '@api/mod';
 import { GlobalState, useGlobalState } from '../lib/state';
 import { API_URL } from '../lib/constants';
 import { launchMod } from '../dialogs/launch-mod';
@@ -49,7 +50,9 @@ export default observer(function LocalModList(props: LocalModListProps): React.R
                 </div>
 
                 <div className="cover flex flex-col justify-center gap-2">
-                  <Button onClick={() => launchMod(gs, mod.modid, mod.version)}>Play</Button>
+                  {mod.type === ModType.MOD || mod.type === ModType.TOTAL_CONVERSION ? (
+                    <Button onClick={() => launchMod(gs, mod.modid, mod.version)}>Play</Button>
+                  ) : null}
                   <Button
                     onClick={() => props.history.push('/mod/' + mod.modid + '/' + mod.version)}
                   >

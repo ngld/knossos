@@ -88,6 +88,7 @@ func buildModList(ctx context.Context, modProvider storage.ModProvider) (*client
 
 		modList[idx] = &client.SimpleModList_Item{
 			Modid:   rel.Modid,
+			Type:    modInfo.Type,
 			Title:   modInfo.Title,
 			Teaser:  rel.Teaser,
 			Version: rel.Version,

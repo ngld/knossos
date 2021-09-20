@@ -47,6 +47,7 @@ message Settings {
 message SimpleModList {
   message Item {
     string modid = 1;
+    ModType type = 5;
     FileRef teaser = 2;
     string title = 3;
     string version = 4;
