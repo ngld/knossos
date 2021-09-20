@@ -20,6 +20,20 @@ import (
 	"github.com/ngld/knossos/packages/libknossos/pkg/storage"
 )
 
+func smartJoin(path ...string) string {
+	result := make([]string, 0, len(path))
+	for _, el := range path {
+		if filepath.IsAbs(el) {
+			// clear the result
+			result = result[:0]
+		}
+
+		result = append(result, el)
+	}
+
+	return filepath.Join(result...)
+}
+
 func getEngineForMod(ctx context.Context, mod *common.Release) (*common.Release, error) {
 	var engine *common.Release
 
@@ -60,7 +74,7 @@ func getBinaryForEngine(ctx context.Context, engine *common.Release) (string, er
 		for _, exe := range pkg.Executables {
 			if exe.Label == "" && !exe.Debug && exe.Priority >= binaryScore {
 				binaryScore = exe.Priority
-				binaryPath = filepath.Join(engine.Folder, pkg.Folder, exe.Path)
+				binaryPath = smartJoin(engine.Folder, pkg.Folder, exe.Path)
 			}
 		}
 	}
@@ -185,7 +199,7 @@ func LaunchMod(ctx context.Context, mod *common.Release, settings *client.UserSe
 			return eris.Wrap(err, "failed to load settings")
 		}
 
-		binary = filepath.Join(knSettings.LibraryPath, "bin", binary)
+		binary = smartJoin(knSettings.LibraryPath, "bin", binary)
 	}
 
 	// Use the user's command line if one is set for this mod and fall back to the mod default otherwise.
