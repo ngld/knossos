@@ -3,7 +3,8 @@ package libinnoextract
 // #include <stdlib.h>
 // #include <stdint.h>
 // #include "binding.h"
-// #cgo unix LDFLAGS: -ldl
+// #cgo linux  LDFLAGS: -ldl
+// #cgo darwin LDFLAGS: -ldl
 import "C"
 
 import (

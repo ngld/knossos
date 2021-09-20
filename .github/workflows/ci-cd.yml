@@ -240,6 +240,9 @@ jobs:
       - name: Build libarchive
         run: ${{ matrix.script }} libarchive-build
 
+      - name: Build libinnoextract
+        run: ${{ matrix.script }} libinnoextract-build
+
       - name: Lint libknossos
         if: ${{ github.event_name == 'pull_request' && runner.os == 'Linux' }}
         run: ./task.sh libknossos-lint
