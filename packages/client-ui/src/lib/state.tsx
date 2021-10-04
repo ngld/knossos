@@ -1,5 +1,5 @@
-import { createContext, useContext } from 'react';
-import {makeAutoObservable} from 'mobx';
+import { createContext, useContext, useEffect, useState } from 'react';
+import { makeAutoObservable } from 'mobx';
 import { TwirpFetchTransport } from '@protobuf-ts/twirp-transport';
 import { Toaster, IToaster } from '@blueprintjs/core';
 import { KnossosClient } from '@api/client.client';
@@ -17,6 +17,11 @@ export class GlobalState {
   nebula: NebulaClient;
   tasks: TaskTracker;
   overlays: [React.FunctionComponent<OverlayProps> | React.ComponentClass<OverlayProps>, Record<string, unknown>][];
+  signalListeners: Record<string,(() => void)[]> = {
+    remoteRefreshMods: [],
+    showTasks: [],
+    hideTasks: [],
+  };
 
   constructor() {
     this.toaster = Toaster.create({});
@@ -47,6 +52,27 @@ export class GlobalState {
 
   removeOverlay(index: number): void {
     this.overlays.splice(index, 1);
+  }
+
+  useSignal(name: string, listener: () => void): void {
+    useEffect(() => {
+      this.signalListeners[name].push(listener);
+      return () => {
+        const pos = this.signalListeners[name].indexOf(listener);
+        if (pos === -1) {
+          console.error(`Signal listener for ${name} vanished?!`);
+          return;
+        }
+
+        this.signalListeners[name].splice(pos, 1);
+      };
+    });
+  }
+
+  sendSignal(name: string): void {
+    for (const listener of this.signalListeners[name]) {
+      listener();
+    }
   }
 }
 

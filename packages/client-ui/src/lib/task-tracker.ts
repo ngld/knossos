@@ -112,6 +112,13 @@ export class TaskTracker extends EventEmitter {
     return id;
   }
 
+  runTask(label: string, launcher: (id: number) => void): Promise<boolean> {
+    return new Promise((resolve) => {
+      const id = this.startTask(label, resolve);
+      launcher(id);
+    });
+  }
+
   updateTask(ev: ClientSentEvent): void {
     const task = this.taskMap[ev.ref];
     if (!task) {

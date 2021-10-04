@@ -55,12 +55,9 @@ function LogBox({ task }: LogBoxProps): React.ReactElement {
 export default observer(function TaskDisplay(): React.ReactElement {
   const gs = useGlobalState();
   const [open, setOpen] = useState<boolean>(false);
-  useEffect(() => {
-    const listener = () => setOpen(true);
-    gs.tasks.on('new', listener);
 
-    return () => void gs.tasks.off('new', listener);
-  }, [gs.tasks]);
+  gs.useSignal('showTasks', () => setOpen(true));
+  gs.useSignal('hideTasks', () => setOpen(false));
 
   return (
     <div className="absolute bottom-0 right-40 traffic-lights">

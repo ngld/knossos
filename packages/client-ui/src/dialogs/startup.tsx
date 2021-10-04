@@ -63,6 +63,19 @@ async function initSequence(
 
     setLabel('Loading installed mods');
     // TODO: check mod.json files and mod folders
+
+    setLabel('Updating mod list');
+    const success = await gs.tasks.runTask('Sync mods', (ref) => {
+      gs.sendSignal('showTasks');
+      void gs.client.syncRemoteMods({ref});
+    });
+
+    if (!success) {
+      console.error('Modsync failed!');
+      return;
+    }
+
+    gs.sendSignal('hideTasks');
   } catch (e) {
     console.error('Init failed!', e);
     // TODO: user-visible error
