@@ -35,6 +35,68 @@ message WakeupResponse {
   string os = 3;
 }
 
+message FSOSettings {
+  message GeneralSettings {
+    string CurrentJoystickGUID = 1;
+    uint32 CurrentJoystick = 2;
+    string LastPlayer = 3;
+
+    // format: "OGL -(%dx%d)x%d bit" width height depth
+    // note: "VK  -" is also recognised but the Vulkan renderer isn't done, yet, so it's not functional.
+    string VideocardFs2open = 4;
+
+    // default: 1.0
+    string GammaD3D = 5;
+
+    // valid options: https://github.com/scp-fs2open/fs2open.github.com/blob/22b16c32d497e6f727bfec218e0f408e3a08f354/code/localization/localize.cpp#L36-L41
+    string Language = 6;
+
+    // default: 100
+    uint32 SpeechVolume = 7;
+    uint32 SpeechVoice = 8;
+
+    bool SpeechTechroom = 9;
+    bool SpeechBriefings = 10;
+    bool SpeechIngame = 11;
+    bool SpeechMulti = 12;
+
+    bool EnableJoystickFF = 13;
+    bool EnableHitEffect = 14;
+
+    // default: 1, 0 = bilinear, 1 = trilinear
+    uint32 TextureFilter = 18;
+
+    bool ForceFullscreen = 16;
+    uint32 MaxFPS = 17;
+  }
+
+  message SoundSettings {
+    string PlaybackDevice = 1;
+    string CaptureDevice = 2;
+
+    // default: medium, 0 = low, 1 = medium, 2 = high
+    uint32 Quality = 3;
+    // default: 48000 for high, 44100 for medium, 22050 for low
+    uint32 SampleRate = 4;
+
+    bool EnableEFX = 5;
+  }
+
+  message VideoSettings {
+    uint32 Display = 1;
+  }
+
+  message ForceFeedbackSettings {
+    // default: 100
+    uint32 Strength = 1;
+  }
+
+  GeneralSettings General = 1;
+  SoundSettings Sound = 2;
+  VideoSettings Video = 3;
+  ForceFeedbackSettings ForceFeedback = 4;
+}
+
 message Settings {
   bool first_run_done = 6;
 	string library_path = 1;

@@ -13,11 +13,11 @@ import (
 	"time"
 
 	"github.com/rotisserie/eris"
-	"github.com/veandco/go-sdl2/sdl"
 
 	"github.com/ngld/knossos/packages/api/client"
 	"github.com/ngld/knossos/packages/api/common"
 	"github.com/ngld/knossos/packages/libknossos/pkg/api"
+	"github.com/ngld/knossos/packages/libknossos/pkg/fso_interop"
 	"github.com/ngld/knossos/packages/libknossos/pkg/storage"
 )
 
@@ -35,15 +35,8 @@ func smartJoin(path ...string) string {
 	return filepath.Join(result...)
 }
 
-func getPrefPath(ctx context.Context) string {
-	// TODO: support portable mode
-
-	// See https://github.com/scp-fs2open/fs2open.github.com/blob/18754fafc138591d2edfd0bc88ae02a6807091b7/code/osapi/osapi.cpp#L44
-	return sdl.GetPrefPath("HardLightProductions", "FreeSpaceOpen")
-}
-
 func touchINI(ctx context.Context) error {
-	iniPath := filepath.Join(getPrefPath(ctx), "fs2_open.ini")
+	iniPath := filepath.Join(fso_interop.GetPrefPath(ctx), "fs2_open.ini")
 
 	f, err := os.OpenFile(iniPath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0660)
 	if err != nil {
@@ -166,11 +159,17 @@ func GetFlagsForMod(ctx context.Context, mod *common.Release) (map[string]*clien
 func GetFlagsForEngine(ctx context.Context, engine *common.Release) (map[string]*client.FlagInfo_Flag, error) {
 	result := make(map[string]*client.FlagInfo_Flag)
 
+	knSettings, err := storage.GetSettings(ctx)
+	if err != nil {
+		return nil, eris.Wrap(err, "failed to load settings")
+	}
+
 	binaryPath, err := getBinaryForEngine(ctx, engine)
 	if err != nil {
 		return nil, err
 	}
 
+	binaryPath = smartJoin(knSettings.LibraryPath, "bin", binaryPath)
 	flags, err := getJSONFlagsForBinary(ctx, binaryPath)
 	if err != nil {
 		return nil, err
@@ -306,7 +305,7 @@ func LaunchMod(ctx context.Context, mod *common.Release, settings *client.UserSe
 	cmdline += strings.Join(modFlag, ",")
 	cmdline += "\""
 
-	cmdlineFile := filepath.Join(getPrefPath(ctx), "data", "cmdline_fso.cfg")
+	cmdlineFile := filepath.Join(fso_interop.GetPrefPath(ctx), "data", "cmdline_fso.cfg")
 	cmdlineFolder := filepath.Dir(cmdlineFile)
 	err = os.MkdirAll(cmdlineFolder, 0770)
 	if err != nil {

@@ -1,9 +1,9 @@
 import {action} from 'mobx';
 import {observer} from 'mobx-react-lite';
-import {Checkbox, ICheckboxProps, InputGroup, IInputGroupProps2} from '@blueprintjs/core';
+import {Checkbox, CheckboxProps, InputGroup, InputGroupProps2, HTMLSelect, HTMLSelectProps} from '@blueprintjs/core';
 import {useFormContext} from './form-context';
 
-interface FormCheckboxProps extends ICheckboxProps {
+interface FormCheckboxProps extends CheckboxProps {
   name: string;
 }
 export const FormCheckbox = observer(function FormCheckbox(props: FormCheckboxProps): React.ReactElement {
@@ -16,7 +16,7 @@ export const FormCheckbox = observer(function FormCheckbox(props: FormCheckboxPr
   })} {...props} />;
 });
 
-interface FormInputGroupProps extends IInputGroupProps2 {
+interface FormInputGroupProps extends InputGroupProps2 {
   name: string;
 }
 export const FormInputGroup = observer(function FormInputGroup(props: FormInputGroupProps): React.ReactElement {
@@ -24,6 +24,18 @@ export const FormInputGroup = observer(function FormInputGroup(props: FormInputG
   const name = props.name;
 
   return <InputGroup value={ctx[name] as string} onChange={action((e) => {
+    ctx[name] = e.target.value;
+  })} {...props} />;
+});
+
+interface FormSelectProps extends HTMLSelectProps {
+  name: string;
+}
+export const FormSelect = observer(function FormSelect(props: FormSelectProps): React.ReactElement {
+  const ctx = useFormContext();
+  const name = props.name;
+
+  return <HTMLSelect value={ctx[name] as string} onChange={action((e) => {
     ctx[name] = e.target.value;
   })} {...props} />;
 });

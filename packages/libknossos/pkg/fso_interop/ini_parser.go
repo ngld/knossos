@@ -1,12 +1,16 @@
-package fsoInterop
+package fso_interop
 
 import (
+	"context"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strconv"
 	"strings"
 
+	"github.com/ngld/knossos/packages/api/client"
 	"github.com/rotisserie/eris"
 )
 
@@ -149,4 +153,49 @@ func parseFile(f io.RuneScanner, dest interface{}) error {
 			}
 		}
 	}
+}
+
+func LoadSettings(ctx context.Context) (*client.FSOSettings, error) {
+	iniPath := filepath.Join(GetPrefPath(ctx), "fs2_open.ini")
+	data, err := os.ReadFile(iniPath)
+	if err != nil {
+		return nil, eris.Wrapf(err, "failed to read %s", iniPath)
+	}
+
+	buffer := strings.NewReader(string(data))
+	var settings client.FSOSettings
+	err = parseFile(buffer, &settings)
+	if err != nil {
+		return nil, eris.Wrapf(err, "failed to parse %s", iniPath)
+	}
+
+	return &settings, nil
+}
+
+func SaveSettings(ctx context.Context, settings *client.FSOSettings) error {
+	buffer := strings.Builder{}
+	value := reflect.ValueOf(settings).Addr()
+	settingsType := value.Type()
+
+	for idx := 0; idx < settingsType.NumField(); idx++ {
+		sectionType := settingsType.Field(idx)
+		sectionValues := value.Field(idx)
+
+		buffer.WriteString(fmt.Sprintf("[%s]\n", sectionType.Name))
+
+		for f := 0; f < settingsType.NumField(); f++ {
+			buffer.WriteString(settingsType.Field(f).Name)
+			buffer.WriteString("=")
+			buffer.WriteString(sectionValues.Field(f).String())
+			buffer.WriteString("\n")
+		}
+	}
+
+	iniPath := filepath.Join(GetPrefPath(ctx), "fs2_open.ini")
+	err := os.WriteFile(iniPath, []byte(buffer.String()), 0660)
+	if err != nil {
+		return eris.Wrapf(err, "failed to write %s", iniPath)
+	}
+
+	return nil
 }

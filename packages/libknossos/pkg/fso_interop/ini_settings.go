@@ -1,4 +1,4 @@
-package fsoInterop
+package fso_interop
 
 type FSOLanguage string
 
