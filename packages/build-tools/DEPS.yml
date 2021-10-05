@@ -1,13 +1,14 @@
 vars:
   PROTOC: 3.18.0
   LIBARCHIVE: 3.5.2
-  CEF: 93.1.12+ga8ffe4b+chromium-93.0.4577.82
+  CEF: 94.4.5+g0fd0d6f+chromium-94.0.4606.71
   MSYS_BUILD: 20210725
-  NODEJS: 14.17.6
+  NODEJS: 14.18.0
   BROTLI: 1.0.9
   NINJA: 1.10.2
   GOLANG_CI: 1.42.1
   INNOEXTRACT: 1.9
+  OPENAL_SOFT: 1.21.1
 
 update-checks:
   PROTOC:
@@ -41,6 +42,10 @@ update-checks:
   INNOEXTRACT:
     github:
       project: dscharrer/innoextract
+  OPENAL_SOFT:
+    regex:
+      url: https://openal-soft.org/
+      pattern: 'The latest release is ([0-9.]+), and is available in source form'
 
 deps:
   protoc-linux:
@@ -67,28 +72,28 @@ deps:
     dest: third_party/protoc-dist
 
   cef-linux-full:
-    sha256: a6dc3bf03e8bcf7e8010899376e4db4f66ff45f70e1c6f3ba02570f5ab443b99
+    sha256: 143ffc646b8dcded15693df0d7a26441961c80028e38c4070d21e82144c5a0b2
     if: linux && amd64 && !ci
     url: https://cef-builds.spotifycdn.com/cef_binary_{CEF}_linux64.tar.bz2
     strip: 1
     dest: third_party/cef
 
   cef-linux:
-    sha256: 4c498735fa77b5a183be74eef71bead85ba099db41274a6005f1f28ce464f4eb
+    sha256: 6d6e6fd673bed4ab4003083a816be22408551899989619efd601153c922bf6b0
     if: linux && amd64 && ci
     url: https://cef-builds.spotifycdn.com/cef_binary_{CEF}_linux64_minimal.tar.bz2
     strip: 1
     dest: third_party/cef
 
   cef-darwin-full:
-    sha256: dcf611f4edef9057b21e7dbdb8955e02682c07a79972cb98a85bf74ab55e99e0
+    sha256: 774ae8fc3a637a4a3176f8ee6da48525cc0b934dffc0c5218c53cd91d3889a27
     if: darwin && (amd64 || arm64) && !ci
     url: https://cef-builds.spotifycdn.com/cef_binary_{CEF}_macosx64.tar.bz2
     strip: 1
     dest: third_party/cef
 
   cef-darwin-arm64-full:
-    sha256: 25664d74552f9ba29b85cdddcf39d4cab477e6883950735d8a676e224984e761
+    sha256: f67881b4cbe695228d244a79ef1d9f31f8d8a618945234d2c17bfbbf97de89ce
     # See the note about cef-darwin-arm64 below
     if: darwin && arm64 # && !ci
     url: https://cef-builds.spotifycdn.com/cef_binary_{CEF}_macosarm64.tar.bz2
@@ -96,7 +101,7 @@ deps:
     dest: third_party/cef
 
   cef-darwin:
-    sha256: 764f019808ef06cd3baff70858b95478b02a9e73823b1b72c779fd4acd289faf
+    sha256: 90cb88df0c8225977b8a50ff572ada0fed9b8f552912ceb26593f433735e926b
     if: darwin && amd64 && ci
     url: https://cef-builds.spotifycdn.com/cef_binary_{CEF}_macosx64_minimal.tar.bz2
     strip: 1
@@ -111,14 +116,14 @@ deps:
 #    dest: third_party/cef
 
   cef-win64-full:
-    sha256: f1c2c2218cc1dd5141adecdf3fbdec173da57597915a366d1321651bc63f3f02
+    sha256: c513d5d743cd72f2980f5d8c5ce057182398a8460be9d051dc0790fa4c7d998a
     if: windows && amd64 && !ci
     url: https://cef-builds.spotifycdn.com/cef_binary_{CEF}_windows64.tar.bz2
     strip: 1
     dest: third_party/cef
 
   cef-win64:
-    sha256: fc3dbf50225891bfdc26000d704fbb19f0f178425fad7e39d61eaaf141cfaf2b
+    sha256: 02e4433734b878529ffa4835deba9e68f732a520615c1f6600d0da23bf3e6632
     if: windows && amd64 && ci
     url: https://cef-builds.spotifycdn.com/cef_binary_{CEF}_windows64_minimal.tar.bz2
     strip: 1
@@ -144,21 +149,21 @@ deps:
     dest: third_party/msys64
 
   nodejs-linux:
-    sha256: 3bbe4faf356738d88b45be222bf5e858330541ff16bd0d4cfad36540c331461b
+    sha256: 5c0bc18b19fd09ff80beb16772e69cb033ee4992a4ccd35bd884fd8f02e6d1ec
     if: linux && amd64
     url: https://nodejs.org/dist/v{NODEJS}/node-v{NODEJS}-linux-x64.tar.xz
     strip: 1
     dest: third_party/nodejs
 
   nodejs-darwin:
-    sha256: e3e4c02240d74fb1dc8a514daa62e5de04f7eaee0bcbca06a366ece73a52ad88
+    sha256: 6b9b4d60bcb4eba95488380be8c4da4af98fce3f4a01c9a76db881cbb736656d
     if: darwin && (amd64 || arm64)
     url: https://nodejs.org/dist/v{NODEJS}/node-v{NODEJS}-darwin-x64.tar.gz
     strip: 1
     dest: third_party/nodejs
 
   nodejs-win64:
-    sha256: b83e9ce542fda7fc519cec6eb24a2575a84862ea4227dedc171a8e0b5b614ac0
+    sha256: 2883e83ac3b1e1cb9a9bf65554043640849b39e86761e7c7ac50b664f42f20ff
     if: windows && amd64
     url: https://nodejs.org/dist/v{NODEJS}/node-v{NODEJS}-win-x64.zip
     strip: 1
@@ -196,3 +201,17 @@ deps:
     url: https://constexpr.org/innoextract/files/innoextract-{INNOEXTRACT}.tar.gz
     strip: 1
     dest: third_party/innoextract
+
+  openal:
+    sha256: c8ad767e9a3230df66756a21cc8ebf218a9d47288f2514014832204e666af5d8
+    if: "!windows"
+    url: https://openal-soft.org/openal-releases/openal-soft-{OPENAL_SOFT}.tar.bz2
+    strip: 1
+    dest: third_party/openal
+
+  openal-bin:
+    sha256: 2e4b005c4f8057adcf4459d9b239d3fe745a9128079b2a091f899550f2d931b0
+    if: windows
+    url: https://openal-soft.org/openal-binaries/openal-soft-{OPENAL_SOFT}-bin.zip
+    strip: 1
+    dest: third_party/openal

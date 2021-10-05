@@ -37,6 +37,9 @@
             "path": "../packages/libinnoextract"
         },
         {
+            "path": "../packages/libopenal",
+        },
+        {
             "path": "../third_party"
         }
     ],

@@ -20,6 +20,10 @@ find_path(libknossos "libknossos.${libext}" PATHS "../../../build/libknossos/" R
 set(libknossos "${libknossos}/libknossos.${libext}")
 
 find_path(libinnoextract_dir "libinnoextract.${libext}" PATHS "../../../build/libinnoextract/" REQUIRED)
+
+if(OS_WINDOWS)
+  find_path(libopenal_dir "soft_oal.dll" PATHS "../../../third_party/openal/bin/Win64" REQUIRED)
+endif()
 ## BRAIN END
 
 #if(MSVC AND NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
@@ -319,6 +323,7 @@ if(OS_WINDOWS)
   copy_file(${CEF_TARGET} "${libknossos}" ${CEF_TARGET_OUT_DIR})
   copy_file(${CEF_TARGET} "${libinnoextract_dir}/libinnoextract.dll" ${CEF_TARGET_OUT_DIR})
   copy_file(${CEF_TARGET} "${libinnoextract_dir}/libwinpthread-1.dll" ${CEF_TARGET_OUT_DIR})
+  copy_file(${CEF_TARGET} "${libopenal_dir}/soft_oal.dll" "${CEF_TARGET_OUT_DIR}/OpenAL32.dll")
 
   if(${CMAKE_BUILD_TYPE} STREQUAL "Release")
     # Strip the libraries on release builds to save a *lot* of space.
