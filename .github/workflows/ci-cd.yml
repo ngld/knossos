@@ -60,16 +60,22 @@ jobs:
           echo "$changed"
           echo "::endgroup::"
 
-          if grep -E '^packages/(api|server|front|build-tools)' > /dev/null <<< "$changed"; then
+          if grep -E '^.github/workflows/ci-cd.yml' > /dev/null <<< "$changed"; then
             echo "::set-output name=nebula_changed::1"
-          fi
-
-          if grep -E '^packages/(api|libarchive|libknossos|client|client-ui|build-tools)' > /dev/null <<< "$changed"; then
             echo "::set-output name=knossos_changed::1"
-          fi
-
-          if grep -E '^packages/(libarchive|updater|build-tools)' > /dev/null <<< "$changed"; then
             echo "::set-output name=updater_changed::1"
+          else
+            if grep -E '^packages/(api|server|front|build-tools)' > /dev/null <<< "$changed"; then
+              echo "::set-output name=nebula_changed::1"
+            fi
+
+            if grep -E '^packages/(api|libarchive|libknossos|libinnoextract|libopenal|client|client-ui|build-tools)' > /dev/null <<< "$changed"; then
+              echo "::set-output name=knossos_changed::1"
+            fi
+
+            if grep -E '^packages/(libarchive|updater|build-tools)' > /dev/null <<< "$changed"; then
+              echo "::set-output name=updater_changed::1"
+            fi
           fi
 
   nebula:
@@ -261,6 +267,7 @@ jobs:
         run: ${{ matrix.script }} uploader-build
 
       - name: Upload Knossos build
+        if: github.event_name == 'push'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: ./build/updater/uploader 0.0.1-nightly.${{ needs.setup.outputs.timestamp }}-${{ needs.setup.outputs.short_sha }} ${{ matrix.bucket }} build/client/launcher/Release/

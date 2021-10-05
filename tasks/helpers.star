@@ -155,7 +155,7 @@ def find_library(names, display_name = None):
 
 def get_golangci_flags():
     if getenv("CI") != "":
-        return " --out-format=github-actions"
+        return " --new-from-rev=HEAD~ --out-format=github-actions"
     else:
         return ""
 

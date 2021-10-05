@@ -43,8 +43,9 @@ def knossos_configure(binext, libext, generator):
         env = {
             # cgo only supports gcc, make sure it doesn't try to use a compiler meant for our other packages
             "CC": "gcc",
+            "CXX": "g++",
         },
-        cmds = ["golangci-lint run" + get_golangci_flags()],
+        cmds = ["golangci-lint run --timeout 5m " + get_golangci_flags()],
     )
 
     libkn_flags = ""
