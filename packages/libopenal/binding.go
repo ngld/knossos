@@ -4,8 +4,10 @@ package libopenal
 // #include <string.h>
 // #include <AL/alc.h>
 // #cgo windows CFLAGS: -I${SRCDIR}/../../third_party/openal/include
+// #cgo darwin  CFLAGS: -I${SRCDIR}/../../third_party/openal/include
 // #cgo windows LDFLAGS: -L${SRCDIR}/../../third_party/openal/bin/Win64 -lsoft_oal
 // #cgo linux   LDFLAGS: -lopenal
+// #cgo darwin  LDFLAGS: -lopenal
 import "C"
 
 import (
