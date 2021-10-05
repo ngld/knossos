@@ -86,6 +86,7 @@ def knossos_configure(binext, libext, generator):
         env = {
             # cgo only supports gcc, make sure it doesn't try to use a compiler meant for our other packages
             "CC": "gcc",
+            "CXX": "g++",
         },
         cmds = [
             "go build %s -o ../../build/libknossos/libknossos%s -trimpath -buildmode c-shared ./api" % (libkn_flags, libext),

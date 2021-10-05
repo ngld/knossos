@@ -251,6 +251,22 @@ message HandleRetailFilesRequest {
   uint32 ref = 3;
 }
 
+message HardwareInfoResponse {
+  repeated string audio_devices = 1;
+  repeated string capture_devices = 2;
+  string default_playback = 3;
+  string default_capture = 4;
+
+  message Joystick {
+    string name = 1;
+    string UUID = 2;
+  }
+
+  repeated Joystick joysticks = 5;
+  repeated string resolutions = 7;
+  repeated string voices = 8;
+}
+
 // event messages
 
 message ClientSentEvent {
@@ -315,4 +331,5 @@ service Knossos {
   rpc OpenLink (OpenLinkRequest) returns (SuccessResponse) {};
   rpc FixLibraryFolderPath (FixLibraryFolderPathPayload) returns (FixLibraryFolderPathPayload) {};
   rpc HandleRetailFiles (HandleRetailFilesRequest) returns (SuccessResponse) {};
+  rpc GetHardwareInfo (NullMessage) returns (HardwareInfoResponse) {};
 }

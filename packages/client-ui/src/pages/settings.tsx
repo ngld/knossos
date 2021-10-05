@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Button, Card, ControlGroup, FormGroup } from '@blueprintjs/core';
+import { Button, Card, ControlGroup, FormGroup, Slider, Tag } from '@blueprintjs/core';
 import { makeAutoObservable, autorun, runInAction } from 'mobx';
-import { Settings, TaskRequest } from '@api/client';
+import { fromPromise, IPromiseBasedObservable } from 'mobx-utils';
+import { observer } from 'mobx-react-lite';
+import { Settings, TaskRequest, HardwareInfoResponse, NullMessage } from '@api/client';
+import { FinishedUnaryCall } from '@protobuf-ts/runtime-rpc';
 import { GlobalState, useGlobalState } from '../lib/state';
 import FormContext from '../elements/form-context';
 import { FormCheckbox, FormInputGroup, FormSelect } from '../elements/form-elements';
@@ -24,6 +27,58 @@ async function saveSettings(gs: GlobalState, formState: Settings): Promise<void>
     console.error(e);
   }
 }
+
+interface HardwareSelectProps {
+  hardwareInfo: IPromiseBasedObservable<FinishedUnaryCall<NullMessage, HardwareInfoResponse>>;
+  infoKey: 'audioDevices' | 'captureDevices' | 'resolutions' | 'voices';
+  field: string;
+}
+
+const HardwareSelect = observer(function HardwareSelect(
+  props: HardwareSelectProps,
+): React.ReactElement {
+  return (
+    <FormSelect name={props.field} fill={true}>
+      {props.hardwareInfo.case({
+        pending: () => <option>Loading...</option>,
+        rejected: () => <option>ERROR</option>,
+        fulfilled: ({ response }) => (
+          <>
+            {response[props.infoKey].map((dev) => (
+              <option key={dev}>{dev}</option>
+            ))}
+          </>
+        ),
+      })}
+    </FormSelect>
+  );
+});
+
+interface JoystickSelectProps {
+  hardwareInfo: IPromiseBasedObservable<FinishedUnaryCall<NullMessage, HardwareInfoResponse>>;
+}
+
+const JoystickSelect = observer(function JoystickSelect(
+  props: JoystickSelectProps,
+): React.ReactElement {
+  return (
+    <FormSelect name="joystick" fill={true}>
+      {props.hardwareInfo.case({
+        pending: () => <option>Loading...</option>,
+        rejected: () => <option>ERROR</option>,
+        fulfilled: ({ response }) => (
+          <>
+            {response.joysticks.map((joystick) => (
+              <option key={joystick.uUID} value={joystick.uUID}>
+                {joystick.name}
+              </option>
+            ))}
+          </>
+        ),
+      })}
+    </FormSelect>
+  );
+});
 
 async function selectLibraryFolder(gs: GlobalState, formState: Settings): Promise<void> {
   try {
@@ -56,13 +111,17 @@ export default function SettingsPage(): React.ReactElement {
     makeAutoObservable(defaults);
     return defaults;
   });
+  const [hardwareInfo] = useState(() => fromPromise(gs.client.getHardwareInfo({})));
 
   useEffect(() => {
     void loadSettings(gs, formState);
 
     return autorun(() => {
-      console.log('Settings changed...');
-      void saveSettings(gs, formState);
+      // Wait until the settings are loaded; firstRunDone should always be true so it's a good indicator
+      if (formState.firstRunDone) {
+        console.log('Settings changed...', JSON.stringify(formState));
+        void saveSettings(gs, formState);
+      }
     });
   }, [gs, formState]);
 
@@ -97,16 +156,15 @@ export default function SettingsPage(): React.ReactElement {
             </Card>
             <Card>
               <h5 className="text-xl mb-5">Downloads</h5>
-              <FormGroup label="Max Downloads">
-                <FormInputGroup name="maxDownloads" />
-              </FormGroup>
+              <div className="flex flex-row gap-4">
+                <FormGroup className="flex-1" label="Max Downloads">
+                  <FormInputGroup name="maxDownloads" />
+                </FormGroup>
 
-              <FormGroup label="Download bandwidth limit">
-                <ControlGroup fill={true}>
-                  <FormInputGroup name="bandwidthLimit" />
-                  <span>KiB/s</span>
-                </ControlGroup>
-              </FormGroup>
+                <FormGroup className="flex-1" label="Download bandwidth limit">
+                  <FormInputGroup name="bandwidthLimit" rightElement={<Tag minimal={true}>KiB/s</Tag>} />
+                </FormGroup>
+              </div>
             </Card>
 
             <Card>
@@ -114,9 +172,11 @@ export default function SettingsPage(): React.ReactElement {
 
               <div className="flex flex-row gap-4">
                 <FormGroup label="Resolution">
-                  <FormSelect name="resolution">
-                    <option>TODO</option>
-                  </FormSelect>
+                  <HardwareSelect
+                    hardwareInfo={hardwareInfo}
+                    infoKey="resolutions"
+                    field="resolution"
+                  />
                 </FormGroup>
 
                 <FormGroup label="Bit Depth">
@@ -139,15 +199,19 @@ export default function SettingsPage(): React.ReactElement {
             <Card>
               <h5 className="text-xl mb-5">Audio</h5>
               <FormGroup label="Playback Device">
-                <FormSelect name="playbackDevice" fill={true}>
-                  <option>TODO</option>
-                </FormSelect>
+                <HardwareSelect
+                  hardwareInfo={hardwareInfo}
+                  infoKey="audioDevices"
+                  field="playback"
+                />
               </FormGroup>
 
               <FormGroup label="Capture Device">
-                <FormSelect name="captureDevice" fill={true}>
-                  <option>TODO</option>
-                </FormSelect>
+                <HardwareSelect
+                  hardwareInfo={hardwareInfo}
+                  infoKey="captureDevices"
+                  field="capture"
+                />
               </FormGroup>
 
               <FormCheckbox name="efx" label="Enable EFX" />
@@ -170,12 +234,12 @@ export default function SettingsPage(): React.ReactElement {
               <div className="flex flex-row gap-4">
                 <div className="flex-1">
                   <FormGroup label="Voice">
-                    <FormSelect name="voice" fill={true}>
-                      <option>TODO</option>
-                    </FormSelect>
+                    <HardwareSelect hardwareInfo={hardwareInfo} infoKey="voices" field="voice" />
                   </FormGroup>
 
-                  <FormGroup label="Volume">TODO</FormGroup>
+                  <FormGroup label="Volume">
+                    <Slider min={0} max={100} labelStepSize={10} />
+                  </FormGroup>
                 </div>
 
                 <FormGroup className="flex-1" label="Use Speech in">
@@ -190,9 +254,7 @@ export default function SettingsPage(): React.ReactElement {
             <Card>
               <h5 className="text-xl mb-5">Joystick</h5>
               <FormGroup label="Joystick">
-                <FormSelect name="joystick" fill={true}>
-                  <option>TODO</option>
-                </FormSelect>
+                <JoystickSelect hardwareInfo={hardwareInfo} />
               </FormGroup>
 
               <FormCheckbox name="enableFF" label="Force Feedback" />
