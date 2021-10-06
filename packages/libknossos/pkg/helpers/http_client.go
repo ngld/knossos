@@ -9,6 +9,7 @@ import (
 
 	"github.com/ngld/knossos/packages/libknossos/pkg/api"
 	"github.com/ngld/knossos/packages/libknossos/pkg/storage"
+	"github.com/rotisserie/eris"
 	"golang.org/x/net/publicsuffix"
 )
 
@@ -26,7 +27,7 @@ func Init(ctx context.Context) error {
 		PublicSuffixList: publicsuffix.List,
 	})
 	if err != nil {
-		return err
+		return eris.Wrap(err, "failed to construct cookie jar")
 	}
 
 	httpClient.Jar = jar
@@ -41,7 +42,7 @@ func CachedGet(ctx context.Context, url string) (*http.Response, error) {
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return nil, err
+		return nil, eris.Wrapf(err, "failed to construct GET request for %s", url)
 	}
 
 	if cacheEntry != nil {
@@ -67,5 +68,10 @@ func CachedGet(ctx context.Context, url string) (*http.Response, error) {
 
 func HTTPDo(ctx context.Context, req *http.Request) (*http.Response, error) {
 	req.Header.Set("User-Agent", userAgent)
-	return httpClient.Do(req)
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, eris.Wrapf(err, "failed request to %s", req.URL)
+	}
+
+	return resp, nil
 }

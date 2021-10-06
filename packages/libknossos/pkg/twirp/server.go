@@ -27,7 +27,11 @@ type wrappedError interface {
 func NewServer() (http.Handler, error) {
 	return client.NewKnossosServer(&knossosServer{}, twirp.WithServerHooks(&twirp.ServerHooks{
 		Error: func(c context.Context, twErr twirp.Error) context.Context {
-			err := twErr.(error)
+			err, ok := twErr.(error)
+			if !ok {
+				panic("error hook received an error that does not conform to the error interface")
+			}
+
 			// Unwrap the error, if possible, to get a proper stack trace.
 			if wrapped, ok := twErr.(wrappedError); ok {
 				err = wrapped.Unwrap()

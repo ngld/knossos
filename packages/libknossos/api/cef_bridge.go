@@ -141,7 +141,7 @@ func handleLocalFile(fileRef *common.FileRef) (*C.KnossosResponse, error) {
 	if localPath != "" {
 		data, err := ioutil.ReadFile(localPath)
 		if err != nil {
-			return nil, err
+			return nil, eris.Wrapf(err, "failed to read %s", localPath)
 		}
 
 		resp := makeResponse()

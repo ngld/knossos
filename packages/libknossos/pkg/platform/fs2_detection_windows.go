@@ -40,7 +40,7 @@ func DetectSteamInstallation(ctx context.Context) (string, error) {
 	} else {
 		libRegex := regexp.MustCompile(`"path"\s+"([^"]+)"`)
 		for _, match := range libRegex.FindAllStringSubmatch(string(content), -1) {
-			libPath := strings.Replace(match[1], "\\\\", "\\", -1)
+			libPath := strings.ReplaceAll(match[1], "\\\\", "\\")
 			libPath = filepath.Join(libPath, "steamapps", "common")
 			steamLibraries = append(steamLibraries, libPath)
 		}
@@ -89,7 +89,11 @@ func DetectGOGInstallation(ctx context.Context) (string, error) {
 		} else {
 			var path string
 			for rows.Next() {
-				rows.Scan(&path)
+				err = rows.Scan(&path)
+				if err != nil {
+					api.Log(ctx, api.LogWarn, "Failed to read a row from GOG Galaxy storage (%v), will only check the primary library!", err)
+				}
+
 				gogLibraries = append(gogLibraries, filepath.Dir(path))
 			}
 		}

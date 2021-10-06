@@ -68,7 +68,7 @@ func (kn *knossosServer) UpdateUpdater(ctx context.Context, req *client.TaskRequ
 
 		resp, err := getNebulaAPI().GetVersions(ctx, &pbapi.NullRequest{})
 		if err != nil {
-			return err
+			return eris.Wrap(err, "failed to fetch versions")
 		}
 
 		updaterFolder := filepath.Join(api.ResourcePath(ctx), "updater")
@@ -177,7 +177,7 @@ func (kn *knossosServer) UpdateUpdater(ctx context.Context, req *client.TaskRequ
 			return eris.New("somehow all updater files were removed")
 		}
 
-		err = os.WriteFile(filepath.Join(updaterFolder, "version.txt"), []byte(resp.Versions["updater"]), 0666)
+		err = os.WriteFile(filepath.Join(updaterFolder, "version.txt"), []byte(resp.Versions["updater"]), 0600)
 		if err != nil {
 			return eris.Wrapf(err, "failed to write %s", filepath.Join(updaterFolder, "version.txt"))
 		}
@@ -192,7 +192,7 @@ func (kn *knossosServer) UpdateUpdater(ctx context.Context, req *client.TaskRequ
 func oldFileCleaner(ctx context.Context, dir string, allowed []string) (bool, error) {
 	contents, err := os.ReadDir(dir)
 	if err != nil {
-		return false, err
+		return false, eris.Wrapf(err, "failed to read contents of %s", dir)
 	}
 
 	deleted := 0
@@ -214,7 +214,7 @@ func oldFileCleaner(ctx context.Context, dir string, allowed []string) (bool, er
 				api.Log(ctx, api.LogInfo, fmt.Sprintf("Removing %s", itemPath))
 				err = os.Remove(itemPath)
 				if err != nil {
-					return false, err
+					return false, eris.Wrapf(err, "failed to delete %s", itemPath)
 				}
 
 				deleted++
@@ -224,7 +224,12 @@ func oldFileCleaner(ctx context.Context, dir string, allowed []string) (bool, er
 
 	if deleted == len(contents) {
 		// We deleted everything in this directory which means that it's empty and can be removed as well.
-		return true, os.Remove(dir)
+		err := os.Remove(dir)
+		if err != nil {
+			return false, eris.Wrapf(err, "failed to delete directory %s", dir)
+		}
+
+		return true, nil
 	}
 
 	return false, nil

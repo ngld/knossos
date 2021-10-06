@@ -22,10 +22,15 @@ func ImportFile(ctx context.Context, ref *common.FileRef) error {
 
 	encoded, err := proto.Marshal(ref)
 	if err != nil {
-		return err
+		return eris.Wrap(err, "failed to serialise file reference")
 	}
 
-	return tx.Bucket(fileBucket).Put([]byte(ref.Fileid), encoded)
+	err = tx.Bucket(fileBucket).Put([]byte(ref.Fileid), encoded)
+	if err != nil {
+		return eris.Wrap(err, "failed to save file reference")
+	}
+
+	return nil
 }
 
 func GetFile(ctx context.Context, id string) (*common.FileRef, error) {
@@ -52,7 +57,7 @@ func GetFile(ctx context.Context, id string) (*common.FileRef, error) {
 
 	err := proto.Unmarshal(item, ref)
 	if err != nil {
-		return nil, err
+		return nil, eris.Wrap(err, "failed to unserialise file reference")
 	}
 
 	return ref, nil

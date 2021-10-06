@@ -41,7 +41,7 @@ func (kn *knossosServer) ScanLocalMods(ctx context.Context, task *client.TaskReq
 
 			subs, err := os.ReadDir(item)
 			if err != nil {
-				return err
+				return eris.Wrapf(err, "failed to read contents of %s", item)
 			}
 			for _, entry := range subs {
 				if entry.IsDir() {
@@ -69,7 +69,7 @@ func (kn *knossosServer) ScanLocalMods(ctx context.Context, task *client.TaskReq
 func buildModList(ctx context.Context, modProvider storage.ModProvider) (*client.SimpleModList, error) {
 	releases, err := modProvider.GetMods(ctx, 0)
 	if err != nil {
-		return nil, err
+		return nil, eris.Wrap(err, "failed to load mod list")
 	}
 
 	modList := make([]*client.SimpleModList_Item, len(releases))
@@ -80,7 +80,7 @@ func buildModList(ctx context.Context, modProvider storage.ModProvider) (*client
 		if !found {
 			modInfo, err = modProvider.GetMod(ctx, rel.Modid)
 			if err != nil {
-				return nil, err
+				return nil, eris.Wrapf(err, "failed to load mod %s from storage", rel.Modid)
 			}
 
 			modMap[rel.Modid] = modInfo

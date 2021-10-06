@@ -120,7 +120,7 @@ func convertPath(ctx context.Context, modPath, input string) *common.FileRef {
 func convertChecksum(input KnChecksum) (*common.Checksum, error) {
 	digest, err := hex.DecodeString(input[1])
 	if err != nil {
-		return nil, err
+		return nil, eris.Wrapf(err, "failed to decode checksum %s", input[1])
 	}
 
 	return &common.Checksum{
@@ -129,15 +129,15 @@ func convertChecksum(input KnChecksum) (*common.Checksum, error) {
 	}, nil
 }
 
-func cleanEmptyFolders(ctx context.Context, folder string) error {
+func cleanEmptyFolders(folder string) error {
 	items, err := os.ReadDir(folder)
 	if err != nil {
-		return err
+		return eris.Wrapf(err, "failed to list contents of %s", folder)
 	}
 
 	for _, item := range items {
 		if item.IsDir() {
-			err = cleanEmptyFolders(ctx, filepath.Join(folder, item.Name()))
+			err = cleanEmptyFolders(filepath.Join(folder, item.Name()))
 			if err != nil {
 				return err
 			}
@@ -147,11 +147,14 @@ func cleanEmptyFolders(ctx context.Context, folder string) error {
 	// Check again because the previous loop might have deleted all remaining folders
 	items, err = os.ReadDir(folder)
 	if err != nil {
-		return err
+		return eris.Wrapf(err, "failed to list again contents of %s", folder)
 	}
 
 	if len(items) == 0 {
-		return os.Remove(folder)
+		err = os.Remove(folder)
+		if err != nil {
+			return eris.Wrapf(err, "failed to remove folder %s", folder)
+		}
 	}
 
 	return nil
@@ -170,18 +173,18 @@ func ImportMods(ctx context.Context, modFiles []string) error {
 		for _, modFile := range modFiles {
 			data, err := ioutil.ReadFile(modFile)
 			if err != nil {
-				return err
+				return eris.Wrapf(err, "failed to read file %s", modFile)
 			}
 
 			var mod KnMod
 			err = json.Unmarshal(data, &mod)
 			if err != nil {
-				return err
+				return eris.Wrapf(err, "failed to parse contents of %s", modFile)
 			}
 
 			modPath, err := filepath.Abs(filepath.Dir(modFile))
 			if err != nil {
-				return err
+				return eris.Wrapf(err, "failed build absolute paths to %s", modFile)
 			}
 
 			api.SetProgress(ctx, done/modCount, mod.Title+" "+mod.Version)
@@ -199,7 +202,7 @@ func ImportMods(ctx context.Context, modFiles []string) error {
 
 				items, err := os.ReadDir(modPath)
 				if err != nil {
-					return err
+					return eris.Wrapf(err, "failed to read contents of directory %s", modPath)
 				}
 
 				// Move all items in the mod into the work subfolder to avoid conflicts between package folders and already
@@ -207,9 +210,11 @@ func ImportMods(ctx context.Context, modFiles []string) error {
 				// this case.
 				for _, item := range items {
 					if item.Name() != "__dev_work" {
-						err = os.Rename(filepath.Join(modPath, item.Name()), filepath.Join(workPath, item.Name()))
+						src := filepath.Join(modPath, item.Name())
+						dest := filepath.Join(workPath, item.Name())
+						err = os.Rename(src, dest)
 						if err != nil {
-							return err
+							return eris.Wrapf(err, "failed to rename %s to %s", src, dest)
 						}
 					}
 				}
@@ -247,7 +252,7 @@ func ImportMods(ctx context.Context, modFiles []string) error {
 				}
 
 				api.Log(ctx, api.LogInfo, "Cleaning up")
-				err = cleanEmptyFolders(ctx, workPath)
+				err = cleanEmptyFolders(workPath)
 				if err != nil {
 					return eris.Wrap(err, "failed cleanup")
 				}
@@ -275,7 +280,7 @@ func ImportMods(ctx context.Context, modFiles []string) error {
 				}
 
 				data = bytes.Replace(data, []byte(`"dev_mode": false,`), []byte(`"dev_mode": true,`), 1)
-				err = os.WriteFile(modFile, data, 0660)
+				err = os.WriteFile(modFile, data, 0600)
 				if err != nil {
 					return eris.Wrapf(err, "failed to update dev_mode field in %s", modFile)
 				}
@@ -329,7 +334,7 @@ func ImportMods(ctx context.Context, modFiles []string) error {
 			if mod.FirstRelease != "" {
 				releaseDate, err := time.Parse("2006-01-02", mod.FirstRelease)
 				if err != nil {
-					return err
+					return eris.Wrapf(err, "failed to parse release date %s", mod.FirstRelease)
 				}
 
 				item.Released = &timestamppb.Timestamp{
@@ -340,7 +345,7 @@ func ImportMods(ctx context.Context, modFiles []string) error {
 			if mod.LastUpdate != "" {
 				updateDate, err := time.Parse("2006-01-02", mod.LastUpdate)
 				if err != nil {
-					return err
+					return eris.Wrapf(err, "failed to parse update date %s", mod.LastUpdate)
 				}
 
 				item.Updated = &timestamppb.Timestamp{

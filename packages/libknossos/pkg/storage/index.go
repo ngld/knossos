@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"sort"
 
+	"github.com/rotisserie/eris"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -38,7 +39,7 @@ func (i *StringListIndex) Open(tx *bolt.Tx) error {
 	if data != nil {
 		err := json.Unmarshal(data, &i.cache)
 		if err != nil {
-			return err
+			return eris.Wrapf(err, "failed to unserialise index %s", i.Name)
 		}
 	}
 
@@ -166,7 +167,7 @@ func (i *StringListIndex) Save(tx *bolt.Tx) error {
 
 	err := i.ForEach(i.sorter)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	// Remove duplicates
@@ -187,9 +188,14 @@ func (i *StringListIndex) Save(tx *bolt.Tx) error {
 
 	encoded, err := json.Marshal(i.cache)
 	if err != nil {
-		return err
+		return eris.Wrapf(err, "failed to serialise index %s", i.Name)
 	}
 
 	bucket := tx.Bucket(indexBucket)
-	return bucket.Put([]byte(i.Name), encoded)
+	err = bucket.Put([]byte(i.Name), encoded)
+	if err != nil {
+		return eris.Wrapf(err, "failed to save index %s", i.Name)
+	}
+
+	return nil
 }

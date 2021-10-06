@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/rotisserie/eris"
 	"go.etcd.io/bbolt"
 )
 
@@ -29,7 +30,7 @@ func GetHTTPCacheEntryForURL(ctx context.Context, url string) (*HTTPCacheEntry, 
 		entry = new(HTTPCacheEntry)
 		err := json.Unmarshal(encoded, entry)
 		if err != nil {
-			return err
+			return eris.Wrapf(err, "failed to deserialise cache info for %s", url)
 		}
 
 		// Update the LastAccessed field
@@ -39,10 +40,15 @@ func GetHTTPCacheEntryForURL(ctx context.Context, url string) (*HTTPCacheEntry, 
 			ETag:         entry.ETag,
 		})
 		if err != nil {
-			return err
+			return eris.Wrapf(err, "failed to serialise cache info for %s", url)
 		}
 
-		return bucket.Put([]byte(url), encoded)
+		err = bucket.Put([]byte(url), encoded)
+		if err != nil {
+			return eris.Wrapf(err, "failed to save cache info for %s", url)
+		}
+
+		return nil
 	})
 	if err != nil {
 		return nil, err
@@ -54,9 +60,14 @@ func SetHTTPCacheEntryForURL(ctx context.Context, url string, entry *HTTPCacheEn
 	return update(ctx, func(tx *bbolt.Tx) error {
 		encoded, err := json.Marshal(entry)
 		if err != nil {
-			return err
+			return eris.Wrapf(err, "failed to serialise cache entry for url %s", url)
 		}
 
-		return tx.Bucket(httpCacheBucket).Put([]byte(url), encoded)
+		err = tx.Bucket(httpCacheBucket).Put([]byte(url), encoded)
+		if err != nil {
+			return eris.Wrapf(err, "failed to save cache entry for url %s", url)
+		}
+
+		return nil
 	})
 }

@@ -44,13 +44,18 @@ func fetchRemoteMessage(ctx context.Context, messageName string, ref protoreflec
 
 	encoded, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return err
+		return eris.Wrapf(err, "failed to read %s", messageName)
 	}
 
-	return proto.Unmarshal(encoded, ref)
+	err = proto.Unmarshal(encoded, ref)
+	if err != nil {
+		return eris.Wrapf(err, "failed to parse response to %s", messageName)
+	}
+
+	return nil
 }
 
-func calcVersionsChecksum(ctx context.Context, versions []string) ([]byte, error) {
+func calcVersionsChecksum(versions []string) ([]byte, error) {
 	// We use simple string sorting here instead of proper versioning sorting since it doesn't matter *how* the versions
 	// are sorted as long as they appear in the same order on server and client.
 	sort.Strings(versions)
@@ -59,7 +64,7 @@ func calcVersionsChecksum(ctx context.Context, versions []string) ([]byte, error
 	for _, version := range versions {
 		_, err := hasher.Write([]byte(version))
 		if err != nil {
-			return nil, err
+			return nil, eris.Wrap(err, "failed to hash mod versions")
 		}
 	}
 
@@ -95,7 +100,7 @@ func processRemoteMod(ctx context.Context, params storage.RemoteImportCallbackPa
 	var versionHash []byte
 	localVersions, err := storage.RemoteMods.GetVersionsForMod(ctx, entry.Modid)
 	if err == nil {
-		versionHash, err = calcVersionsChecksum(ctx, localVersions)
+		versionHash, err = calcVersionsChecksum(localVersions)
 		if err != nil {
 			return nil, err
 		}

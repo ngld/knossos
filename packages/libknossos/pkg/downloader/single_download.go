@@ -158,7 +158,7 @@ func DownloadSingle(ctx context.Context, filepath string, mirrors []string, chec
 
 			if ctx.Err() != nil {
 				resp.Body.Close()
-				return ctx.Err()
+				return eris.Wrap(ctx.Err(), "context error")
 			}
 		}
 

@@ -16,5 +16,10 @@ func OpenLink(link string) error {
 		return eris.Wrap(err, "failed to convert link string")
 	}
 
-	return windows.ShellExecute(windows.InvalidHandle, verb, linkPtr, nil, nil, windows.SW_NORMAL)
+	err = windows.ShellExecute(windows.InvalidHandle, verb, linkPtr, nil, nil, windows.SW_NORMAL)
+	if err != nil {
+		return eris.Wrap(err, "failed to open link")
+	}
+
+	return nil
 }

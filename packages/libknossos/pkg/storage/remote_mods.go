@@ -9,6 +9,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/ngld/knossos/packages/api/common"
+	"github.com/rotisserie/eris"
 )
 
 var (
@@ -51,17 +52,22 @@ func ImportRemoteMods(ctx context.Context, callback func(context.Context, Remote
 				for _, version := range remoteVersionIdx.Lookup(id) {
 					err := bucket.Delete([]byte(id + "#" + version))
 					if err != nil {
-						return err
+						return eris.Wrapf(err, "failed to delete mod release entry %s %s", id, version)
 					}
 				}
 
 				remoteVersionIdx.BatchedRemoveAll(id)
-				return bucket.Delete([]byte(id))
+				err := bucket.Delete([]byte(id))
+				if err != nil {
+					return eris.Wrapf(err, "failed to delete mod entry %s", id)
+				}
+
+				return nil
 			},
 			RemoveRelease: func(id, version string) error {
 				err := bucket.Delete([]byte(id + "#" + version))
 				if err != nil {
-					return err
+					return eris.Wrapf(err, "failed to delete mod release %s %s", id, version)
 				}
 
 				remoteVersionIdx.BatchedRemove(id, version)
@@ -70,12 +76,12 @@ func ImportRemoteMods(ctx context.Context, callback func(context.Context, Remote
 			AddMod: func(mod *common.ModMeta) error {
 				encoded, err := proto.Marshal(mod)
 				if err != nil {
-					return err
+					return eris.Wrapf(err, "failed to serialise mod %s", mod.Modid)
 				}
 
 				err = bucket.Put([]byte(mod.Modid), encoded)
 				if err != nil {
-					return err
+					return eris.Wrapf(err, "failed to save mod %s", mod.Modid)
 				}
 
 				// Add this mod to our type index
@@ -85,12 +91,12 @@ func ImportRemoteMods(ctx context.Context, callback func(context.Context, Remote
 			AddRelease: func(rel *common.Release) error {
 				encoded, err := proto.Marshal(rel)
 				if err != nil {
-					return err
+					return eris.Wrapf(err, "failed to serialise mod release %s %s", rel.Modid, rel.Version)
 				}
 
 				err = bucket.Put([]byte(rel.Modid+"#"+rel.Version), encoded)
 				if err != nil {
-					return err
+					return eris.Wrapf(err, "failed to save mod release %s %s", rel.Modid, rel.Version)
 				}
 
 				remoteVersionIdx.BatchedAdd(rel.Modid, rel.Version)
@@ -151,7 +157,12 @@ func GetRemoteModsLastModifiedDates(ctx context.Context) (RemoteIndexLastModifie
 			return nil
 		}
 
-		return json.Unmarshal(encoded, &result)
+		err := json.Unmarshal(encoded, &result)
+		if err != nil {
+			return eris.Wrap(err, "failed to deserialise last modified dates for remote mods")
+		}
+
+		return nil
 	})
 	if err != nil {
 		return nil, err
@@ -164,9 +175,14 @@ func UpdateRemoteModsLastModifiedDates(ctx context.Context, dates RemoteIndexLas
 	return update(ctx, func(tx *bolt.Tx) error {
 		encoded, err := json.Marshal(&dates)
 		if err != nil {
-			return err
+			return eris.Wrap(err, "failed to serialise last modified dates for remote mods")
 		}
 
-		return tx.Bucket(remoteModsBucket).Put([]byte("#last_modifieds"), encoded)
+		err = tx.Bucket(remoteModsBucket).Put([]byte("#last_modifieds"), encoded)
+		if err != nil {
+			return eris.Wrap(err, "failed to save last modified dates for remote mods")
+		}
+
+		return nil
 	})
 }

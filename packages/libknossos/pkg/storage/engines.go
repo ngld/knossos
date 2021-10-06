@@ -78,10 +78,14 @@ func SaveEngineFlags(ctx context.Context, path string, flags *JSONFlags) error {
 		bucket := tx.Bucket(engineFlagsBucket)
 		encoded, err := json.Marshal(flags)
 		if err != nil {
-			return err
+			return eris.Wrap(err, "failed to encode engine flags")
 		}
 
-		return bucket.Put([]byte("file#"+path), encoded)
+		err = bucket.Put([]byte("file#"+path), encoded)
+		if err != nil {
+			return eris.Wrap(err, "failed to save engine flags")
+		}
+		return nil
 	})
 }
 
@@ -95,7 +99,12 @@ func GetEngineFlags(ctx context.Context, path string) (*JSONFlags, error) {
 		}
 
 		flags = new(JSONFlags)
-		return json.Unmarshal(encoded, flags)
+		err := json.Unmarshal(encoded, flags)
+		if err != nil {
+			return eris.Wrap(err, "failed to parse stored engine flags")
+		}
+
+		return nil
 	})
 	if err != nil {
 		return nil, err
@@ -104,7 +113,7 @@ func GetEngineFlags(ctx context.Context, path string) (*JSONFlags, error) {
 	return flags, nil
 }
 
-func cleanEngineFlags(ctx context.Context, tx *bolt.Tx) error {
+func cleanEngineFlags(_ context.Context, tx *bolt.Tx) error {
 	bucket := tx.Bucket(engineFlagsBucket)
 	filePrefix := []byte("file#")
 
@@ -119,7 +128,10 @@ func cleanEngineFlags(ctx context.Context, tx *bolt.Tx) error {
 				return eris.Wrapf(err, "failed to check %s", filePath)
 			}
 
-			return bucket.Delete(k)
+			err = bucket.Delete(k)
+			if err != nil {
+				return eris.Wrapf(err, "failed to delete engine flags for missing file %s", filePath)
+			}
 		}
 
 		return nil

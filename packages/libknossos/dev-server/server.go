@@ -196,7 +196,7 @@ func refHandler(rw http.ResponseWriter, r *http.Request) {
 func msgDispatcher(cse *client.ClientSentEvent) error {
 	encoded, err := proto.Marshal(cse)
 	if err != nil {
-		return err
+		return eris.Wrap(err, "failed to serialise client message")
 	}
 
 	wsLock.Lock()

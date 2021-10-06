@@ -4,6 +4,7 @@ import (
 	"sort"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/rotisserie/eris"
 )
 
 // StringVersionCollection can be used to sort a string slice based on semver ordering rules
@@ -30,7 +31,7 @@ func NewStringVersionCollection(versions []string) (*StringVersionCollection, er
 	for idx, strVer := range versions {
 		ver, err := semver.NewVersion(strVer)
 		if err != nil {
-			return nil, err
+			return nil, eris.Wrapf(err, "failed to parse version %s", strVer)
 		}
 
 		decodedVersions[idx] = ver

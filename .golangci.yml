@@ -2,18 +2,42 @@ linters:
   disable-all: false
   fast: false
   enable:
-    - revive
-    - govet
-    - megacheck
+    - bodyclose
+    - deadcode
     - dogsled
     - dupl
+    - durationcheck
     - errcheck
     - errorlint
     - exhaustive
-    - nestif
+    - exportloopref
+    - forcetypeassert
     - goconst
     - gocritic
+    - gomodguard
+    - gosec
+    - gosimple
+    - govet
+    - ineffassign
+    - makezero
+    - megacheck
+    - nestif
+    - nilerr
+    #- nilnil
     - nolintlint
+    - paralleltest
+    - prealloc
+    - predeclared
+    - revive
+    - staticcheck
+    - structcheck
+    - unconvert
+    - unparam
+    - unused
+    - varcheck
+    - wastedassign
+    - whitespace
+    - wrapcheck
 
     # TODO add to build scripts
     #- gofumpt
@@ -26,3 +50,30 @@ linters-settings:
 
   exhaustive:
     default-signifies-exhaustive: true
+
+  nestif:
+    min-complexity: 7
+
+  wrapcheck:
+    ignoreSigs:
+      # defaults from https://github.com/tomarrell/wrapcheck/blob/master/wrapcheck/wrapcheck.go
+      - .Errorf(
+      - errors.New(
+      - errors.Unwrap(
+      - .Wrap(
+      - .Wrapf(
+      - .WithMessage(
+      - .WithMessagef(
+      - .WithStack(
+      # ignore bbolt's Tx.ForEach() because it only returns the error from the passed callback
+      - .ForEach(
+      - .Update(
+      - .View(
+      - .Batch(
+      # eris...
+      - eris.New(
+      - eris.Wrap(
+      - eris.Wrapf(
+
+    ignorePackageGlobs:
+      - github.com/ngld/knossos/packages/*

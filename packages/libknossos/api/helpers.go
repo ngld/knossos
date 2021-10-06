@@ -24,6 +24,7 @@ func (r *memoryResponse) Header() http.Header {
 }
 
 func (r *memoryResponse) Write(data []byte) (int, error) {
+	// nolint:wrapcheck // doesn't make sense here since we can't add much of value to the error
 	return r.resp.Write(data)
 }
 

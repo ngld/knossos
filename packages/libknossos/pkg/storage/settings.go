@@ -7,6 +7,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 
 	"github.com/ngld/knossos/packages/api/client"
+	"github.com/rotisserie/eris"
 )
 
 var settingsBucket = []byte("settings")
@@ -19,7 +20,12 @@ func GetSettings(ctx context.Context) (*client.Settings, error) {
 			return nil
 		}
 
-		return json.Unmarshal(item, &settings)
+		err := json.Unmarshal(item, &settings)
+		if err != nil {
+			return eris.Wrap(err, "failed to deserialise settings")
+		}
+
+		return nil
 	})
 	return settings, err
 }
@@ -27,10 +33,15 @@ func GetSettings(ctx context.Context) (*client.Settings, error) {
 func SaveSettings(ctx context.Context, settings *client.Settings) error {
 	encoded, err := json.Marshal(settings)
 	if err != nil {
-		return err
+		return eris.Wrap(err, "failed to serialise settings")
 	}
 
 	return db.Update(func(tx *bolt.Tx) error {
-		return tx.Bucket(settingsBucket).Put([]byte("settings"), encoded)
+		err := tx.Bucket(settingsBucket).Put([]byte("settings"), encoded)
+		if err != nil {
+			return eris.Wrap(err, "failed to save settings")
+		}
+
+		return nil
 	})
 }

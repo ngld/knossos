@@ -238,7 +238,7 @@ func LaunchMod(ctx context.Context, mod *common.Release, settings *client.UserSe
 		return err
 	}
 
-	parentFolder := ""
+	var parentFolder string
 	if modMeta.Parent != "FS2" && modMeta.Parent != "" {
 		parentVersions, err := storage.LocalMods.GetVersionsForMod(ctx, modMeta.Parent)
 		if err != nil {
@@ -291,7 +291,7 @@ func LaunchMod(ctx context.Context, mod *common.Release, settings *client.UserSe
 			if filepath.IsAbs(rel.Folder) || filepath.IsAbs(pkg.Folder) {
 				flagPath, err := filepath.Rel(parentFolder, filepath.Join(rel.Folder, pkg.Folder))
 				if err != nil {
-					return err
+					return eris.Wrapf(err, "failed to build relative path to %s", filepath.Join(rel.Folder, pkg.Folder))
 				}
 
 				modFlag = append(modFlag, flagPath)
@@ -309,24 +309,24 @@ func LaunchMod(ctx context.Context, mod *common.Release, settings *client.UserSe
 	cmdlineFolder := filepath.Dir(cmdlineFile)
 	err = os.MkdirAll(cmdlineFolder, 0770)
 	if err != nil {
-		return err
+		return eris.Wrapf(err, "failed to create directories %s", cmdlineFolder)
 	}
 
 	hdl, err := os.Create(cmdlineFile)
 	if err != nil {
-		return err
+		return eris.Wrapf(err, "failed to create %s", cmdlineFile)
 	}
 
 	api.Log(ctx, api.LogInfo, "Command line flags: %s", cmdline)
 
 	_, err = hdl.WriteString(cmdline)
 	if err != nil {
-		return err
+		return eris.Wrapf(err, "failed to write to %s", cmdlineFile)
 	}
 
 	err = hdl.Close()
 	if err != nil {
-		return err
+		return eris.Wrapf(err, "failed to close %s", cmdlineFile)
 	}
 
 	// Make sure FSO is not running in legacy mode
@@ -344,7 +344,7 @@ func LaunchMod(ctx context.Context, mod *common.Release, settings *client.UserSe
 
 	err = proc.Start()
 	if err != nil {
-		return err
+		return eris.Wrapf(err, "failed to launch %s", binary)
 	}
 
 	running := true

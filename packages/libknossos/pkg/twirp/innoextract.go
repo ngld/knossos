@@ -215,7 +215,7 @@ func copyFromGameFolder(ctx context.Context, libraryPath, gameFolder string, mov
 		Modid:   "FS2",
 		Version: "1.20.0",
 		Folder:  "FS2",
-		Description: strings.Replace(strings.Replace(`[b][i]The year is 2367, thirty two years after the Great War. Or at least that is what YOU thought was the Great War.
+		Description: strings.ReplaceAll(strings.ReplaceAll(`[b][i]The year is 2367, thirty two years after the Great War. Or at least that is what YOU thought was the Great War.
 		The endless line of Shivan capital ships, bombers and fighters with super advanced technology was nearly overwhelming.\n\n
 		As the Terran and Vasudan races finish rebuilding their decimated societies, a disturbance lurks in the not-so-far
 		reaches of the Gamma Draconis system.\n\nYour nemeses have arrived... and they are wondering what happened to
@@ -225,7 +225,7 @@ func copyFromGameFolder(ctx context.Context, libraryPath, gameFolder string, mov
 		thrusting the player into the role of a pilot fighting against the mysterious aliens, the Shivans. While defending
 		the human race and its alien Vasudan allies, the player also gets involved in putting down a rebellion. The game
 		features large numbers of fighters alongside gigantic capital ships in a battlefield fraught with beams, shells and
-		missiles in detailed star systems and nebulae.`, "\n", "", -1), "\\n", "\n", -1),
+		missiles in detailed star systems and nebulae.`, "\n", ""), "\\n", "\n"),
 		ReleaseThread: "http://www.hard-light.net/forums/index.php",
 		Videos:        []string{"https://www.youtube.com/watch?v=ufViyhrXzTE"},
 		Released:      timestamppb.New(releaseDate),

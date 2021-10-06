@@ -35,7 +35,7 @@ type VpWriter struct {
 func NewVpWriter(filename string) (*VpWriter, error) {
 	hdl, err := os.Create(filename)
 	if err != nil {
-		return nil, err
+		return nil, eris.Wrapf(err, "failed to create VP archive %s", filename)
 	}
 
 	root := new(VpFolder)
@@ -49,7 +49,7 @@ func NewVpWriter(filename string) (*VpWriter, error) {
 	_, err = hdl.Seek(int64(4+12), io.SeekStart)
 	if err != nil {
 		hdl.Close()
-		return nil, err
+		return nil, eris.Wrapf(err, "failed to seek in VP %s", filename)
 	}
 
 	return &VpWriter{
@@ -92,13 +92,13 @@ func (w *VpWriter) WriteFile(filename string, reader io.Reader) error {
 	item := new(VpFile)
 	offset, err := w.hdl.Seek(0, io.SeekCurrent)
 	if err != nil {
-		return err
+		return eris.Wrapf(err, "failed to read current position in %s", filename)
 	}
 
 	item.offset = int32(offset)
 	size, err := io.CopyBuffer(w.hdl, reader, w.buffer)
 	if err != nil {
-		return err
+		return eris.Wrapf(err, "failed to write data to %s", filename)
 	}
 
 	item.size = int32(size)
@@ -120,18 +120,18 @@ func (w *VpWriter) Close() error {
 	tocOffset, err := w.hdl.Seek(0, io.SeekCurrent)
 	if err != nil {
 		w.hdl.Close()
-		return err
+		return eris.Wrapf(err, "failed to read current position in %s", w.hdl.Name())
 	}
 	err = writeDirectoryEntries(w.root, w.hdl, &items, buffer)
 	if err != nil {
 		w.hdl.Close()
-		return err
+		return eris.Wrapf(err, "failed to write TOC to %s", w.hdl.Name())
 	}
 
 	_, err = w.hdl.Seek(0, io.SeekStart)
 	if err != nil {
 		w.hdl.Close()
-		return err
+		return eris.Wrapf(err, "failed to seek to the start of %s", w.hdl.Name())
 	}
 
 	buffer[0] = 'V'
@@ -145,11 +145,11 @@ func (w *VpWriter) Close() error {
 	_, err = w.hdl.Write(buffer[:16])
 	if err != nil {
 		w.hdl.Close()
-		return err
+		return eris.Wrapf(err, "failed to write positions in %s", w.hdl.Name())
 	}
 	err = w.hdl.Close()
 	if err != nil {
-		return err
+		return eris.Wrapf(err, "failed to close %s", w.hdl.Name())
 	}
 
 	return nil
@@ -165,9 +165,9 @@ func writeDirectoryEntries(folder *VpFolder, hdl *os.File, items *int32, buffer 
 		nameLen := len(name)
 		for idx := 0; idx < 32; idx++ {
 			if idx >= nameLen {
-				buffer[8+idx] = byte(0)
+				buffer[8+idx] = 0
 			} else {
-				buffer[8+idx] = byte(name[idx])
+				buffer[8+idx] = name[idx]
 			}
 		}
 
@@ -176,11 +176,11 @@ func writeDirectoryEntries(folder *VpFolder, hdl *os.File, items *int32, buffer 
 
 		_, err := hdl.Write(buffer)
 		if err != nil {
-			return err
+			return eris.Wrapf(err, "failed to write directory entry for %s in %s", name, hdl.Name())
 		}
 		err = writeDirectoryEntries(folder, hdl, items, buffer)
 		if err != nil {
-			return err
+			return eris.Wrapf(err, "failed to write sub entries for %s in %s", name, hdl.Name())
 		}
 
 		// offset
@@ -198,7 +198,7 @@ func writeDirectoryEntries(folder *VpFolder, hdl *os.File, items *int32, buffer 
 		binary.LittleEndian.PutUint32(buffer[40:44], 0)
 		_, err = hdl.Write(buffer)
 		if err != nil {
-			return err
+			return eris.Wrapf(err, "failed to write end for directory entry %s in %s", name, hdl.Name())
 		}
 	}
 
@@ -221,7 +221,7 @@ func writeDirectoryEntries(folder *VpFolder, hdl *os.File, items *int32, buffer 
 		binary.LittleEndian.PutUint32(buffer[40:44], uint32(file.timestamp.Unix()))
 		_, err := hdl.Write(buffer)
 		if err != nil {
-			return err
+			return eris.Wrapf(err, "failed to write file entry %s in %s", name, hdl.Name())
 		}
 	}
 

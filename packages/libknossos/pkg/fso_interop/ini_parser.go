@@ -19,7 +19,7 @@ func readUntil(f io.RuneScanner, stop rune) (string, error) {
 	for {
 		char, _, err := f.ReadRune()
 		if err != nil {
-			return "", err
+			return "", eris.Wrap(err, "failed to read rune")
 		}
 
 		if char == stop {
@@ -34,14 +34,19 @@ func skipWhitespace(f io.RuneScanner) error {
 	for {
 		char, _, err := f.ReadRune()
 		if err != nil {
-			return err
+			return eris.Wrap(err, "failed to read rune")
 		}
 
 		switch char {
 		case ' ', '\t', '\n', '\r':
 			// do nothing
 		default:
-			return f.UnreadRune()
+			err = f.UnreadRune()
+			if err != nil {
+				return eris.Wrap(err, "failed to queue rune back")
+			}
+
+			return nil
 		}
 	}
 }
@@ -59,7 +64,7 @@ func parseFile(f io.RuneScanner, dest interface{}) error {
 			if eris.Is(err, io.EOF) {
 				return nil
 			}
-			return err
+			return eris.Wrap(err, "failed to read rune")
 		}
 
 		switch char {
@@ -192,7 +197,7 @@ func SaveSettings(ctx context.Context, settings *client.FSOSettings) error {
 	}
 
 	iniPath := filepath.Join(GetPrefPath(ctx), "fs2_open.ini")
-	err := os.WriteFile(iniPath, []byte(buffer.String()), 0660)
+	err := os.WriteFile(iniPath, []byte(buffer.String()), 0600)
 	if err != nil {
 		return eris.Wrapf(err, "failed to write %s", iniPath)
 	}

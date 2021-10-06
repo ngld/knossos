@@ -238,7 +238,7 @@ func ProgressCopier(ctx context.Context, stepInfo TaskStep, length int64, input 
 	pos := 0
 	lastPos := 0
 	buffer := make([]byte, 4096)
-	step := (stepInfo.To - float32(stepInfo.From)) / float32(length)
+	step := (stepInfo.To - stepInfo.From) / float32(length)
 	lastUpdate := time.Now()
 	interval := time.Millisecond * 300
 	tracker := NewSpeedTracker()

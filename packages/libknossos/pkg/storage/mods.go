@@ -61,7 +61,12 @@ func ImportMods(ctx context.Context, callback func(context.Context, func(*common
 
 		// Remove existing entries
 		err := bucket.ForEach(func(k, _ []byte) error {
-			return bucket.Delete(k)
+			err := bucket.Delete(k)
+			if err != nil {
+				return eris.Wrapf(err, "failed to delete key %v in local mod storage", k)
+			}
+
+			return nil
 		})
 		if err != nil {
 			return err
@@ -80,12 +85,12 @@ func ImportMods(ctx context.Context, callback func(context.Context, func(*common
 		err = callback(ctx, func(mod *common.ModMeta) error {
 			encoded, err := proto.Marshal(mod)
 			if err != nil {
-				return err
+				return eris.Wrapf(err, "failed to serialise mod metadata for %s", mod.Modid)
 			}
 
 			err = bucket.Put([]byte(mod.Modid), encoded)
 			if err != nil {
-				return err
+				return eris.Wrapf(err, "failed to save mod metadata for %s", mod.Modid)
 			}
 
 			// Add this mod to our type index
@@ -94,12 +99,12 @@ func ImportMods(ctx context.Context, callback func(context.Context, func(*common
 		}, func(rel *common.Release) error {
 			encoded, err := proto.Marshal(rel)
 			if err != nil {
-				return err
+				return eris.Wrapf(err, "failed to serialise mod release %s %s", rel.Modid, rel.Version)
 			}
 
 			err = bucket.Put([]byte(rel.Modid+"#"+rel.Version), encoded)
 			if err != nil {
-				return err
+				return eris.Wrapf(err, "failed to save mod release %s %s", rel.Modid, rel.Version)
 			}
 
 			localVersionIdx.BatchedAdd(rel.Modid, rel.Version)
@@ -124,7 +129,12 @@ func ImportUserSettings(ctx context.Context, callback func(context.Context, func
 
 		// Remove existing entries
 		err := bucket.ForEach(func(k, _ []byte) error {
-			return bucket.Delete(k)
+			err := bucket.Delete(k)
+			if err != nil {
+				return eris.Wrapf(err, "failed to delete key %v in user settings", k)
+			}
+
+			return nil
 		})
 		if err != nil {
 			return err
@@ -135,10 +145,15 @@ func ImportUserSettings(ctx context.Context, callback func(context.Context, func
 		return callback(ctx, func(modID, version string, us *client.UserSettings) error {
 			encoded, err := proto.Marshal(us)
 			if err != nil {
-				return err
+				return eris.Wrapf(err, "failed to serialise user settings for mod %s %s", modID, version)
 			}
 
-			return bucket.Put([]byte(modID+"#"+version), encoded)
+			err = bucket.Put([]byte(modID+"#"+version), encoded)
+			if err != nil {
+				return eris.Wrapf(err, "failed to save user settings for mod %s %s", modID, version)
+			}
+
+			return nil
 		})
 	})
 }
@@ -151,10 +166,15 @@ func SaveLocalMod(ctx context.Context, mod *common.ModMeta) error {
 		bucket := tx.Bucket(localModsBucket)
 		encoded, err := proto.Marshal(mod)
 		if err != nil {
-			return eris.Wrap(err, "failed to serialise mod")
+			return eris.Wrapf(err, "failed to serialise mod %s", mod.Modid)
 		}
 
-		return bucket.Put([]byte(mod.Modid), encoded)
+		err = bucket.Put([]byte(mod.Modid), encoded)
+		if err != nil {
+			return eris.Wrapf(err, "failed to save mod %s", mod.Modid)
+		}
+
+		return nil
 	})
 }
 
@@ -191,9 +211,15 @@ func SaveLocalModRelease(ctx context.Context, release *common.Release) error {
 	// Finally, we can save the actual mod
 	encoded, err := proto.Marshal(release)
 	if err != nil {
-		return eris.Wrap(err, "failed to encode release")
+		return eris.Wrapf(err, "failed to encode release %s %s", release.Modid, release.Version)
 	}
-	return bucket.Put([]byte(release.Modid+"#"+release.Version), encoded)
+
+	err = bucket.Put([]byte(release.Modid+"#"+release.Version), encoded)
+	if err != nil {
+		return eris.Wrapf(err, "failed to save release %s %s", release.Modid, release.Version)
+	}
+
+	return nil
 }
 
 func (p genericModProvider) GetMods(ctx context.Context, taskRef uint32) ([]*common.Release, error) {
@@ -213,7 +239,7 @@ func (p genericModProvider) GetMods(ctx context.Context, taskRef uint32) ([]*com
 			meta := new(common.Release)
 			err := proto.Unmarshal(item, meta)
 			if err != nil {
-				return err
+				return eris.Wrapf(err, "failed to deserialise release %s %s", modID, versions[len(versions)-1])
 			}
 
 			result = append(result, meta)
@@ -235,7 +261,12 @@ func (p genericModProvider) GetMod(ctx context.Context, id string) (*common.ModM
 			return eris.Errorf("mod %s not found", id)
 		}
 
-		return proto.Unmarshal(encoded, &mod)
+		err := proto.Unmarshal(encoded, &mod)
+		if err != nil {
+			return eris.Wrapf(err, "failed to deserialise mod %s", id)
+		}
+
+		return nil
 	})
 	if err != nil {
 		return nil, err
@@ -251,7 +282,12 @@ func (p genericModProvider) GetModRelease(ctx context.Context, id string, versio
 			return eris.Errorf("mod %s %s not found", id, version)
 		}
 
-		return proto.Unmarshal(item, mod)
+		err := proto.Unmarshal(item, mod)
+		if err != nil {
+			return eris.Wrapf(err, "failed to deserialise release %s %s", id, version)
+		}
+
+		return nil
 	})
 	if err != nil {
 		return nil, err
@@ -275,11 +311,16 @@ func SaveUserSettingsForMod(ctx context.Context, id, version string, settings *c
 	return db.Update(func(tx *bolt.Tx) error {
 		encoded, err := proto.Marshal(settings)
 		if err != nil {
-			return err
+			return eris.Wrapf(err, "failed to serialise user settings for mod %s %s", id, version)
 		}
 
 		bucket := tx.Bucket(userModSettingsBucket)
-		return bucket.Put([]byte(id+"#"+version), encoded)
+		err = bucket.Put([]byte(id+"#"+version), encoded)
+		if err != nil {
+			return eris.Wrapf(err, "failed to save user settings for mod %s %s", id, version)
+		}
+
+		return nil
 	})
 }
 
@@ -290,7 +331,10 @@ func GetUserSettingsForMod(ctx context.Context, id, version string) (*client.Use
 
 		encoded := bucket.Get([]byte(id + "#" + version))
 		if encoded != nil {
-			return proto.Unmarshal(encoded, result)
+			err := proto.Unmarshal(encoded, result)
+			if err != nil {
+				return eris.Wrapf(err, "failed to deserialise user settings for mod %s %s", id, version)
+			}
 		}
 		return nil
 	})

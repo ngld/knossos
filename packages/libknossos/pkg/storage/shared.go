@@ -8,6 +8,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 
 	"github.com/ngld/knossos/packages/libknossos/pkg/api"
+	"github.com/rotisserie/eris"
 )
 
 type txCtxKey struct{}
@@ -22,7 +23,7 @@ func Open(ctx context.Context) error {
 		Timeout: 1 * time.Second,
 	})
 	if err != nil {
-		return err
+		return eris.Wrap(err, "failed to open state DB")
 	}
 
 	buckets := [][]byte{
@@ -33,7 +34,7 @@ func Open(ctx context.Context) error {
 		for _, bucket := range buckets {
 			_, err := tx.CreateBucketIfNotExists(bucket)
 			if err != nil {
-				return err
+				return eris.Wrapf(err, "failed to create bucket %s", bucket)
 			}
 		}
 
