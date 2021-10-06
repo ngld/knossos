@@ -54,7 +54,7 @@ def configure():
     if build not in ("Debug", "Release"):
         error("Invalid build mode %s passed. Only Debug or Release are valid." % build)
 
-    setenv("NODE_OPTIONS", '-r "%s"' % to_slashes(str(resolve_path("//.pnp.js"))))
+    setenv("NODE_OPTIONS", '-r "%s"' % to_slashes(str(resolve_path("//.pnp.cjs"))))
 
     if OS == "windows":
         libext = ".dll"
@@ -176,15 +176,15 @@ def configure():
         ],
         outputs = [
             ".yarn/cache/*.zip",
-            ".pnp.js",
+            ".pnp.cjs",
         ],
         env = {
-            # The .pnp.js file doesn't exist, yet, so forcing Node.js to load it will cause yarn install to fail.
+            # The .pnp.cjs file doesn't exist, yet, so forcing Node.js to load it will cause yarn install to fail.
             "NODE_OPTIONS": "",
         },
         cmds = [
             yarn("install"),
-            "touch .pnp.js",
+            "touch .pnp.cjs",
         ],
     )
 

@@ -7,7 +7,7 @@ package libopenal
 // #cgo darwin  CFLAGS: -I${SRCDIR}/../../third_party/openal/include
 // #cgo windows LDFLAGS: -L${SRCDIR}/../../third_party/openal/bin/Win64 -lsoft_oal
 // #cgo linux   LDFLAGS: -lopenal
-// #cgo darwin  LDFLAGS: -lopenal
+// #cgo darwin  LDFLAGS: -framework OpenAL
 import "C"
 
 import (

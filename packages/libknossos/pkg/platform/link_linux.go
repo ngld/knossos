@@ -3,7 +3,7 @@ package platform
 import (
 	"os"
 
-	"golang.org/x/sys/windows"
+	"github.com/rotisserie/eris"
 )
 
 func OpenLink(link string) error {
