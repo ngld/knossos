@@ -4,7 +4,7 @@ const {existsSync} = require(`fs`);
 const {createRequire, createRequireFromPath} = require(`module`);
 const {resolve} = require(`path`);
 
-const relPnpApiPath = "../../../../.pnp.js";
+const relPnpApiPath = "../../../../.pnp.cjs";
 
 const absPnpApiPath = resolve(__dirname, relPnpApiPath);
 const absRequire = (createRequire || createRequireFromPath)(absPnpApiPath);
@@ -72,6 +72,14 @@ const moduleWrapper = tsserver => {
             str = resolve(`zipfile:${str}`);
           } break;
 
+          // Support neovim native LSP and [typescript-language-server](https://github.com/theia-ide/typescript-language-server)
+          // We have to resolve the actual file system path from virtual path,
+          // everything else is up to neovim
+          case `neovim`: {
+            str = normalize(resolved).replace(/\.zip\//, `.zip::`);
+            str = `zipfile:${str}`;
+          } break;
+
           default: {
             str = `zip:${str}`;
           } break;
@@ -83,9 +91,25 @@ const moduleWrapper = tsserver => {
   }
 
   function fromEditorPath(str) {
-    return process.platform === `win32`
-      ? str.replace(/^\^?zip:\//, ``)
-      : str.replace(/^\^?zip:/, ``);
+    switch (hostInfo) {
+      case `coc-nvim`:
+      case `neovim`: {
+        str = str.replace(/\.zip::/, `.zip/`);
+        // The path for coc-nvim is in format of /<pwd>/zipfile:/<pwd>/.yarn/...
+        // So in order to convert it back, we use .* to match all the thing
+        // before `zipfile:`
+        return process.platform === `win32`
+          ? str.replace(/^.*zipfile:\//, ``)
+          : str.replace(/^.*zipfile:/, ``);
+      } break;
+
+      case `vscode`:
+      default: {
+        return process.platform === `win32`
+          ? str.replace(/^\^?zip:\//, ``)
+          : str.replace(/^\^?zip:/, ``);
+      } break;
+    }
   }
 
   // Force enable 'allowLocalPluginLoads'
