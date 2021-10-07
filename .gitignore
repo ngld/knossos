@@ -23,7 +23,7 @@ compile_commands.json
 .yarn/cache/
 .yarn/unplugged/
 .yarn/*-state.*
-.pnp.js
+.pnp.cjs
 
 # macOS
 .DS_Store

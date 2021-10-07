@@ -142,7 +142,6 @@ module.exports = function (env, args) {
       new ReactRefreshPlugin(),
     ],
     devServer: {
-      publicPath: '/',
       hot: true,
       historyApiFallback: {
         rewrites: [
