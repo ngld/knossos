@@ -141,6 +141,13 @@ cmake_policy(SET CMP0042 NEW)
 
 # Only generate Debug and Release configuration types.
 set(CMAKE_CONFIGURATION_TYPES Debug Release)
+set(CONSOLE_OUTPUT OFF CACHE BOOL "Whether to output to console in Windows release builds")
+
+if(NOT WIN32)
+  set(CONSOLE_OUTPUT ON)
+elseif(NOT CMAKE_BUILD_TYPE STREQUAL Release)
+  set(CONSOLE_OUTPUT ON)
+endif()
 
 # Project name.
 project(Knossos)

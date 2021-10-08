@@ -119,9 +119,9 @@ def knossos_configure(binext, libext, generator):
             "cd build/client",
             """
     if [ ! -f CMakeCache.txt ] || [ ! -f compile_commands.json ]; then
-        cmake -G"{generator}" -DCMAKE_BUILD_TYPE={cef_build} -DPROJECT_ARCH={kn_arch} -DCMAKE_EXPORT_COMPILE_COMMANDS=1 ../../packages/client
+        cmake -G"{generator}" -DCMAKE_BUILD_TYPE={cef_build} -DPROJECT_ARCH={kn_arch} -DCONSOLE_OUTPUT={console} -DCMAKE_EXPORT_COMPILE_COMMANDS=1 ../../packages/client
     fi
-    """.format(generator = generator, cef_build = cef_build, kn_arch = kn_arch),
+    """.format(generator = generator, cef_build = cef_build, kn_arch = kn_arch, console = "ON" if build == "Debug" else "OFF"),
             merge_compile_commands,
             build_cmd,
         ],

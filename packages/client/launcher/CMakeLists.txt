@@ -131,7 +131,6 @@ endif()
 # Determine the target output directory.
 SET_CEF_TARGET_OUT_DIR()
 
-
 #
 # Linux configuration.
 #
@@ -298,7 +297,7 @@ endif()
 if(OS_WINDOWS)
   # Executable target.
   add_executable(${CEF_TARGET} ${KNOSSOS_SRCS} ${KNOSSOS_HELPER_SRCS})
-  if(NOT CMAKE_BUILD_TYPE STREQUAL Debug)
+  if(NOT CONSOLE_OUTPUT)
     # This doesn't work with IDEs but they probably don't need the console subsystem to get useful debug output.
     set_target_properties(${CEF_TARGET} PROPERTIES WIN32_EXECUTABLE TRUE)
   endif()
