@@ -1,30 +1,91 @@
-import { useState, useEffect } from 'react';
-import { Button, Card, ControlGroup, FormGroup, Slider, Tag } from '@blueprintjs/core';
-import { makeAutoObservable, autorun, runInAction } from 'mobx';
+import { useState } from 'react';
+import { Button, Card, ControlGroup, FormGroup, Tag, Spinner, Callout } from '@blueprintjs/core';
+import { makeAutoObservable, runInAction } from 'mobx';
 import { fromPromise, IPromiseBasedObservable } from 'mobx-utils';
 import { observer } from 'mobx-react-lite';
-import { Settings, TaskRequest, HardwareInfoResponse, NullMessage } from '@api/client';
+import { Settings, FSOSettings, HardwareInfoResponse, NullMessage } from '@api/client';
 import { FinishedUnaryCall } from '@protobuf-ts/runtime-rpc';
 import { GlobalState, useGlobalState } from '../lib/state';
 import FormContext from '../elements/form-context';
-import { FormCheckbox, FormInputGroup, FormSelect } from '../elements/form-elements';
+import { FormCheckbox, FormInputGroup, FormSelect, FormSlider } from '../elements/form-elements';
+import ErrorDialog from '../dialogs/error-dialog';
 
-async function loadSettings(gs: GlobalState, formState: Settings): Promise<void> {
-  try {
-    const result = await gs.client.getSettings({});
-    runInAction(() => {
-      Object.assign(formState, result.response);
-    });
-  } catch (e) {
-    console.error(e);
+class SettingsState {
+  loading = true;
+  saving = false;
+  error = false;
+  errorMessage = '';
+  saveError = false;
+  gs: GlobalState;
+  knSettings: Settings = Settings.create();
+  fsoSettings: FSOSettings = FSOSettings.create();
+
+  constructor(gs: GlobalState) {
+    makeAutoObservable(this, { gs: false }, { proxy: false });
+    this.gs = gs;
+
+    void (async () => {
+      try {
+        const settings = await gs.client.getSettings({});
+        const fsoSettings = await gs.client.loadFSOSettings({});
+
+        runInAction(() => {
+          this.knSettings = settings.response;
+          this.fsoSettings = fsoSettings.response;
+          this.loading = false;
+        });
+      } catch (e) {
+        console.error(e);
+        runInAction(() => {
+          this.error = true;
+          this.loading = false;
+          this.errorMessage = e instanceof Error ? e.message : String(e);
+        });
+      }
+    })();
   }
-}
 
-async function saveSettings(gs: GlobalState, formState: Settings): Promise<void> {
-  try {
-    await gs.client.saveSettings(formState);
-  } catch (e) {
-    console.error(e);
+  async saveKNSettings() {
+    this.saving = true;
+
+    try {
+      await this.gs.client.saveSettings(this.knSettings);
+      runInAction(() => {
+        this.saving = false;
+      });
+    } catch (e) {
+      console.error(e);
+      runInAction(() => {
+        this.saving = false;
+
+        const message = <pre>{e instanceof Error ? e.message : String(e)}</pre>;
+        this.gs.launchOverlay(ErrorDialog, { message });
+      });
+    }
+  }
+
+  async saveFSOSettings() {
+    this.saving = true;
+
+    try {
+      await this.gs.client.saveFSOSettings(this.fsoSettings);
+      runInAction(() => {
+        this.saving = false;
+      });
+    } catch (e) {
+      console.error(e);
+      runInAction(() => {
+        this.saving = false;
+
+        const message = <pre>{e instanceof Error ? e.message : String(e)}</pre>;
+        this.gs.launchOverlay(ErrorDialog, { message });
+      });
+    }
+  }
+
+  async saveAll() {
+    await this.saveKNSettings();
+    await this.saveFSOSettings();
   }
 }
 
@@ -62,7 +123,7 @@ const JoystickSelect = observer(function JoystickSelect(
   props: JoystickSelectProps,
 ): React.ReactElement {
   return (
-    <FormSelect name="joystick" fill={true}>
+    <FormSelect name="currentJoystickGUID" fill={true}>
       {props.hardwareInfo.case({
         pending: () => <option>Loading...</option>,
         rejected: () => <option>ERROR</option>,
@@ -80,12 +141,15 @@ const JoystickSelect = observer(function JoystickSelect(
   );
 });
 
-async function selectLibraryFolder(gs: GlobalState, formState: Settings): Promise<void> {
+async function selectLibraryFolder(gs: GlobalState, formState: SettingsState): Promise<void> {
   try {
-    const result = await knOpenFolder('Please select your library folder', formState.libraryPath);
-    if (result !== '' && result !== formState.libraryPath) {
+    const result = await knOpenFolder(
+      'Please select your library folder',
+      formState.knSettings.libraryPath,
+    );
+    if (result !== '' && result !== formState.knSettings.libraryPath) {
       runInAction(() => {
-        formState.libraryPath = result;
+        formState.knSettings.libraryPath = result;
       });
 
       void rescanLocalMods(gs);
@@ -98,171 +162,204 @@ async function selectLibraryFolder(gs: GlobalState, formState: Settings): Promis
 async function rescanLocalMods(gs: GlobalState): Promise<void> {
   try {
     const task = gs.tasks.startTask('Scan new library folder...');
-    await gs.client.scanLocalMods(TaskRequest.create({ ref: task }));
+    await gs.client.scanLocalMods({ ref: task });
   } catch (e) {
     console.error(e);
   }
 }
 
-export default function SettingsPage(): React.ReactElement {
+export default observer(function SettingsPage(): React.ReactElement {
   const gs = useGlobalState();
-  const [formState] = useState<Settings>(() => {
-    const defaults = Settings.create();
-    makeAutoObservable(defaults);
-    return defaults;
-  });
+  const [formState] = useState(() => new SettingsState(gs));
   const [hardwareInfo] = useState(() => fromPromise(gs.client.getHardwareInfo({})));
-
-  useEffect(() => {
-    void loadSettings(gs, formState);
-
-    return autorun(() => {
-      // Wait until the settings are loaded; firstRunDone should always be true so it's a good indicator
-      if (formState.firstRunDone) {
-        console.log('Settings changed...', JSON.stringify(formState));
-        void saveSettings(gs, formState);
-      }
-    });
-  }, [gs, formState]);
 
   return (
     <div className="text-white text-sm">
-      <FormContext value={formState as unknown as Record<string, unknown>}>
-        <div className="flex flex-row gap-4">
-          <div className="flex flex-1 flex-col gap-4">
-            <Card>
-              <h5 className="text-xl mb-5">General Knossos Settings</h5>
-              <FormGroup label="Library Path">
-                <ControlGroup fill={true}>
-                  <FormInputGroup name="libraryPath" readOnly={true} />
-                  <Button
-                    onClick={() => {
-                      void selectLibraryFolder(gs, formState);
-                    }}
-                  >
-                    Browse...
-                  </Button>
-                </ControlGroup>
-                <Button
-                  onClick={() => {
-                    void rescanLocalMods(gs);
-                  }}
-                >
-                  Rescan local mods
+      <div className="flex flex-row gap-4">
+        {formState.loading ? (
+          <div className="absolute top-0 left-0 right-0 bottom-0 flex justify-center align-middle">
+            <Spinner />
+          </div>
+        ) : formState.error ? (
+          <Callout intent="danger" title="Error">
+            Failed to load settings.
+            <pre>{formState.errorMessage}</pre>
+          </Callout>
+        ) : (
+          <>
+            <div className="flex flex-1 flex-col gap-4">
+              <Card className="relative">
+                <Button className="absolute top-4 right-4" onClick={() => void formState.saveAll()}>
+                  Save All
                 </Button>
-              </FormGroup>
-              <FormCheckbox name="updateCheck" label="Update Notifications" />
-              <FormCheckbox name="errorReports" label="Send Error Reports" />
-            </Card>
-            <Card>
-              <h5 className="text-xl mb-5">Downloads</h5>
-              <div className="flex flex-row gap-4">
-                <FormGroup className="flex-1" label="Max Downloads">
-                  <FormInputGroup name="maxDownloads" />
-                </FormGroup>
 
-                <FormGroup className="flex-1" label="Download bandwidth limit">
-                  <FormInputGroup name="bandwidthLimit" rightElement={<Tag minimal={true}>KiB/s</Tag>} />
-                </FormGroup>
-              </div>
-            </Card>
+                <h5 className="text-xl mb-5">General Knossos Settings</h5>
+                <FormContext value={formState.knSettings as unknown as Record<string, unknown>}>
+                  <FormGroup label="Library Path">
+                    <ControlGroup fill={true}>
+                      <FormInputGroup name="libraryPath" readOnly={true} />
+                      <Button
+                        onClick={() => {
+                          void selectLibraryFolder(gs, formState);
+                        }}
+                      >
+                        Browse...
+                      </Button>
+                    </ControlGroup>
+                    <Button
+                      onClick={() => {
+                        void rescanLocalMods(gs);
+                      }}
+                    >
+                      Rescan local mods
+                    </Button>
+                  </FormGroup>
+                  <FormCheckbox name="updateCheck" label="Update Notifications" />
+                  <FormCheckbox name="errorReports" label="Send Error Reports" />
+                </FormContext>
+              </Card>
+              <Card>
+                <h5 className="text-xl mb-5">Downloads</h5>
+                <FormContext value={formState.knSettings as unknown as Record<string, unknown>}>
+                  <div className="flex flex-row gap-4">
+                    <FormGroup className="flex-1" label="Max Downloads">
+                      <FormInputGroup name="maxDownloads" />
+                    </FormGroup>
 
-            <Card>
-              <h5 className="text-xl mb-5">Video</h5>
+                    <FormGroup className="flex-1" label="Download bandwidth limit">
+                      <FormInputGroup
+                        name="bandwidthLimit"
+                        rightElement={<Tag minimal={true}>KiB/s</Tag>}
+                      />
+                    </FormGroup>
+                  </div>
+                </FormContext>
+              </Card>
 
-              <div className="flex flex-row gap-4">
-                <FormGroup label="Resolution">
-                  <HardwareSelect
-                    hardwareInfo={hardwareInfo}
-                    infoKey="resolutions"
-                    field="resolution"
-                  />
-                </FormGroup>
+              <Card>
+                <h5 className="text-xl mb-5">Video</h5>
 
-                <FormGroup label="Bit Depth">
-                  <FormSelect name="depth">
-                    <option value="32">32-bit</option>
-                    <option value="16">16-bit</option>
-                  </FormSelect>
-                </FormGroup>
+                <FormContext
+                  value={formState.fsoSettings.default as unknown as Record<string, unknown>}
+                >
+                  <div className="flex flex-row gap-4">
+                    <FormContext value={formState as unknown as Record<string, unknown>}>
+                      <FormGroup label="Resolution">
+                        <HardwareSelect
+                          hardwareInfo={hardwareInfo}
+                          infoKey="resolutions"
+                          field="resolution"
+                        />
+                      </FormGroup>
 
-                <FormGroup label="Texture Filter">
-                  <FormSelect name="filter">
-                    <option value="3">Trilinear</option>
-                    <option value="2">Bilinear</option>
-                  </FormSelect>
-                </FormGroup>
-              </div>
-            </Card>
-          </div>
-          <div className="flex flex-1 flex-col gap-4">
-            <Card>
-              <h5 className="text-xl mb-5">Audio</h5>
-              <FormGroup label="Playback Device">
-                <HardwareSelect
-                  hardwareInfo={hardwareInfo}
-                  infoKey="audioDevices"
-                  field="playback"
-                />
-              </FormGroup>
+                      <FormGroup label="Bit Depth">
+                        <FormSelect name="depth">
+                          <option value="32">32-bit</option>
+                          <option value="16">16-bit</option>
+                        </FormSelect>
+                      </FormGroup>
+                    </FormContext>
 
-              <FormGroup label="Capture Device">
-                <HardwareSelect
-                  hardwareInfo={hardwareInfo}
-                  infoKey="captureDevices"
-                  field="capture"
-                />
-              </FormGroup>
-
-              <FormCheckbox name="efx" label="Enable EFX" />
-
-              <div className="flex flex-row gap-4">
-                <FormGroup className="flex-1" label="Sample Rate">
-                  <FormInputGroup name="sampleRate" />
-                </FormGroup>
-
-                <FormGroup className="flex-1" label="Language">
-                  <FormSelect name="language">
-                    <option>English</option>
-                  </FormSelect>
-                </FormGroup>
-              </div>
-            </Card>
-
-            <Card>
-              <h5 className="text-xl mb-5">Speech</h5>
-              <div className="flex flex-row gap-4">
-                <div className="flex-1">
-                  <FormGroup label="Voice">
-                    <HardwareSelect hardwareInfo={hardwareInfo} infoKey="voices" field="voice" />
+                    <FormGroup label="Texture Filter">
+                      <FormSelect name="textureFilter">
+                        <option value="3">Trilinear</option>
+                        <option value="2">Bilinear</option>
+                      </FormSelect>
+                    </FormGroup>
+                  </div>
+                </FormContext>
+              </Card>
+            </div>
+            <div className="flex flex-1 flex-col gap-4">
+              <Card>
+                <h5 className="text-xl mb-5">Audio</h5>
+                <FormContext
+                  value={formState.fsoSettings.sound as unknown as Record<string, unknown>}
+                >
+                  <FormGroup label="Playback Device">
+                    <HardwareSelect
+                      hardwareInfo={hardwareInfo}
+                      infoKey="audioDevices"
+                      field="playbackDevice"
+                    />
                   </FormGroup>
 
-                  <FormGroup label="Volume">
-                    <Slider min={0} max={100} labelStepSize={10} />
+                  <FormGroup label="Capture Device">
+                    <HardwareSelect
+                      hardwareInfo={hardwareInfo}
+                      infoKey="captureDevices"
+                      field="captureDevice"
+                    />
                   </FormGroup>
-                </div>
 
-                <FormGroup className="flex-1" label="Use Speech in">
-                  <FormCheckbox name="speechTechRoom" label="Tech Room" />
-                  <FormCheckbox name="speechInGame" label="In-Game" />
-                  <FormCheckbox name="speechBriefings" label="Briefings" />
-                  <FormCheckbox name="speechMulti" label="Multiplayer" />
-                </FormGroup>
-              </div>
-            </Card>
+                  <FormCheckbox name="enableEFX" label="Enable EFX" />
 
-            <Card>
-              <h5 className="text-xl mb-5">Joystick</h5>
-              <FormGroup label="Joystick">
-                <JoystickSelect hardwareInfo={hardwareInfo} />
-              </FormGroup>
+                  <div className="flex flex-row gap-4">
+                    <FormGroup className="flex-1" label="Sample Rate">
+                      <FormInputGroup name="sampleRate" />
+                    </FormGroup>
 
-              <FormCheckbox name="enableFF" label="Force Feedback" />
-              <FormCheckbox name="enableHitEffect" label="Directional Hit" />
-            </Card>
-          </div>
-        </div>
-      </FormContext>
+                    <FormContext
+                      value={formState.fsoSettings.default as unknown as Record<string, unknown>}
+                    >
+                      <FormGroup className="flex-1" label="Language">
+                        <FormSelect name="language">
+                          <option>English</option>
+                        </FormSelect>
+                      </FormGroup>
+                    </FormContext>
+                  </div>
+                </FormContext>
+              </Card>
+
+              <Card>
+                <h5 className="text-xl mb-5">Speech</h5>
+                <FormContext
+                  value={formState.fsoSettings.default as unknown as Record<string, unknown>}
+                >
+                  <div className="flex flex-row gap-4">
+                    <div className="flex-1">
+                      <FormGroup label="Voice">
+                        <HardwareSelect
+                          hardwareInfo={hardwareInfo}
+                          infoKey="voices"
+                          field="speechVoice"
+                        />
+                      </FormGroup>
+
+                      <FormGroup label="Volume">
+                        <FormSlider min={0} max={100} labelStepSize={10} name="speechVolume" />
+                      </FormGroup>
+                    </div>
+
+                    <FormGroup className="flex-1" label="Use Speech in">
+                      <FormCheckbox name="speechTechroom" label="Tech Room" />
+                      <FormCheckbox name="speechIngame" label="In-Game" />
+                      <FormCheckbox name="speechBriefings" label="Briefings" />
+                      <FormCheckbox name="speechMulti" label="Multiplayer" />
+                    </FormGroup>
+                  </div>
+                </FormContext>
+              </Card>
+
+              <Card>
+                <h5 className="text-xl mb-5">Joystick</h5>
+
+                <FormContext
+                  value={formState.fsoSettings.default as unknown as Record<string, unknown>}
+                >
+                  <FormGroup label="Joystick">
+                    <JoystickSelect hardwareInfo={hardwareInfo} />
+                  </FormGroup>
+
+                  <FormCheckbox name="enableJoystickFF" label="Force Feedback" />
+                  <FormCheckbox name="enableHitEffect" label="Directional Hit" />
+                </FormContext>
+              </Card>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
-}
+});

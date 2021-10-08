@@ -36,7 +36,7 @@ message WakeupResponse {
 }
 
 message FSOSettings {
-  message GeneralSettings {
+  message DefaultSettings {
     string CurrentJoystickGUID = 1;
     uint32 CurrentJoystick = 2;
     string LastPlayer = 3;
@@ -91,7 +91,7 @@ message FSOSettings {
     uint32 Strength = 1;
   }
 
-  GeneralSettings General = 1;
+  DefaultSettings Default = 1;
   SoundSettings Sound = 2;
   VideoSettings Video = 3;
   ForceFeedbackSettings ForceFeedback = 4;
@@ -332,4 +332,6 @@ service Knossos {
   rpc FixLibraryFolderPath (FixLibraryFolderPathPayload) returns (FixLibraryFolderPathPayload) {};
   rpc HandleRetailFiles (HandleRetailFilesRequest) returns (SuccessResponse) {};
   rpc GetHardwareInfo (NullMessage) returns (HardwareInfoResponse) {};
+  rpc LoadFSOSettings (NullMessage) returns (FSOSettings) {};
+  rpc SaveFSOSettings (FSOSettings) returns (SuccessResponse) {};
 }

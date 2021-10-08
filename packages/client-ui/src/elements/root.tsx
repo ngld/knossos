@@ -85,6 +85,7 @@ const ModContainer = observer(function ModContainer(): React.ReactElement {
       id="scroll-container"
       className={cx(
         'flex-1',
+        'relative',
         'mod-container',
         { 'pattern-bg': location.pathname !== '/settings' },
         'rounded-md',

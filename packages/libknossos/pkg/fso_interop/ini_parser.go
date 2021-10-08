@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/ngld/knossos/packages/api/client"
+	"github.com/ngld/knossos/packages/libknossos/pkg/api"
 	"github.com/rotisserie/eris"
 )
 
@@ -34,6 +35,9 @@ func skipWhitespace(f io.RuneScanner) error {
 	for {
 		char, _, err := f.ReadRune()
 		if err != nil {
+			if eris.Is(err, io.EOF) {
+				return err
+			}
 			return eris.Wrap(err, "failed to read rune")
 		}
 
@@ -52,7 +56,7 @@ func skipWhitespace(f io.RuneScanner) error {
 }
 
 func parseFile(f io.RuneScanner, dest interface{}) error {
-	destVal := reflect.ValueOf(dest)
+	destVal := reflect.ValueOf(dest).Elem()
 	if destVal.Kind() != reflect.Struct {
 		panic("expected dest to be a struct")
 	}
@@ -79,6 +83,11 @@ func parseFile(f io.RuneScanner, dest interface{}) error {
 				return eris.Errorf("found unexpected section %s", label)
 			}
 
+			if section.IsNil() {
+				section.Set(reflect.New(section.Type().Elem()))
+			}
+			section = section.Elem()
+
 			err = skipWhitespace(f)
 			if err != nil {
 				return err
@@ -91,11 +100,22 @@ func parseFile(f io.RuneScanner, dest interface{}) error {
 		case ' ', '\t', '\n', '\r':
 			err = skipWhitespace(f)
 			if err != nil {
+				if eris.Is(err, io.EOF) {
+					return nil
+				}
 				return err
 			}
 		default:
+			err = f.UnreadRune()
+			if err != nil {
+				return eris.Wrap(err, "failed to push rune back on stack")
+			}
+
 			line, err := readUntil(f, '\n')
 			if err != nil {
+				if eris.Is(err, io.EOF) {
+					return nil
+				}
 				return err
 			}
 
@@ -123,7 +143,7 @@ func parseFile(f io.RuneScanner, dest interface{}) error {
 			if !ok {
 				for idx := 0; idx < st.NumField(); idx++ {
 					field := st.Field(idx)
-					if field.Tag.Get("ini") == key {
+					if strings.SplitN(field.Tag.Get("json"), ",", 2)[0] == key {
 						fieldType = field
 						ok = true
 						break
@@ -145,7 +165,7 @@ func parseFile(f io.RuneScanner, dest interface{}) error {
 					return eris.Errorf("failed to parse value %s for key %s", value, key)
 				}
 
-				field.Set(reflect.ValueOf(num))
+				field.Set(reflect.ValueOf(uint32(num)))
 			case reflect.Bool:
 				num, err := strconv.Atoi(value)
 				if err != nil {
@@ -169,6 +189,21 @@ func LoadSettings(ctx context.Context) (*client.FSOSettings, error) {
 
 	buffer := strings.NewReader(string(data))
 	var settings client.FSOSettings
+	// assign defaults
+
+	settings.Default = &client.FSOSettings_DefaultSettings{
+		GammaD3D:      "1.0",
+		Language:      "English",
+		SpeechVolume:  100,
+		TextureFilter: 1,
+	}
+	settings.Sound = &client.FSOSettings_SoundSettings{
+		SampleRate: 441000,
+	}
+	settings.ForceFeedback = &client.FSOSettings_ForceFeedbackSettings{
+		Strength: 100,
+	}
+
 	err = parseFile(buffer, &settings)
 	if err != nil {
 		return nil, eris.Wrapf(err, "failed to parse %s", iniPath)
@@ -179,19 +214,50 @@ func LoadSettings(ctx context.Context) (*client.FSOSettings, error) {
 
 func SaveSettings(ctx context.Context, settings *client.FSOSettings) error {
 	buffer := strings.Builder{}
-	value := reflect.ValueOf(settings).Addr()
+	value := reflect.ValueOf(settings).Elem()
 	settingsType := value.Type()
 
 	for idx := 0; idx < settingsType.NumField(); idx++ {
-		sectionType := settingsType.Field(idx)
-		sectionValues := value.Field(idx)
+		sectionField := settingsType.Field(idx)
+		if !sectionField.IsExported() {
+			continue
+		}
 
-		buffer.WriteString(fmt.Sprintf("[%s]\n", sectionType.Name))
+		sectionValues := value.Field(idx).Elem()
+		if !sectionValues.IsValid() {
+			api.Log(ctx, api.LogWarn, "Couldn't read %s", sectionField.Name)
+			continue
+		}
 
-		for f := 0; f < settingsType.NumField(); f++ {
-			buffer.WriteString(settingsType.Field(f).Name)
+		if idx > 0 {
+			buffer.WriteString("\n")
+		}
+		buffer.WriteString(fmt.Sprintf("[%s]\n", sectionField.Name))
+
+		sectionType := sectionValues.Type()
+		for f := 0; f < sectionType.NumField(); f++ {
+			field := sectionType.Field(f)
+			if !field.IsExported() {
+				continue
+			}
+
+			buffer.WriteString(field.Name)
 			buffer.WriteString("=")
-			buffer.WriteString(sectionValues.Field(f).String())
+
+			switch value := sectionValues.Field(f).Interface().(type) {
+			case string:
+				buffer.WriteString(value)
+			case int32, uint32:
+				buffer.WriteString(fmt.Sprintf("%d", value))
+			case bool:
+				if value {
+					buffer.WriteString("1")
+				} else {
+					buffer.WriteString("0")
+				}
+			default:
+				return eris.Errorf("discovered unsupported type %s in field %s in section %s", sectionValues.Field(f).String(), field.Name, sectionField.Name)
+			}
 			buffer.WriteString("\n")
 		}
 	}

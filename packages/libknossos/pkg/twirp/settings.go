@@ -12,13 +12,8 @@ import (
 	"github.com/veandco/go-sdl2/sdl"
 )
 
-func (kn *knossosServer) GetFSOSettings(ctx context.Context, req *client.NullMessage) (*client.FSOSettings, error) {
-	settings, err := fso_interop.LoadSettings(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	return settings, nil
+func (kn *knossosServer) LoadFSOSettings(ctx context.Context, req *client.NullMessage) (*client.FSOSettings, error) {
+	return fso_interop.LoadSettings(ctx)
 }
 
 func (kn *knossosServer) SaveFSOSettings(ctx context.Context, req *client.FSOSettings) (*client.SuccessResponse, error) {
