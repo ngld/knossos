@@ -53,7 +53,7 @@ message FSOSettings {
 
     // default: 100
     uint32 SpeechVolume = 7;
-    uint32 SpeechVoice = 8;
+    string SpeechVoice = 8;
 
     bool SpeechTechroom = 9;
     bool SpeechBriefings = 10;
@@ -77,7 +77,7 @@ message FSOSettings {
     // default: medium, 0 = low, 1 = medium, 2 = high
     uint32 Quality = 3;
     // default: 48000 for high, 44100 for medium, 22050 for low
-    uint32 SampleRate = 4;
+    string SampleRate = 4;
 
     bool EnableEFX = 5;
   }

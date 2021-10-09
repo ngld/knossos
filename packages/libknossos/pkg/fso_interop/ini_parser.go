@@ -198,7 +198,7 @@ func LoadSettings(ctx context.Context) (*client.FSOSettings, error) {
 		TextureFilter: 1,
 	}
 	settings.Sound = &client.FSOSettings_SoundSettings{
-		SampleRate: 441000,
+		SampleRate: "441000",
 	}
 	settings.ForceFeedback = &client.FSOSettings_ForceFeedbackSettings{
 		Strength: 100,

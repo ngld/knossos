@@ -3,12 +3,20 @@ import { Button, Card, ControlGroup, FormGroup, Tag, Spinner, Callout } from '@b
 import { makeAutoObservable, runInAction } from 'mobx';
 import { fromPromise, IPromiseBasedObservable } from 'mobx-utils';
 import { observer } from 'mobx-react-lite';
-import { Settings, FSOSettings, HardwareInfoResponse, NullMessage } from '@api/client';
+import {
+  Settings,
+  FSOSettings,
+  FSOSettings_DefaultSettings,
+  FSOSettings_VideoSettings,
+  HardwareInfoResponse,
+  NullMessage,
+} from '@api/client';
 import { FinishedUnaryCall } from '@protobuf-ts/runtime-rpc';
 import { GlobalState, useGlobalState } from '../lib/state';
 import FormContext from '../elements/form-context';
 import { FormCheckbox, FormInputGroup, FormSelect, FormSlider } from '../elements/form-elements';
 import ErrorDialog from '../dialogs/error-dialog';
+import { useFormContext } from '../elements/form-context';
 
 class SettingsState {
   loading = true;
@@ -43,6 +51,82 @@ class SettingsState {
         });
       }
     })();
+  }
+
+  get resolution(): string {
+    const m = /\(([0-9]+)x([0-9]+)\)x([0-9]+) bit/.exec(
+      this.fsoSettings.default?.videocardFs2Open ?? '',
+    );
+    if (!m) {
+      return '';
+    }
+
+    return `${m[1]}x${m[2]} - ${this.fsoSettings.video?.display}`;
+  }
+
+  set resolution(value: string) {
+    const m = /([0-9]+)x([0-9]+) - ([0-9]+)/.exec(value);
+    if (!m) {
+      return;
+    }
+
+    let oldValue = /\(([0-9]+)x([0-9]+)\)x([0-9]+) bit/.exec(
+      this.fsoSettings.default?.videocardFs2Open ?? '',
+    );
+
+    let def = this.fsoSettings.default;
+    if (!def) {
+      this.fsoSettings.default = FSOSettings_DefaultSettings.create();
+      def = this.fsoSettings.default;
+    }
+
+    def.videocardFs2Open = `OGL -(${m[1]}x${m[2]})x${oldValue ? oldValue[3] : '32'} bit`;
+
+    let video = this.fsoSettings.video;
+    if (!video) {
+      this.fsoSettings.video = FSOSettings_VideoSettings.create();
+      video = this.fsoSettings.video;
+    }
+
+    video.display = parseInt(m[3]);
+  }
+
+  get depth(): string {
+    const m = /\(([0-9]+)x([0-9]+)\)x([0-9]+) bit/.exec(
+      this.fsoSettings.default?.videocardFs2Open ?? '',
+    );
+    if (!m) {
+      return '';
+    }
+
+    return m[3];
+  }
+
+  set depth(value: string) {
+    let def = this.fsoSettings.default;
+    if (!def) {
+      this.fsoSettings.default = FSOSettings_DefaultSettings.create();
+      def = this.fsoSettings.default;
+    }
+
+    const m = /\(([0-9]+)x([0-9]+)\)x([0-9]+) bit/.exec(def.videocardFs2Open);
+    if (m) {
+      def.videocardFs2Open = `OGL -(${m[1]}x${m[2]})x${value} bit`;
+    }
+  }
+
+  get textureFilter(): string {
+    return String(this.fsoSettings.default?.textureFilter ?? '');
+  }
+
+  set textureFilter(value: string) {
+    let def = this.fsoSettings.default;
+    if (!def) {
+      this.fsoSettings.default = FSOSettings_DefaultSettings.create();
+      def = this.fsoSettings.default;
+    }
+
+    def.textureFilter = parseInt(value);
   }
 
   async saveKNSettings() {
@@ -98,6 +182,9 @@ interface HardwareSelectProps {
 const HardwareSelect = observer(function HardwareSelect(
   props: HardwareSelectProps,
 ): React.ReactElement {
+  const ctx = useFormContext();
+  const value = ctx[props.field] as string;
+
   return (
     <FormSelect name={props.field} fill={true}>
       {props.hardwareInfo.case({
@@ -105,8 +192,38 @@ const HardwareSelect = observer(function HardwareSelect(
         rejected: () => <option>ERROR</option>,
         fulfilled: ({ response }) => (
           <>
+            <option key="" value="">
+              Default
+            </option>
+            {response[props.infoKey].indexOf(value) < 0 && value !== '' ? (
+              <option key={value}>{value}</option>
+            ) : null}
             {response[props.infoKey].map((dev) => (
               <option key={dev}>{dev}</option>
+            ))}
+          </>
+        ),
+      })}
+    </FormSelect>
+  );
+});
+
+interface VoiceSelectProps {
+  hardwareInfo: IPromiseBasedObservable<FinishedUnaryCall<NullMessage, HardwareInfoResponse>>;
+}
+
+const VoiceSelect = observer(function VoiceSelect(props: VoiceSelectProps): React.ReactElement {
+  return (
+    <FormSelect name="speechVoice" fill={true}>
+      {props.hardwareInfo.case({
+        pending: () => <option>Loading...</option>,
+        rejected: () => <option>ERROR</option>,
+        fulfilled: ({ response }) => (
+          <>
+            {response.voices.map((name, i) => (
+              <option key={i} value={i}>
+                {name}
+              </option>
             ))}
           </>
         ),
@@ -129,6 +246,9 @@ const JoystickSelect = observer(function JoystickSelect(
         rejected: () => <option>ERROR</option>,
         fulfilled: ({ response }) => (
           <>
+            <option key="" value="">
+              No joystick
+            </option>
             {response.joysticks.map((joystick) => (
               <option key={joystick.uUID} value={joystick.uUID}>
                 {joystick.name}
@@ -320,11 +440,7 @@ export default observer(function SettingsPage(): React.ReactElement {
                   <div className="flex flex-row gap-4">
                     <div className="flex-1">
                       <FormGroup label="Voice">
-                        <HardwareSelect
-                          hardwareInfo={hardwareInfo}
-                          infoKey="voices"
-                          field="speechVoice"
-                        />
+                        <VoiceSelect hardwareInfo={hardwareInfo} />
                       </FormGroup>
 
                       <FormGroup label="Volume">
