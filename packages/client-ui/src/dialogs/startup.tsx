@@ -54,6 +54,7 @@ async function initSequence(
           initSequence(gs, setOpen, setLabel);
         },
       });
+      setOpen(false);
       return;
     }
 
@@ -72,6 +73,7 @@ async function initSequence(
 
     if (!success) {
       console.error('Modsync failed!');
+      setOpen(false);
       return;
     }
 

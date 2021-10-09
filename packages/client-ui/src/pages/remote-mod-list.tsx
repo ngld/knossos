@@ -15,11 +15,6 @@ async function fetchMods(gs: GlobalState): Promise<SimpleModList_Item[]> {
   return result.response.mods;
 }
 
-function refreshRemoteMods(gs: GlobalState): void {
-  const taskId = gs.tasks.startTask('Refreshing remote mod list');
-  void gs.client.syncRemoteMods({ ref: taskId });
-}
-
 export interface RemoteModListProps {
   history: History;
 }
@@ -37,7 +32,6 @@ export default observer(function RemoteModList(props: RemoteModListProps): React
         ),
         fulfilled: (mods) => (
           <>
-            <Button onClick={() => refreshRemoteMods(gs)}>Refresh</Button>
             <div className="flex flex-row flex-wrap justify-between gap-4">
               {mods.map((mod) => (
                 <div
