@@ -16,7 +16,8 @@ import (
 type ModProvider interface {
 	GetVersionsForMod(context.Context, string) ([]string, error)
 	GetModRelease(context.Context, string, string) (*common.Release, error)
-	GetMods(context.Context, uint32) ([]*common.Release, error)
+	GetMods(context.Context) ([]*common.Release, error)
+	GetAllReleases(context.Context) ([]*common.Release, error)
 	GetMod(context.Context, string) (*common.ModMeta, error)
 }
 
@@ -222,7 +223,32 @@ func SaveLocalModRelease(ctx context.Context, release *common.Release) error {
 	return nil
 }
 
-func (p genericModProvider) GetMods(ctx context.Context, taskRef uint32) ([]*common.Release, error) {
+func DeleteLocalModRelease(ctx context.Context, release *common.Release) error {
+	tx := TxFromCtx(ctx)
+	if tx == nil {
+		return BatchUpdate(ctx, func(ctx context.Context) error {
+			return DeleteLocalModRelease(ctx, release)
+		})
+	}
+
+	importMutex.Lock()
+	defer importMutex.Unlock()
+
+	bucket := tx.Bucket(localModsBucket)
+	err := bucket.Delete([]byte(release.Modid + "#" + release.Version))
+	if err != nil {
+		return eris.Wrapf(err, "failed to delete release %s %s", release.Modid, release.Version)
+	}
+
+	err = localVersionIdx.Remove(tx, release.Modid, release.Version)
+	if err != nil {
+		return eris.Wrapf(err, "failed to remove release %s %s from version index", release.Modid, release.Version)
+	}
+
+	return nil
+}
+
+func (p genericModProvider) GetMods(ctx context.Context) ([]*common.Release, error) {
 	var result []*common.Release
 
 	err := db.View(func(tx *bolt.Tx) error {
@@ -243,6 +269,29 @@ func (p genericModProvider) GetMods(ctx context.Context, taskRef uint32) ([]*com
 			}
 
 			result = append(result, meta)
+			return nil
+		})
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (p genericModProvider) GetAllReleases(ctx context.Context) ([]*common.Release, error) {
+	result := make([]*common.Release, 0)
+
+	err := db.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(p.bucket)
+		return bucket.ForEach(func(k, v []byte) error {
+			var rel common.Release
+			err := proto.Unmarshal(v, &rel)
+			if err != nil {
+				return eris.Wrapf(err, "failed to deserialise release %s", k)
+			}
+
+			result = append(result, &rel)
 			return nil
 		})
 	})

@@ -58,7 +58,7 @@ interface InstallState {
 
 async function getInstallInfo(
   gs: GlobalState,
-  props: InstallModProps,
+  props: InstallModDialogProps,
   setState: React.Dispatch<React.SetStateAction<InstallState>>,
 ): Promise<void> {
   const result = await gs.client.getModInstallInfo({
@@ -187,13 +187,13 @@ function processDependencies(
   }
 }
 
-interface InstallModProps {
+interface InstallModDialogProps {
   modid?: string;
   version?: string;
-  onFinished: () => void;
+  onFinished?: () => void;
 }
 
-const InstallMod = observer(function InstallMod(props: InstallModProps): React.ReactElement {
+export const InstallModDialog = observer(function InstallModDialog(props: InstallModDialogProps): React.ReactElement {
   const gs = useGlobalState();
   const [isOpen, setOpen] = useState(true);
   const [state, setState] = useState<InstallState>({
@@ -304,10 +304,10 @@ const InstallMod = observer(function InstallMod(props: InstallModProps): React.R
 });
 
 export function installMod(gs: GlobalState, modid: string, version: string): void {
-  gs.launchOverlay(InstallMod, { modid, version });
+  gs.launchOverlay(InstallModDialog, { modid, version });
 }
 
-function triggerModInstallation(gs: GlobalState, state: InstallState, props: InstallModProps): void {
+function triggerModInstallation(gs: GlobalState, state: InstallState, props: InstallModDialogProps): void {
   const mods = {} as Record<string, InstallModRequest_Mod>;
   for (const [key, selected] of Object.entries(state.userSelected)) {
     if (selected) {
@@ -330,4 +330,5 @@ function triggerModInstallation(gs: GlobalState, state: InstallState, props: Ins
     ref: gs.tasks.startTask('Installing mod ' + state.title),
     mods: Object.values(mods),
   });
+  gs.sendSignal('showTasks');
 }

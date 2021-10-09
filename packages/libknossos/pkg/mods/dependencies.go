@@ -220,3 +220,28 @@ func GetDependencySnapshot(ctx context.Context, mods storage.ModProvider, releas
 	api.Log(ctx, api.LogDebug, "Dependencies successfully resolved")
 	return snapshot, nil
 }
+
+func GetModDependents(ctx context.Context, mods storage.ModProvider, modID, version string) ([][2]string, error) {
+	result := make([][2]string, 0)
+	modList, err := mods.GetAllReleases(ctx)
+	if err != nil {
+		return nil, eris.Wrap(err, "failed to read mod list")
+	}
+
+	for _, rel := range modList {
+		if rel.Modid == modID {
+			continue
+		}
+
+		if rel.DependencySnapshot == nil {
+			api.Log(ctx, api.LogWarn, "Mod %s %s doesn't have a dependency snapshot, skipping it!", rel.Modid, version)
+			continue
+		}
+
+		if rel.DependencySnapshot[modID] == version {
+			result = append(result, [2]string{rel.Modid, rel.Version})
+		}
+	}
+
+	return result, nil
+}

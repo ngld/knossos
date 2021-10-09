@@ -67,7 +67,7 @@ func (kn *knossosServer) ScanLocalMods(ctx context.Context, task *client.TaskReq
 }
 
 func buildModList(ctx context.Context, modProvider storage.ModProvider) (*client.SimpleModList, error) {
-	releases, err := modProvider.GetMods(ctx, 0)
+	releases, err := modProvider.GetMods(ctx)
 	if err != nil {
 		return nil, eris.Wrap(err, "failed to load mod list")
 	}

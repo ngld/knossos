@@ -267,6 +267,21 @@ message HardwareInfoResponse {
   repeated string voices = 8;
 }
 
+message UninstallModCheckRequest {
+  string modid = 1;
+}
+
+message UninstallModCheckResponse {
+  repeated string versions = 1;
+  map<string, string> errors = 2;
+}
+
+message UninstallModRequest {
+  string modid = 1;
+  repeated string versions = 2;
+  uint32 ref = 3;
+}
+
 // event messages
 
 message ClientSentEvent {
@@ -334,4 +349,6 @@ service Knossos {
   rpc GetHardwareInfo (NullMessage) returns (HardwareInfoResponse) {};
   rpc LoadFSOSettings (NullMessage) returns (FSOSettings) {};
   rpc SaveFSOSettings (FSOSettings) returns (SuccessResponse) {};
+  rpc UninstallModCheck (UninstallModCheckRequest) returns (UninstallModCheckResponse) {};
+  rpc UninstallMod (UninstallModRequest) returns (SuccessResponse) {};
 }

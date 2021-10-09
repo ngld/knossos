@@ -8,6 +8,7 @@ import { ModType } from '@api/mod';
 import { GlobalState, useGlobalState } from '../lib/state';
 import { API_URL } from '../lib/constants';
 import { launchMod } from '../dialogs/launch-mod';
+import UninstallModDialog from '../dialogs/uninstall-mod';
 import ModstockImage from '../resources/modstock.jpg';
 
 async function fetchMods(gs: GlobalState): Promise<SimpleModList_Item[]> {
@@ -60,7 +61,16 @@ export default observer(function LocalModList(props: LocalModListProps): React.R
                   >
                     Details
                   </Button>
-                  <Button>Uninstall</Button>
+                  <Button
+                    onClick={() =>
+                      gs.launchOverlay(UninstallModDialog, {
+                        modid: mod.modid,
+                        version: mod.version,
+                      })
+                    }
+                  >
+                    Uninstall
+                  </Button>
                 </div>
               </div>
             ))}{' '}

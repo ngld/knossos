@@ -2,14 +2,7 @@ import React, { useMemo } from 'react';
 import { observer } from 'mobx-react-lite';
 import { fromPromise } from 'mobx-utils';
 import type { RouteComponentProps } from 'react-router-dom';
-import {
-  Spinner,
-  Callout,
-  NonIdealState,
-  HTMLSelect,
-  Tab,
-  Tabs,
-} from '@blueprintjs/core';
+import { Button, Spinner, Callout, NonIdealState, HTMLSelect, Tab, Tabs } from '@blueprintjs/core';
 import styled from 'astroturf/react';
 
 import { ModInfoResponse } from '@api/client';
@@ -17,11 +10,9 @@ import { ModInfoResponse } from '@api/client';
 import { useGlobalState, GlobalState } from '../lib/state';
 import bbparser from '../lib/bbparser';
 import RefImage from '../elements/ref-image';
+import { InstallModDialog } from '../dialogs/install-mod';
 
-async function getModDetails(
-  gs: GlobalState,
-  params: ModDetailsParams,
-): Promise<ModInfoResponse> {
+async function getModDetails(gs: GlobalState, params: ModDetailsParams): Promise<ModInfoResponse> {
   const response = await gs.client.getRemoteModInfo({
     id: params.modid,
     version: params.version ?? '',
@@ -44,10 +35,10 @@ export default observer(function RemoteModDetailsPage(
   props: RouteComponentProps<ModDetailsParams>,
 ): React.ReactElement {
   const gs = useGlobalState();
-  const modDetails = useMemo(() => fromPromise(getModDetails(gs, props.match.params)), [
-    gs,
-    props.match.params,
-  ]);
+  const modDetails = useMemo(
+    () => fromPromise(getModDetails(gs, props.match.params)),
+    [gs, props.match.params],
+  );
 
   const rawDesc = (modDetails.value as ModInfoResponse | undefined)?.release?.description;
   const description = useMemo(() => {
@@ -96,6 +87,11 @@ export default observer(function RemoteModDetailsPage(
                   <RefImage className="object-contain w-full h-300px" src={mod.release?.banner} />
                 )}
               </div>
+              <Callout>
+                <Button onClick={() => gs.launchOverlay(InstallModDialog, props.match.params)}>
+                  Install
+                </Button>
+              </Callout>
               <Tabs renderActiveTabPanelOnly={true}>
                 <Tab
                   id="desc"
