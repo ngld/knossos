@@ -158,7 +158,7 @@ def configure():
             "packages/build-tools/ccache-helper/main.go",
             "packages/build-tools/protoc-ts-helper/main.go",
         ],
-        outputs = [".tools/%s%s" % (name, binext) for name in ("modd", "pggen", "protoc-gen-go", "protoc-gen-twirp", "protoc-gen-ts")],
+        outputs = [".tools/%s%s" % (name, binext) for name in ("pggen", "protoc-gen-go", "protoc-gen-twirp", "protoc-gen-ts")],
         cmds = [
             "tool install-tools",
             "cd packages/build-tools",

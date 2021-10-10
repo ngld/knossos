@@ -172,6 +172,7 @@ func runTaskInternal(ctx context.Context, task *Task, tasks TaskList, dryRun, fo
 
 	if !force {
 		var newestInput time.Time
+		var newestInName string
 		inputList, err := resolvePatternLists(ctx, task.Base, task.Inputs)
 		if err != nil {
 			return eris.Wrap(err, "failed to resolve inputs")
@@ -190,12 +191,14 @@ func runTaskInternal(ctx context.Context, task *Task, tasks TaskList, dryRun, fo
 
 			if info.ModTime().Sub(newestInput) > 0 {
 				newestInput = info.ModTime()
+				newestInName = item
 			}
 		}
 
 		missing := false
 		if !newestInput.IsZero() {
 			var newestOutput time.Time
+			var newestOutName string
 			oldestOutput := time.Now()
 
 			for _, item := range outputList {
@@ -212,6 +215,7 @@ func runTaskInternal(ctx context.Context, task *Task, tasks TaskList, dryRun, fo
 					mt := info.ModTime()
 					if mt.Sub(newestOutput) > 0 {
 						newestOutput = mt
+						newestOutName = item
 					}
 
 					if oldestOutput.Sub(mt) > 0 {
@@ -227,13 +231,17 @@ func runTaskInternal(ctx context.Context, task *Task, tasks TaskList, dryRun, fo
 						Msgf("oldest output is %f minutes older than the newest output", newestOutput.Sub(oldestOutput).Minutes())
 				}
 
-				if newestOutput.Sub(newestInput) > 0 {
+				if newestOutput.Sub(newestInput) >= 0 {
 					log(ctx).Info().
 						Str("task", task.Short).
 						Msgf("nothing to do (output is %f seconds newer)", newestOutput.Sub(newestInput).Seconds())
 
 					rctx.runTasks[task.Short] = true
 					return nil
+				} else {
+					log(ctx).Info().
+						Str("task", task.Short).
+						Msgf("rebuild necessary since %s is newer than %s", newestInName, newestOutName)
 				}
 			}
 		}

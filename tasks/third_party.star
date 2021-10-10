@@ -53,7 +53,7 @@ import "C"
         hidden = True,
         desc = "Builds libinnoextract with CMake",
         inputs = ["third_party/innoextract/{cmake/*.cmake,src/**/*.{cpp,hpp}{,.in}}", "packages/libinnoextract/CMakeLists.txt"],
-        outputs = ["build/libinnoextract/libinnoextract.{dll,so,dylib}"],
+        outputs = ["build/libinnoextract/libinnoextract.*"],
         windows_script = "packages/libinnoextract/msys2-build.sh",
         unix_script = "packages/libinnoextract/unix-build.sh",
     )
