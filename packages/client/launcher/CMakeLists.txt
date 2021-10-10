@@ -23,6 +23,7 @@ find_path(libinnoextract_dir "libinnoextract.${libext}" PATHS "../../../build/li
 
 if(OS_WINDOWS)
   find_path(libopenal_dir "soft_oal.dll" PATHS "../../../third_party/openal/bin/Win64" REQUIRED)
+  find_path(libSDL2_dir "SDL2.dll" PATHS ENV "PATH" REQUIRED)
 endif()
 ## BRAIN END
 
@@ -323,6 +324,7 @@ if(OS_WINDOWS)
   copy_file(${CEF_TARGET} "${libinnoextract_dir}/libinnoextract.dll" ${CEF_TARGET_OUT_DIR})
   copy_file(${CEF_TARGET} "${libinnoextract_dir}/libwinpthread-1.dll" ${CEF_TARGET_OUT_DIR})
   copy_file(${CEF_TARGET} "${libopenal_dir}/soft_oal.dll" "${CEF_TARGET_OUT_DIR}/OpenAL32.dll")
+  copy_file(${CEF_TARGET} "${libSDL2_dir}/SDL2.dll" ${CEF_TARGET_OUT_DIR})
 
   if(${CMAKE_BUILD_TYPE} STREQUAL "Release")
     # Strip the libraries on release builds to save a *lot* of space.
