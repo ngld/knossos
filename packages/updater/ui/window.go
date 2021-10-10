@@ -74,6 +74,8 @@ var (
 	installPath     string
 	versions        []string
 	selectedVersion = ""
+	desktopShortcut bool
+	menuShortcut    bool
 	token           string
 )
 
@@ -98,6 +100,12 @@ func introWindow() {
 			}
 		}
 		imgui.EndCombo()
+	}
+
+	if runtime.GOOS == "windows" {
+		imgui.Spacing()
+		imgui.Checkbox("Desktop icon", &desktopShortcut)
+		imgui.Checkbox("Start menu icon", &menuShortcut)
 	}
 
 	imgui.Spacing()
@@ -161,8 +169,22 @@ func InitIntroWindow() {
 	versions = filtered
 	selectedVersion = versions[0]
 
+	if installPath == "" && runtime.GOOS == "windows" {
+		installPath = "C:\\Program Files\\Knossos"
+	}
+
 	if len(os.Args) >= 3 && os.Args[1] == "--auto" {
 		installPath = os.Args[2]
+
+		if os.Args[3] != "" {
+			selectedVersion = os.Args[3]
+		}
+
+		if runtime.GOOS == "windows" {
+			desktopShortcut = os.Args[4] == "true"
+			menuShortcut = os.Args[5] == "true"
+		}
+
 		state = stateInstalling
 		PerformInstallation(installPath, selectedVersion, token)
 	}

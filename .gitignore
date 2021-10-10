@@ -4,6 +4,7 @@ dist/
 .cache
 .task
 .skip-go-version-check
+*.syso
 
 # generated sources
 *.pb.go

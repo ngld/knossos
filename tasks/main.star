@@ -246,6 +246,16 @@ def configure():
     third_party_configure(binext, libext, generator)
     knossos_configure(binext, libext, generator)
 
+    task(
+        "updater-resources",
+        desc = "Prepares the resource information from the winres folder for the Go compiler",
+        deps = ["install-tools"],
+        base = "packages/updater",
+        inputs = ["winres/*.{png,json}"],
+        outputs = ["rsrc_*.syso"],
+        cmds = ["go-winres make"],
+    )
+
     if build == "Release":
         updater_goldflags = "-s -w"
     else:
@@ -259,7 +269,7 @@ def configure():
     task(
         "updater-build",
         desc = "Builds the Knossos updater",
-        deps = ["libarchive-build"],
+        deps = ["libarchive-build", "updater-resources"],
         env = {
             "CC": "gcc",
             "CXX": "g++",

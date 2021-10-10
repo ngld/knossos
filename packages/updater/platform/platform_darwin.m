@@ -1,5 +1,6 @@
 #import <Cocoa/Cocoa.h>
 #include <libgen.h>
+#include <string>
 #include "platform.h"
 
 void PlatformInit() {}
@@ -65,4 +66,19 @@ DialogResult OpenFolderDialog(const char *title, const char *folder) {
   panel.allowsMultipleSelection = NO;
   panel.prompt = @"Open Folder";
   return RunSavePanel(panel, title, folder);
+}
+
+extern char* GetDesktopDirectory() {
+  std::string path = getenv("HOME");
+  path += "/Desktop";
+
+  return path.c_str();
+}
+
+extern char* GetStartMenuDirectory() {
+  return nullptr;
+}
+
+extern bool IsElevated() {
+  return false;
 }

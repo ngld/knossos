@@ -2,6 +2,7 @@
 #define KNOSSOS_PLATFORM_FOLDER
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #ifdef __cplusplus
 #define EXPORT extern "C"
@@ -24,6 +25,14 @@ extern void ShowError(const char *message);
 extern DialogResult SaveFileDialog(const char *title, const char *default_filepath);
 extern DialogResult OpenFileDialog(const char *title, const char *default_filepath);
 extern DialogResult OpenFolderDialog(const char *title, const char *folder);
+extern const char* CreateShortcut(const char* shortcut, const char* target);
+extern char* GetDesktopDirectory();
+extern char* GetStartMenuDirectory();
+extern bool IsElevated();
+
+#ifdef WIN32
+extern char* RunElevated(const char* program, const char* args);
+#endif
 
 #ifdef __cplusplus
 }

@@ -1,4 +1,5 @@
 #include <string.h>
+#include <unistd.h>
 #include <X11/Xlib.h>
 
 #pragma GCC diagnostic push
@@ -90,3 +91,18 @@ DialogResult OpenFolderDialog(
   return InternalOpenFileDialog(title, GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER,
                          folder);
 }
+
+extern char* GetDesktopDirectory() {
+  // TODO
+  return nullptr;
+}
+
+extern char* GetStartMenuDirectory() {
+  // TODO
+  return nullptr;
+}
+
+extern bool IsElevated() {
+  return false;
+}
+

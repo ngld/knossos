@@ -9,9 +9,11 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
+	"strings"
 
 	"github.com/ngld/knossos/packages/libarchive"
 	"github.com/ngld/knossos/packages/updater/downloader"
+	"github.com/ngld/knossos/packages/updater/platform"
 	"github.com/rotisserie/eris"
 )
 
@@ -28,6 +30,31 @@ func PerformInstallation(folder, version, token string) {
 			Log(LogError, "panic: %+v", pan)
 		}
 	}()
+
+	if runtime.GOOS == "windows" {
+		if (strings.HasPrefix(folder, "C:\\Program Files") || menuShortcut) && !platform.IsElevated() {
+			Log(LogInfo, "Elevating")
+
+			desktopShortcutStr := "false"
+			menuShortcutStr := "false"
+
+			if desktopShortcut {
+				desktopShortcutStr = "true"
+			}
+
+			if menuShortcut {
+				menuShortcutStr = "true"
+			}
+
+			err := platform.RunElevated(filepath.Clean(os.Args[0]), "--auto", folder, selectedVersion, desktopShortcutStr, menuShortcutStr)
+			if err == nil {
+				os.Exit(0)
+			}
+
+			Log(LogError, "Failed: %s", err)
+			return
+		}
+	}
 
 	Log(LogInfo, "Installing Knossos %s in %s", version, folder)
 	err := os.MkdirAll(folder, 0770)
@@ -153,6 +180,40 @@ func PerformInstallation(folder, version, token string) {
 						return
 					}
 				}
+			}
+		}
+	}
+
+	if runtime.GOOS == "windows" {
+		if desktopShortcut {
+			Log(LogInfo, "Creating Desktop shortcut")
+
+			path := platform.GetDesktopDirectory()
+			if path == "" {
+				path = filepath.Join(os.Getenv("USERPROFILE"), "Desktop")
+				Log(LogError, "Failed to determine desktop directory, assuming %s instead!", path)
+			}
+
+			path = filepath.Join(path, "Knossos.lnk")
+			if err := platform.CreateShortcut(path, filepath.Join(folder, "Knossos.exe")); err != nil {
+				Log(LogError, "Failed to create desktop shortcut %s! %s", path, err)
+				return
+			}
+		}
+
+		if menuShortcut {
+			Log(LogInfo, "Creating shortcut in start menu")
+
+			path := platform.GetStartMenuDirectory()
+			if path == "" {
+				path = filepath.Join(os.Getenv("ALLUSERSPROFILE"), "Microsoft", "Windows", "Start Menu")
+				Log(LogError, "Failed to determine start menu directory, assuming %s instead!", path)
+			}
+
+			path = filepath.Join(path, "Knossos.lnk")
+			if err := platform.CreateShortcut(path, filepath.Join(folder, "Knossos.exe")); err != nil {
+				Log(LogError, "Failed to create start menu shortcut %s! %s", path, err)
+				return
 			}
 		}
 	}
