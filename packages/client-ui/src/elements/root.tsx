@@ -121,8 +121,8 @@ const OverlayRenderer = observer(function OverlayRenderer({
 }): React.ReactElement {
   return (
     <ErrorBoundary>
-      {gs.overlays.map(([Component, props], idx) => (
-        <Component onFinished={() => gs.removeOverlay(idx)} {...props} />
+      {gs.overlays.map(([Component, props, overlayID], idx) => (
+        <Component key={overlayID} onFinished={() => gs.removeOverlay(idx)} {...props} />
       ))}
     </ErrorBoundary>
   );

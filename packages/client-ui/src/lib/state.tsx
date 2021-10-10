@@ -16,7 +16,8 @@ export class GlobalState {
   client: KnossosClient;
   nebula: NebulaClient;
   tasks: TaskTracker;
-  overlays: [React.FunctionComponent<OverlayProps> | React.ComponentClass<OverlayProps>, Record<string, unknown>][];
+  _nextOverlayID = 0;
+  overlays: [React.FunctionComponent<OverlayProps> | React.ComponentClass<OverlayProps>, Record<string, unknown>, number][];
   signalListeners: Record<string,(() => void)[]> = {
     remoteRefreshMods: [],
     showTasks: [],
@@ -41,12 +42,20 @@ export class GlobalState {
     this.tasks.listen();
     this.overlays = [];
 
-    makeAutoObservable(this);
+    makeAutoObservable(this, {
+      // don't use black magic on complex objects
+      toaster: false,
+      client: false,
+      nebula: false,
+      tasks: false,
+      // don't let MobX mess with the stored callbacks
+      signalListeners: false,
+    });
   }
 
   launchOverlay<T extends OverlayProps = OverlayProps>(component: React.FunctionComponent<T> | React.ComponentClass<T> | ((props: T) => React.ReactNode), props: T): number {
     const idx = this.overlays.length;
-    this.overlays.push([component as React.FunctionComponent<OverlayProps>, props as Record<string, unknown>]);
+    this.overlays.push([component as React.FunctionComponent<OverlayProps>, props as Record<string, unknown>, this._nextOverlayID++]);
     return idx;
   }
 
@@ -60,7 +69,7 @@ export class GlobalState {
       return () => {
         const pos = this.signalListeners[name].indexOf(listener);
         if (pos === -1) {
-          console.error(`Signal listener for ${name} vanished?!`);
+          console.error(this.signalListeners[name].map(cb => cb.toString()), listener.toString(), `Signal listener for ${name} vanished?!`);
           return;
         }
 

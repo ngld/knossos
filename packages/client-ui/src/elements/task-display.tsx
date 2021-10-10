@@ -2,8 +2,9 @@ import { useState, useEffect, useRef } from 'react';
 import { Classes, Button, Dialog, ProgressBar, Text } from '@blueprintjs/core';
 import { CiTimesLine } from '@meronex/icons/ci';
 import { Tooltip2 } from '@blueprintjs/popover2';
+import { action } from 'mobx';
 import { observer } from 'mobx-react-lite';
-import { useGlobalState } from '../lib/state';
+import { useGlobalState, GlobalState } from '../lib/state';
 import { TaskState } from '../lib/task-tracker';
 
 interface LogBoxProps {
@@ -52,6 +53,13 @@ function LogBox({ task }: LogBoxProps): React.ReactElement {
   );
 }
 
+const clearTasks = action(function clearTasks(gs: GlobalState): void {
+  const taskIDs = gs.tasks.tasks.map(task => task.id);
+  for (const id of taskIDs) {
+    gs.tasks.removeTask(id);
+  }
+});
+
 export default observer(function TaskDisplay(): React.ReactElement {
   const gs = useGlobalState();
   const [open, setOpen] = useState<boolean>(false);
@@ -60,7 +68,7 @@ export default observer(function TaskDisplay(): React.ReactElement {
   gs.useSignal('hideTasks', () => setOpen(false));
 
   return (
-    <div className="absolute bottom-0 right-40 traffic-lights">
+    <div className="absolute bottom-0 right-40 no-window-drag">
       <Tooltip2 content="Show active tasks">
         <div
           className={'cursor-pointer ' + (gs.tasks.active > 0 ? 'text-white' : 'text-dim')}
@@ -73,7 +81,7 @@ export default observer(function TaskDisplay(): React.ReactElement {
             : gs.tasks.tasks[0].label}
         </div>
       </Tooltip2>
-      <Dialog isOpen={open} onClose={() => setOpen(false)} title="Tasks" className="large-dialog">
+      <Dialog isOpen={open} onClose={() => setOpen(false)} title={<>Tasks <Button className="float-right" minimal={true} onClick={() => clearTasks(gs)}>Clear All</Button></>} className="large-dialog">
         <div className={Classes.DIALOG_BODY}>
           {gs.tasks.tasks.map((task) => (
             <div key={task.id}>

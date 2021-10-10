@@ -29,6 +29,10 @@ body {
     z-index: 22;
 }
 
+.no-window-drag, .bp3-dialog {
+    -webkit-app-region: no-drag;
+}
+
 .font-inria {
     font-family: 'Inria Sans';
 }
