@@ -49,12 +49,16 @@ function LogBox({ task }: LogBoxProps): React.ReactElement {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _ = 'font-mono';
   return (
-    <div ref={boxRef} className="overflow-y-auto max-h-56 bg-base text-xs" onScroll={scrollHandler} />
+    <div
+      ref={boxRef}
+      className="overflow-y-auto max-h-56 bg-base text-xs"
+      onScroll={scrollHandler}
+    />
   );
 }
 
 const clearTasks = action(function clearTasks(gs: GlobalState): void {
-  const taskIDs = gs.tasks.tasks.map(task => task.id);
+  const taskIDs = gs.tasks.tasks.map((task) => task.id);
   for (const id of taskIDs) {
     gs.tasks.removeTask(id);
   }
@@ -81,7 +85,19 @@ export default observer(function TaskDisplay(): React.ReactElement {
             : gs.tasks.tasks[0].label}
         </div>
       </Tooltip2>
-      <Dialog isOpen={open} onClose={() => setOpen(false)} title={<>Tasks <Button className="float-right" minimal={true} onClick={() => clearTasks(gs)}>Clear All</Button></>} className="large-dialog">
+      <Dialog
+        isOpen={open}
+        onClose={() => setOpen(false)}
+        title={
+          <>
+            Tasks{' '}
+            <Button className="float-right" minimal={true} onClick={() => clearTasks(gs)}>
+              Clear All
+            </Button>
+          </>
+        }
+        className="large-dialog"
+      >
         <div className={Classes.DIALOG_BODY}>
           {gs.tasks.tasks.map((task) => (
             <div key={task.id}>
@@ -91,9 +107,13 @@ export default observer(function TaskDisplay(): React.ReactElement {
                 </Text>
                 {(task.progress === 1 || task.error) && (
                   <div className="absolute right-0 top-0">
+                    <Button minimal small onClick={() => gs.tasks.cancelTask(task.id)}>
+                      Cancel
+                    </Button>
                     <Button
-                      minimal={true}
-                      small={true}
+                      minimal
+                      small
+                      disabled={(task.indeterminate || task.progress < 1) && !task.error}
                       onClick={() => gs.tasks.removeTask(task.id)}
                     >
                       <CiTimesLine />

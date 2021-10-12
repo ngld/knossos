@@ -38,7 +38,7 @@ export class GlobalState {
         deadline: process.env.NODE_ENV === 'production' ? 10000 : 1000,
       }),
     );
-    this.tasks = new TaskTracker();
+    this.tasks = new TaskTracker(this);
     this.tasks.listen();
     this.overlays = [];
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { makeObservable, action, observable, computed } from 'mobx';
 import EventEmitter from 'eventemitter3';
 import { LogMessage, LogMessage_LogLevel, ClientSentEvent } from '@api/client';
+import { GlobalState } from '../lib/state';
 
 export interface TaskState {
   id: number;
@@ -11,6 +12,7 @@ export interface TaskState {
   error: boolean;
   indeterminate: boolean;
   started: number;
+  canCancel: boolean;
   logMessages: LogMessage[];
   logContainer: HTMLDivElement,
   finishCb?: (success: boolean) => void;
@@ -41,16 +43,19 @@ function getLogTime(task: TaskState, line: LogMessage): string {
 
 export class TaskTracker extends EventEmitter {
   _idCounter: number;
+  _gs: GlobalState;
   tasks: TaskState[];
   taskMap: Record<string, TaskState>;
 
-  constructor() {
+  constructor(gs: GlobalState) {
     super();
+    this._gs = gs;
     this._idCounter = 1;
     this.tasks = [];
     this.taskMap = {};
 
     makeObservable(this, {
+      _gs: false,
       tasks: observable,
       taskMap: observable,
       active: computed,
@@ -90,7 +95,7 @@ export class TaskTracker extends EventEmitter {
     return () => knRemoveMessageListener(listener);
   }
 
-  startTask(label: string, finishCb?: (success: boolean) => void): number {
+  startTask(label: string, finishCb?: (success: boolean) => void, canCancel = false): number {
     const id = this._idCounter++;
     const task = {
       id,
@@ -100,6 +105,7 @@ export class TaskTracker extends EventEmitter {
       error: false,
       indeterminate: true,
       started: Math.floor(Date.now() / 1000),
+      canCancel,
       logMessages: [],
       logContainer: document.createElement('div'),
       finishCb,
@@ -194,6 +200,10 @@ export class TaskTracker extends EventEmitter {
     this.taskMap[ev.ref] = task;
   }
 
+  cancelTask(id: number): void {
+    void this._gs.client.cancelTask({ ref: id });
+  }
+
   removeTask(id: number): void {
     let taskIdx = -1;
     for (let i = 0; i < this.tasks.length; i++) {
@@ -213,8 +223,8 @@ export class TaskTracker extends EventEmitter {
   }
 }
 
-export function useTaskTracker(): TaskTracker {
-  const [tracker] = useState(() => new TaskTracker());
+export function useTaskTracker(gs: GlobalState): TaskTracker {
+  const [tracker] = useState(() => new TaskTracker(gs));
 
   useEffect(() => {
     return tracker.listen();

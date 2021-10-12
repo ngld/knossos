@@ -44,6 +44,8 @@ var clientLogLevelMap = map[LogLevel]client.LogMessage_LogLevel{
 	LogFatal: client.LogMessage_FATAL,
 }
 
+var taskCancels = map[uint32]context.CancelFunc{}
+
 // KnossosCtxParams acts as a container for important info stored in the context
 type KnossosCtxParams struct {
 	// LogCallback is a function that records the passed message in the host application's logging system
@@ -277,6 +279,9 @@ func ProgressCopier(ctx context.Context, stepInfo TaskStep, length int64, input 
 
 // RunTask updates the context with the necessary task info and handles errors as well as panics from the task.
 func RunTask(ctx context.Context, ref uint32, task func(context.Context) error) {
+	ctx, cancel := context.WithCancel(ctx)
+	taskCancels[ref] = cancel
+
 	taskCtx := WithKnossosContext(context.Background(), ctx.Value(knKey{}).(KnossosCtxParams))
 	taskCtx = WithTaskContext(taskCtx, TaskCtxParams{Ref: ref})
 
@@ -295,6 +300,9 @@ func RunTask(ctx context.Context, ref uint32, task func(context.Context) error) 
 					Error:   "Failed with panic",
 				})
 			}
+
+			cancel()
+			delete(taskCancels, ref)
 		}()
 
 		err := task(taskCtx)
@@ -310,6 +318,13 @@ func RunTask(ctx context.Context, ref uint32, task func(context.Context) error) 
 			})
 		}
 	}()
+}
+
+func CancelTask(ctx context.Context, ref uint32) {
+	cancel, ok := taskCancels[ref]
+	if ok {
+		cancel()
+	}
 }
 
 func CrashReporter(ctx context.Context) {

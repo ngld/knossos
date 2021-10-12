@@ -94,3 +94,8 @@ func (kn *knossosServer) FixLibraryFolderPath(ctx context.Context, req *client.F
 
 	return &client.FixLibraryFolderPathPayload{Path: req.Path}, nil
 }
+
+func (kn *knossosServer) CancelTask(ctx context.Context, req *client.TaskRequest) (*client.SuccessResponse, error) {
+	api.CancelTask(ctx, req.Ref)
+	return &client.SuccessResponse{Success: true}, nil
+}

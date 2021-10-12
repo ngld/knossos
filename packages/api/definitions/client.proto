@@ -351,4 +351,5 @@ service Knossos {
   rpc SaveFSOSettings (FSOSettings) returns (SuccessResponse) {};
   rpc UninstallModCheck (UninstallModCheckRequest) returns (UninstallModCheckResponse) {};
   rpc UninstallMod (UninstallModRequest) returns (SuccessResponse) {};
+  rpc CancelTask (TaskRequest) returns (SuccessResponse) {};
 }

@@ -319,6 +319,7 @@ func (kn *knossosServer) InstallMod(ctx context.Context, req *client.InstallModR
 			api.Log(ctx, api.LogInfo, "Opening archive %s for %s", step.label, step.modInfo.Title)
 			err = handleArchive(ctx, item.Filepath, &step, hasher, buffer)
 			if err != nil {
+				queue.Abort()
 				return err
 			}
 

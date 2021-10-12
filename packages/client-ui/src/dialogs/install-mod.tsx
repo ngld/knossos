@@ -327,7 +327,7 @@ function triggerModInstallation(gs: GlobalState, state: InstallState, props: Ins
   void gs.client.installMod({
     modid: props.modid ?? '',
     version: props.version ?? '',
-    ref: gs.tasks.startTask('Installing mod ' + state.title),
+    ref: gs.tasks.startTask('Installing mod ' + state.title, undefined, true),
     mods: Object.values(mods),
   });
   gs.sendSignal('showTasks');
