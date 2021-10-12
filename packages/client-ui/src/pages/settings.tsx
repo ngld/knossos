@@ -283,6 +283,7 @@ async function rescanLocalMods(gs: GlobalState): Promise<void> {
   try {
     const task = gs.tasks.startTask('Scan new library folder...');
     await gs.client.scanLocalMods({ ref: task });
+    gs.sendSignal('showTasks');
   } catch (e) {
     console.error(e);
   }

@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"time"
@@ -29,11 +30,12 @@ var (
 type RemoteIndexLastModifiedDates map[string][]time.Time
 
 type RemoteImportCallbackParams struct {
-	ForAllVersions func(func(string, []string) error) error
-	RemoveMod      func(string) error
-	RemoveRelease  func(string, string) error
-	AddMod         func(*common.ModMeta) error
-	AddRelease     func(*common.Release) error
+	ForAllVersions    func(func(string, []string) error) error
+	RemoveMod         func(string) error
+	RemoveRelease     func(string, string) error
+	RemoveModReleases func(string) error
+	AddMod            func(*common.ModMeta) error
+	AddRelease        func(*common.Release) error
 }
 
 func ImportRemoteMods(ctx context.Context, callback func(context.Context, RemoteImportCallbackParams) error) error {
@@ -72,6 +74,19 @@ func ImportRemoteMods(ctx context.Context, callback func(context.Context, Remote
 
 				remoteVersionIdx.BatchedRemove(id, version)
 				return nil
+			},
+			RemoveModReleases: func(id string) error {
+				prefix := []byte(id + "#")
+				return bucket.ForEach(func(k, v []byte) error {
+					if bytes.HasPrefix(k, prefix) {
+						err := bucket.Delete(k)
+						if err != nil {
+							return eris.Wrapf(err, "failed to delete mod release %s", k)
+						}
+					}
+
+					return nil
+				})
 			},
 			AddMod: func(mod *common.ModMeta) error {
 				encoded, err := proto.Marshal(mod)

@@ -241,6 +241,11 @@ func (q *Queue) download(ctx context.Context, item *QueueItem, progress *uint32)
 		if item.Filesize > 0 && resp.ContentLength != item.Filesize {
 			if resp.StatusCode == 200 || (resp.ContentLength+int64(*progress)) != item.Filesize {
 				api.Log(ctx, api.LogWarn, "%s has unexpected size %d != %d", urls[midx], resp.ContentLength, item.Filesize)
+
+				if item.Checksum != nil {
+					// We still have a checksum to verify that the contents are fine so let's assume that this difference is fine.
+					filesize = resp.ContentLength + int64(*progress)
+				}
 			}
 		}
 
@@ -274,7 +279,7 @@ func (q *Queue) download(ctx context.Context, item *QueueItem, progress *uint32)
 				break
 			}
 
-			if ctx.Err() != nil {
+			if ctx.Err() != nil || q.err != nil {
 				resp.Body.Close()
 				return
 			}
@@ -362,7 +367,7 @@ func (q *Queue) Result() *QueueItem {
 }
 
 func (q *Queue) updateProgressTicker() {
-	for !q.done {
+	for !q.done && q.err == nil {
 		q.speedTracker.Track(int(atomic.SwapUint32(&q.periodReceivedBytes, 0)))
 
 		totalReceived := uint32(0)
@@ -375,4 +380,14 @@ func (q *Queue) updateProgressTicker() {
 
 		time.Sleep(300 * time.Millisecond)
 	}
+}
+
+func (q *Queue) Abort() {
+	q.err = eris.New("aborted")
+
+	// Notify Run() that the queue failed
+	q.activeLock.Broadcast()
+
+	// Notify NextResult() that the queue failed
+	q.finishedLock.Broadcast()
 }

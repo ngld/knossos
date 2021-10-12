@@ -166,7 +166,15 @@ function renderFlags(
         {flag.label === '' ? flag.flag : flag.label}
         {flag.help && (
           <span className="float-right">
-            <a href={flag.help}>?</a>
+            <a
+              href={flag.help}
+              onClick={(e) => {
+                e.preventDefault();
+                void gs.client.openLink({ link: flag.help });
+              }}
+            >
+              ?
+            </a>
           </span>
         )}
       </Checkbox>

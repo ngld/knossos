@@ -58,11 +58,6 @@ func DetectGOGInstallation(ctx context.Context) (string, error) {
 	api.Log(ctx, api.LogInfo, "Looking for GOG Galaxy installation")
 	api.SetProgress(ctx, 0, "Looking for GOG Galaxy installation")
 
-	/*galaxyPath, err := readRegKey(windows.HKEY_LOCAL_MACHINE, "SOFTWARE/WOW6432Node/GOG.com/GalaxyClient/paths", "client")
-	if err != nil {
-		return "", eris.Wrap(err, "failed to read galaxy path from registry")
-	}*/
-
 	progData := os.Getenv("ProgramData")
 	configPath := filepath.Join(progData, "GOG.com", "Galaxy", "config.json")
 	configBytes, err := os.ReadFile(configPath)

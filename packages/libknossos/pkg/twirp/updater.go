@@ -52,7 +52,7 @@ func (kn *knossosServer) CheckForProgramUpdates(ctx context.Context, req *client
 	}
 
 	knNewVersion := ""
-	if resp.Versions["knossos"] != api.Version {
+	if resp.Versions["knossos"] != fmt.Sprintf("%s+%s", api.Version, api.Commit) {
 		knNewVersion = resp.Versions["knossos"]
 	}
 

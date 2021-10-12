@@ -26,7 +26,7 @@ var errModNotFound = eris.New("remote mod not found")
 func fetchRemoteMessage(ctx context.Context, messageName string, ref protoreflect.ProtoMessage) error {
 	resp, err := helpers.CachedGet(ctx, api.SyncEndpoint+"/"+messageName)
 	if err != nil {
-		return err
+		return eris.Wrapf(err, "failed to send modsync request to Nebula (%s)", messageName)
 	}
 	defer resp.Body.Close()
 
@@ -107,6 +107,14 @@ func processRemoteMod(ctx context.Context, params storage.RemoteImportCallbackPa
 	}
 
 	versionMismatch := !bytes.Equal(versionHash, entry.VersionChecksum)
+	if versionMismatch {
+		api.Log(ctx, api.LogInfo, "Version mismatch detected, clearing releases for %s.", entry.Modid)
+
+		err = params.RemoveModReleases(entry.Modid)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	for idx, curPackDate := range entry.PacksLastModified {
 		if !versionMismatch && idx < len(packDates) && !curPackDate.AsTime().After(packDates[idx]) {
@@ -182,7 +190,12 @@ func UpdateRemoteModIndex(ctx context.Context) error {
 
 		api.SetProgress(ctx, 1, "Finishing")
 
-		return storage.UpdateRemoteModsLastModifiedDates(ctx, curDates)
+		err = storage.UpdateRemoteModsLastModifiedDates(ctx, curDates)
+		if err == nil {
+			api.Log(ctx, api.LogInfo, "Done")
+		}
+
+		return err
 	})
 }
 

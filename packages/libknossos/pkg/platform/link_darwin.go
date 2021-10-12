@@ -8,5 +8,9 @@ import (
 
 func OpenLink(link string) error {
 	_, err := os.StartProcess("open", []string{link}, nil)
-	return eris.Wrap(err, "failed to launch open")
+	if err != nil {
+		eris.Wrap(err, "failed to launch open")
+	}
+
+	return nil
 }
