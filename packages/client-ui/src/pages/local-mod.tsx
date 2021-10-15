@@ -21,6 +21,7 @@ import { Release, ModType } from '@api/mod';
 import RefImage from '../elements/ref-image';
 import { useGlobalState, GlobalState } from '../lib/state';
 import bbparser from '../lib/bbparser';
+import ErrorDialog from '../dialogs/error-dialog';
 
 async function getModDetails(gs: GlobalState, params: ModDetailsParams): Promise<ModInfoResponse> {
   const response = await gs.client.getModInfo({
@@ -95,6 +96,32 @@ interface DepInfoProps extends ModDetailsParams {
   release?: Release;
 }
 
+async function changeDepSnapshot(
+  gs: GlobalState,
+  props: DepInfoProps,
+  modid: string,
+  version: string,
+): Promise<void> {
+  try {
+    const result = await gs.client.depSnapshotChange({
+      modid: props.modid,
+      version: props.version ?? '',
+      depModid: modid,
+      depVersion: version,
+    });
+
+    if (!result.response.success) {
+      gs.launchOverlay(ErrorDialog, { message: 'Failed to save the changed dependency!' });
+    }
+  } catch (e) {
+    console.error(e);
+    gs.launchOverlay(ErrorDialog, {
+      title: 'Failed to change dependency snapshot change',
+      message: <pre>{e instanceof Error ? e.message : String(e)}</pre>,
+    });
+  }
+}
+
 const DepInfo = observer(function DepInfo(props: DepInfoProps): React.ReactElement {
   const gs = useGlobalState();
   const deps = useMemo(() => fromPromise(getModDependencies(gs, props)), [gs, props]);
@@ -108,38 +135,46 @@ const DepInfo = observer(function DepInfo(props: DepInfoProps): React.ReactEleme
         <pre>{e.toString()}</pre>
       </Callout>
     ),
-    fulfilled: (response) => (
-      <HTMLTable>
-        <thead>
-          <tr>
-            <th>Mod</th>
-            <th>Latest Local Version</th>
-            <th>Latest Available Version</th>
-            <th>Saved Version</th>
-          </tr>
-        </thead>
-        <tbody>
-          {Object.entries(response.dependencies).map(([modid, current]) => {
-            return (
-              <tr key={modid}>
-                <td>{modid}</td>
-                <td>{current}</td>
-                <td>TBD</td>
-                <td>
-                  <HTMLSelect defaultValue={current}>
-                    {response.available[modid].versions.map((version) => (
-                      <option key={version} value={version}>
-                        {version}
-                      </option>
-                    ))}
-                  </HTMLSelect>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </HTMLTable>
-    ),
+    fulfilled: (response) => {
+      const depIDs = Object.keys(response.dependencies);
+      depIDs.sort();
+      return (
+        <HTMLTable>
+          <thead>
+            <tr>
+              <th>Mod</th>
+              <th>Latest Local Version</th>
+              <th>Latest Available Version</th>
+              <th>Saved Version</th>
+            </tr>
+          </thead>
+          <tbody>
+            {depIDs.map((modID) => {
+              const current = response.dependencies[modID];
+              return (
+                <tr key={modID}>
+                  <td>{modID}</td>
+                  <td>{current}</td>
+                  <td>TBD</td>
+                  <td>
+                    <HTMLSelect
+                      defaultValue={current}
+                      onChange={(e) => void changeDepSnapshot(gs, props, modID, e.target.value)}
+                    >
+                      {response.available[modID].versions.map((version) => (
+                        <option key={version} value={version}>
+                          {version}
+                        </option>
+                      ))}
+                    </HTMLSelect>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </HTMLTable>
+      );
+    },
   });
 });
 

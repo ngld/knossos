@@ -282,6 +282,13 @@ message UninstallModRequest {
   uint32 ref = 3;
 }
 
+message DepSnapshotChangeRequest {
+  string modid = 1;
+  string version = 2;
+  string dep_modid = 3;
+  string dep_version = 4;
+}
+
 // event messages
 
 message ClientSentEvent {
@@ -352,4 +359,5 @@ service Knossos {
   rpc UninstallModCheck (UninstallModCheckRequest) returns (UninstallModCheckResponse) {};
   rpc UninstallMod (UninstallModRequest) returns (SuccessResponse) {};
   rpc CancelTask (TaskRequest) returns (SuccessResponse) {};
+  rpc DepSnapshotChange (DepSnapshotChangeRequest) returns (SuccessResponse) {};
 }

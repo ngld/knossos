@@ -227,3 +227,25 @@ func (kn *knossosServer) LaunchMod(ctx context.Context, req *client.LaunchModReq
 
 	return &client.SuccessResponse{Success: true}, nil
 }
+
+func (kn *knossosServer) DepSnapshotChange(ctx context.Context, req *client.DepSnapshotChangeRequest) (*client.SuccessResponse, error) {
+	rel, err := storage.LocalMods.GetModRelease(ctx, req.Modid, req.Version)
+	if err != nil {
+		return nil, err
+	}
+
+	_, ok := rel.DependencySnapshot[req.DepModid]
+	if !ok {
+		return nil, eris.Errorf("could not find dependency %s in mod %s %s", req.DepModid, req.Modid, req.Version)
+	}
+
+	rel.DependencySnapshot[req.DepModid] = req.DepVersion
+	err = storage.SaveLocalModRelease(ctx, rel)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: Add warning about potential conflicts (if we detect some).
+
+	return &client.SuccessResponse{Success: true}, nil
+}
