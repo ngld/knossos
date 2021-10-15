@@ -78,7 +78,7 @@ export default observer(function UninstallModDialog(
                     {version}
                   </Checkbox>
                   {response.errors[version] ? <>
-                    <Callout>
+                    <Callout className="mb-4">
                       {response.errors[version]}
                     </Callout>
                   </> : null}

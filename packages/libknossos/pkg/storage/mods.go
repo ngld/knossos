@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"bytes"
 	"context"
 	"sort"
 	"sync"
@@ -285,13 +286,15 @@ func (p genericModProvider) GetAllReleases(ctx context.Context) ([]*common.Relea
 	err := db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(p.bucket)
 		return bucket.ForEach(func(k, v []byte) error {
-			var rel common.Release
-			err := proto.Unmarshal(v, &rel)
-			if err != nil {
-				return eris.Wrapf(err, "failed to deserialise release %s", k)
-			}
+			if bytes.Contains(k, []byte("#")) {
+				var rel common.Release
+				err := proto.Unmarshal(v, &rel)
+				if err != nil {
+					return eris.Wrapf(err, "failed to deserialise release %s", k)
+				}
 
-			result = append(result, &rel)
+				result = append(result, &rel)
+			}
 			return nil
 		})
 	})

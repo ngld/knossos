@@ -88,7 +88,7 @@ def knossos_configure(binext, libext, generator):
             # cgo only supports gcc, make sure it doesn't try to use a compiler meant for our other packages
             "CC": "gcc",
             "CXX": "g++",
-            "CGO_LDFLAGS": "-static-libstdc++ -static-libgcc ",
+            "CGO_LDFLAGS": "-static-libstdc++ -static-libgcc",
         },
         cmds = [
             "go build %s -o ../../build/libknossos/libknossos%s -trimpath -buildmode c-shared ./api" % (libkn_flags, libext),
@@ -168,14 +168,35 @@ def knossos_configure(binext, libext, generator):
         env = {
             # cgo only supports gcc, make sure it doesn't try to use a compiler meant for our other packages
             "CC": "gcc",
+            "CXX": "g++",
+            "CGO_LDFLAGS": "-static-libstdc++ -static-libgcc",
         },
         cmds = [["go", "build"] + list(parse_shell_args(libkn_flags)) + ["-o", "../../build/libknossos/dev-server%s" % binext, "./dev-server"]],
     )
 
     task(
+        "client-ws-dlls",
+        hidden=True,
+        inputs=[
+            "third_party/openal/bin/Win64/soft_oal.dll",
+            "third_party/msys64/mingw64/bin/SDL2.dll",
+        ],
+        outputs=["build/libknossos/{OpenAL32,SDL2}.dll"],
+        cmds = [
+            "mkdir -p build/libknossos",
+            "cp third_party/openal/bin/Win64/soft_oal.dll build/libknossos/OpenAL32.dll",
+            "cp third_party/msys64/mingw64/bin/SDL2.dll build/libknossos",
+        ]
+    )
+
+    ws_deps = []
+    if OS == "windows":
+        ws_deps.append("client-ws-dlls")
+
+    task(
         "client-ws-run",
         desc = "Launch Knossos WS server",
-        deps = ["client-ws-build"],
+        deps = ["client-ws-build"] + ws_deps,
         base = "packages/libknossos",
         cmds = ["../../build/libknossos/dev-server"],
     )

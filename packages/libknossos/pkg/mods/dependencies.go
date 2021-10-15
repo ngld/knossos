@@ -234,7 +234,7 @@ func GetModDependents(ctx context.Context, mods storage.ModProvider, modID, vers
 		}
 
 		if rel.DependencySnapshot == nil {
-			api.Log(ctx, api.LogWarn, "Mod %s %s doesn't have a dependency snapshot, skipping it!", rel.Modid, version)
+			api.Log(ctx, api.LogWarn, "Mod %s %s doesn't have a dependency snapshot, skipping it!", rel.Modid, rel.Version)
 			continue
 		}
 
