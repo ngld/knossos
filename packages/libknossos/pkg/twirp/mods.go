@@ -2,6 +2,7 @@ package twirp
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"sort"
@@ -100,6 +101,65 @@ func buildModList(ctx context.Context, modProvider storage.ModProvider) (*client
 	return &client.SimpleModList{
 		Mods: modList,
 	}, nil
+}
+
+func (kn *knossosServer) UpdateLocalModList(ctx context.Context, req *client.TaskRequest) (*client.SuccessResponse, error) {
+	api.RunTask(ctx, req.Ref, func(ctx context.Context) error {
+		api.Log(ctx, api.LogInfo, "Looking for knmod.json files")
+
+		settings, err := storage.GetSettings(ctx)
+		if err != nil {
+			return eris.Wrap(err, "failed to load settings")
+		}
+
+		parentFolders, err := os.ReadDir(settings.LibraryPath)
+		if err != nil {
+			return eris.Wrapf(err, "failed to read directory %s", settings.LibraryPath)
+		}
+
+		seenMods := map[string]bool{}
+		storage.ImportMods(ctx, func(ctx context.Context, importMod func(*common.ModMeta) error, importRelease func(*common.Release) error) error {
+			for _, parent := range parentFolders {
+				if !parent.IsDir() {
+					continue
+				}
+
+				if parent.Name() != "bin" {
+					modPath := filepath.Join(settings.LibraryPath, parent.Name(), "knmod.json")
+					modData, err := os.ReadFile(modPath)
+					if err != nil {
+						if eris.Is(err, os.ErrNotExist) {
+							continue
+						}
+
+						return eris.Wrapf(err, "failed to read %s", modPath)
+					}
+
+					var mod common.Mod
+					err = json.Unmarshal(modData, &mod)
+					if err != nil {
+						api.Log(ctx, api.LogError, "Failed to parse %s, skipping the directory! (%s)", modPath, err)
+						continue
+					}
+
+					
+
+					var rel common.Release
+					err = json.Unmarshal(jsonData, &rel)
+					if err != nil {
+						api.Log(ctx, api.LogError, "Failed to parse %s, skipping the directory! (%s)", jsonPath, err)
+						continue
+					}
+				}
+			}
+
+			return nil
+		})
+
+		return nil
+	})
+
+	return &client.SuccessResponse{Success: true}, nil
 }
 
 func (kn *knossosServer) GetLocalMods(ctx context.Context, _ *client.NullMessage) (*client.SimpleModList, error) {

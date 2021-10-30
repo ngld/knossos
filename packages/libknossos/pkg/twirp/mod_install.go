@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"hash"
 	"io"
@@ -24,6 +25,7 @@ import (
 	"github.com/ngld/knossos/packages/libknossos/pkg/storage"
 	"github.com/rotisserie/eris"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func (kn *knossosServer) GetModInstallInfo(ctx context.Context, req *client.ModInfoRequest) (*client.InstallInfoResponse, error) {
@@ -146,6 +148,7 @@ func (kn *knossosServer) InstallMod(ctx context.Context, req *client.InstallModR
 			return err
 		}
 
+		api.Log(ctx, api.LogInfo, "Planning mod installation")
 		checksumLookup := make(map[string]*common.ChecksumPack_Archive)
 		for modID, chkInfo := range info {
 			for name, ar := range chkInfo.Archives {
@@ -181,6 +184,16 @@ func (kn *knossosServer) InstallMod(ctx context.Context, req *client.InstallModR
 			if err != nil {
 				return eris.Wrapf(err, "failed to read release metadata for %s %s", mod.Modid, mod.Version)
 			}
+
+			parent := modMeta.Parent
+			if modMeta.Type == common.ModType_ENGINE {
+				parent = "bin"
+			} else if parent == "" {
+				parent = "FS2"
+			}
+
+			modMeta.Parent = parent
+			modFolder := filepath.Join(settings.LibraryPath, parent, fmt.Sprintf("%s-%s", relMeta.Modid, relMeta.Version))
 
 			for _, pkg := range relMeta.Packages {
 				found := false
@@ -241,16 +254,8 @@ func (kn *knossosServer) InstallMod(ctx context.Context, req *client.InstallModR
 					arPath := filepath.Join(tempFolder, fmt.Sprintf("%s-%s-%d", mod.Modid, pkg.Name, idx))
 					arKey := mod.Modid + "#" + pkg.Name + "#" + ar.Label
 
-					parent := modMeta.Parent
-					if modMeta.Type == common.ModType_ENGINE {
-						parent = "bin"
-					} else if parent == "" {
-						parent = "FS2"
-					}
-					modMeta.Parent = parent
-
 					step := ModInstallStep{
-						folder:      filepath.Join(settings.LibraryPath, parent, mod.Modid+"-"+relMeta.Version, pkg.Folder),
+						folder:      filepath.Join(modFolder, pkg.Folder),
 						destination: ar.Destination,
 						label:       ar.Label,
 						modInfo:     modMeta,
@@ -261,8 +266,10 @@ func (kn *knossosServer) InstallMod(ctx context.Context, req *client.InstallModR
 
 					allFilesExists := true
 					for _, item := range step.files {
-						info, err := os.Stat(filepath.Join(step.folder, filepath.FromSlash(item.Filename)))
+						itemPath := filepath.Join(step.folder, filepath.FromSlash(item.Filename))
+						info, err := os.Stat(itemPath)
 						if eris.Is(err, os.ErrNotExist) {
+							api.Log(ctx, api.LogDebug, "File %s is missing", itemPath)
 							allFilesExists = false
 							break
 						} else if err != nil {
@@ -271,7 +278,8 @@ func (kn *knossosServer) InstallMod(ctx context.Context, req *client.InstallModR
 							break
 						}
 
-						if info.Size() != int64(item.Size) {
+						if item.Size > 0 && info.Size() != int64(item.Size) {
+							api.Log(ctx, api.LogDebug, "File %s has wrong file size (%d != %d)", itemPath, info.Size(), item.Size)
 							// Ignore incomplete files
 							allFilesExists = false
 							break
@@ -332,8 +340,8 @@ func (kn *knossosServer) InstallMod(ctx context.Context, req *client.InstallModR
 		}
 
 		api.Log(ctx, api.LogInfo, "Updating mod metadata")
+		modMetas := make(map[string]*common.ModMeta)
 		err = storage.BatchUpdate(ctx, func(ctx context.Context) error {
-			modMetas := make(map[string]*common.ModMeta)
 			for _, mod := range newMeta {
 				err = storage.SaveLocalMod(ctx, mod)
 				if err != nil {
@@ -379,12 +387,15 @@ func (kn *knossosServer) InstallMod(ctx context.Context, req *client.InstallModR
 
 				fileRefs := append([]*common.FileRef{rel.Banner, rel.Teaser}, rel.Screenshots...)
 				queueItems := make([]*downloader.QueueItem, 0)
+				modFolder, err := mods.GetModFolder(ctx, rel)
+				if err != nil {
+					return eris.Wrapf(err, "failed to build folder path for %s %s", rel.Modid, rel.Version)
+				}
+
 				for _, ref := range fileRefs {
 					if ref != nil && (len(ref.Urls) != 1 || !strings.HasPrefix(ref.Urls[0], "file://")) {
-						urls := ref.Urls
-						ext := filepath.Ext(ref.Urls[0])
-						dest := "ref_" + hex.EncodeToString([]byte(ref.Fileid)) + ext
-						dest = filepath.Join(settings.LibraryPath, modMetas[rel.Modid].Parent, rel.Modid+"-"+rel.Version, dest)
+						dest := "ref_" + hex.EncodeToString([]byte(ref.Fileid)) + filepath.Ext(ref.Urls[0])
+						dest = filepath.Join(modFolder, dest)
 						ref.Urls = []string{"file://" + filepath.ToSlash(dest)}
 
 						// Only download missing images.
@@ -393,7 +404,7 @@ func (kn *knossosServer) InstallMod(ctx context.Context, req *client.InstallModR
 							queueItems = append(queueItems, &downloader.QueueItem{
 								Key:      ref.Fileid,
 								Filepath: dest,
-								Mirrors:  urls,
+								Mirrors:  ref.Urls,
 								Checksum: nil,
 								Filesize: 0,
 							})
@@ -411,6 +422,21 @@ func (kn *knossosServer) InstallMod(ctx context.Context, req *client.InstallModR
 					return eris.Wrap(err, "failed to fetch mod images")
 				}
 
+				err = storage.SaveLocalModRelease(ctx, rel)
+				if err != nil {
+					return eris.Wrapf(err, "failed to save release %s (%s)", modMetas[rel.Modid].Title, rel.Version)
+				}
+			}
+
+			return nil
+		})
+
+		if err != nil {
+			return err
+		}
+
+		err = storage.BatchUpdate(ctx, func(ctx context.Context) error {
+			for _, rel := range newRelMeta {
 				// Build dependency snapshot based on the passed snapshot.
 				// The user-requested mod will receive the full snapshot but dependencies usually only need a subset.
 				// For example, FSO's dep snapshot would only contain FSO while the MVPs' snapshot would only contain
@@ -433,6 +459,34 @@ func (kn *knossosServer) InstallMod(ctx context.Context, req *client.InstallModR
 					}
 				}
 
+				modFolder, err := mods.GetModFolder(ctx, rel)
+				if err != nil {
+					return eris.Wrapf(err, "failed to build folder path for %s %s", rel.Modid, rel.Version)
+				}
+
+				releaseData, err := json.MarshalIndent(rel, "", "  ")
+				if err != nil {
+					return eris.Wrapf(err, "failed to serialise release %s %s", rel.Modid, rel.Version)
+				}
+
+				releaseJson := filepath.Join(modFolder, "knrelease.json")
+				err = os.WriteFile(releaseJson, releaseData, 0600)
+				if err != nil {
+					return eris.Wrapf(err, "failed to write %s for %s %s", releaseJson, rel.Modid, rel.Version)
+				}
+
+				modData, err := json.MarshalIndent(modMetas[rel.Modid], "", "  ")
+				if err != nil {
+					return eris.Wrapf(err, "failed to serialise mod metadata for %s", rel.Modid)
+				}
+
+				modJson := filepath.Join(modFolder, "knmod.json")
+				err = os.WriteFile(modJson, modData, 0600)
+				if err != nil {
+					return eris.Wrapf(err, "failed to write %s for %s %s", modJson, rel.Modid, rel.Version)
+				}
+
+				rel.JsonExportUpdated = timestamppb.Now()
 				err = storage.SaveLocalModRelease(ctx, rel)
 				if err != nil {
 					return eris.Wrapf(err, "failed to save release %s (%s)", modMetas[rel.Modid].Title, rel.Version)
@@ -441,6 +495,7 @@ func (kn *knossosServer) InstallMod(ctx context.Context, req *client.InstallModR
 
 			return nil
 		})
+
 		if err != nil {
 			return err
 		}
@@ -481,7 +536,10 @@ func handleArchive(ctx context.Context, archivePath string, step *ModInstallStep
 		}
 
 		if archive.Entry.Size == 0 {
-			api.Log(ctx, api.LogWarn, "Skipping empty file %s", archive.Entry.Pathname)
+			// Skip warning for folders in .zip files.
+			if !strings.HasSuffix(archive.Entry.Pathname, "/") {
+				api.Log(ctx, api.LogWarn, "Skipping empty file %s", archive.Entry.Pathname)
+			}
 			continue
 		}
 

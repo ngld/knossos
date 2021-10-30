@@ -68,6 +68,7 @@ message Release {
   repeated string videos = 15;
   google.protobuf.Timestamp released = 16;
   google.protobuf.Timestamp updated = 17;
+  google.protobuf.Timestamp json_export_updated = 25;
 
   // install
   string notes = 20;

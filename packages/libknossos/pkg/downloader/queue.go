@@ -125,6 +125,9 @@ func (q *Queue) Run(ctx context.Context) error {
 	q.activeLock.L.Unlock()
 
 	q.done = true
+	// Wake NextResult() in case it's waiting for further results.
+	q.finishedLock.Broadcast()
+
 	if q.err != nil {
 		return eris.Wrapf(q.err, "one or more downloads failed\n%s", api.Stacktrace(2))
 	}
