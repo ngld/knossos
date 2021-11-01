@@ -3,6 +3,7 @@ package twirp
 import (
 	"context"
 	"fmt"
+	"runtime"
 
 	"github.com/ngld/knossos/packages/api/client"
 	"github.com/ngld/knossos/packages/libknossos/pkg/fso_interop"
@@ -31,7 +32,13 @@ func (kn *knossosServer) GetHardwareInfo(ctx context.Context, req *client.NullMe
 		return nil, err
 	}
 
-	err = sdl.Init(sdl.INIT_VIDEO | sdl.INIT_JOYSTICK)
+	if runtime.GOOS == "darwin" {
+		platform.RunOnMain(func() {
+			err = sdl.Init(sdl.INIT_VIDEO | sdl.INIT_JOYSTICK)
+		})
+	} else {
+		err = sdl.Init(sdl.INIT_VIDEO | sdl.INIT_JOYSTICK)
+	}
 	if err != nil {
 		return nil, eris.Wrap(err, "failed to init SDL")
 	}
