@@ -63,11 +63,19 @@ async function initSequence(
     }
 
     setLabel('Loading installed mods');
-    // TODO: check mod.json files and mod folders
+    let success = await gs.tasks.runTask('Load local mods', (ref) => {
+      gs.sendSignal('showTasks');
+      void gs.client.updateLocalModList({ref});
+    });
+
+    if (!success) {
+      console.error('Local mod import failed!');
+      setOpen(false);
+      return;
+    }
 
     setLabel('Updating mod list');
-    const success = await gs.tasks.runTask('Sync mods', (ref) => {
-      gs.sendSignal('showTasks');
+    success = await gs.tasks.runTask('Sync mods', (ref) => {
       void gs.client.syncRemoteMods({ref});
     });
 

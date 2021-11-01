@@ -15,7 +15,6 @@ import (
 	"strings"
 	"sync/atomic"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/ngld/knossos/packages/api/client"
 	"github.com/ngld/knossos/packages/api/common"
 	"github.com/ngld/knossos/packages/libarchive"
@@ -554,7 +553,6 @@ func handleArchive(ctx context.Context, archivePath string, step *ModInstallStep
 
 		checksum, ok := fileLookup[itemName]
 		if !ok {
-			spew.Dump(fileLookup)
 			return eris.Errorf("could not find checksum for %s in %s for %s", archive.Entry.Pathname, step.label, step.modInfo.Title)
 		}
 

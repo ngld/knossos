@@ -360,4 +360,5 @@ service Knossos {
   rpc UninstallMod (UninstallModRequest) returns (SuccessResponse) {};
   rpc CancelTask (TaskRequest) returns (SuccessResponse) {};
   rpc DepSnapshotChange (DepSnapshotChangeRequest) returns (SuccessResponse) {};
+  rpc UpdateLocalModList (TaskRequest) returns (SuccessResponse) {};
 }
