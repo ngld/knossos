@@ -4,6 +4,7 @@ import { runInAction } from 'mobx';
 import { GlobalState, useGlobalState } from '../lib/state';
 import { runUpdateCheck } from './updater';
 import { FirstRunWizard, FirstRunWizardProps } from './first-run-wizard';
+import ErrorDialog from './error-dialog';
 
 export function initStartup(gs: GlobalState): void {
   gs.launchOverlay<StartupOverlayProps>(StartupOverlay, {});
@@ -83,8 +84,15 @@ async function initSequence(
     if (!success) {
       console.error('Modsync failed!');
       setOpen(false);
+      gs.sendSignal('hideTasks');
+
       runInAction(() => {
         gs.startupDone = true;
+        gs.launchOverlay(ErrorDialog, {
+          title: 'Failed to fetch available mods',
+          message:
+            "Failed to communicate with Nebula, make sure your AV isn't blocking Knossos and Nebula isn't down for maintenance.",
+        });
       });
       return;
     }

@@ -16,7 +16,7 @@ import (
 var (
 	userAgent  string
 	httpClient = http.Client{
-		Timeout: 10 * time.Second,
+		Timeout: 30 * time.Second,
 	}
 )
 

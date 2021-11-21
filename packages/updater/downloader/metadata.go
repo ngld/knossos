@@ -48,7 +48,7 @@ type RegistryManifest struct {
 }
 
 var client = http.Client{
-	Timeout: 3 * time.Second,
+	Timeout: 30 * time.Second,
 	CheckRedirect: func(req *http.Request, via []*http.Request) error {
 		return http.ErrUseLastResponse
 	},
