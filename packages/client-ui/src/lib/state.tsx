@@ -23,6 +23,7 @@ export class GlobalState {
     showTasks: [],
     hideTasks: [],
   };
+  startupDone: boolean;
 
   constructor() {
     this.toaster = Toaster.create({});
@@ -41,6 +42,7 @@ export class GlobalState {
     this.tasks = new TaskTracker(this);
     this.tasks.listen();
     this.overlays = [];
+    this.startupDone = false;
 
     makeAutoObservable(this, {
       // don't use black magic on complex objects

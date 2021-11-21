@@ -479,7 +479,7 @@ func (kn *knossosServer) InstallMod(ctx context.Context, req *client.InstallModR
 					return eris.Wrapf(err, "failed to serialise mod metadata for %s", rel.Modid)
 				}
 
-				modJson := filepath.Join(modFolder, "knmod.json")
+				modJson := filepath.Join(settings.LibraryPath, modMetas[rel.Modid].Parent, "knmod-"+rel.Modid+".json")
 				err = os.WriteFile(modJson, modData, 0600)
 				if err != nil {
 					return eris.Wrapf(err, "failed to write %s for %s %s", modJson, rel.Modid, rel.Version)

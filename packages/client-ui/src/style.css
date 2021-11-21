@@ -3,6 +3,10 @@ body {
     font-family: 'Inter';
 }
 
+pre {
+    white-space: pre-wrap;
+}
+
 #container {
     position: absolute;
     top: 0;

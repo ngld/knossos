@@ -9,6 +9,7 @@ import {
 } from '@meronex/icons/ci';
 import { useState, useEffect } from 'react';
 import { observer } from 'mobx-react-lite';
+import { Spinner } from '@blueprintjs/core';
 import { Tooltip2 } from '@blueprintjs/popover2';
 import cx from 'classnames';
 import { Switch, Route, Redirect, useHistory, useLocation } from 'react-router-dom';
@@ -77,7 +78,9 @@ function TooltipButton(props: TooltipButtonProps): React.ReactElement {
   );
 }
 
-const ModContainer = observer(function ModContainer(): React.ReactElement {
+const ModContainer = observer(function ModContainer(props: {
+  gs: GlobalState;
+}): React.ReactElement {
   const location = useLocation();
 
   return (
@@ -95,20 +98,24 @@ const ModContainer = observer(function ModContainer(): React.ReactElement {
       )}
     >
       <ErrorBoundary>
-        <Switch>
-          <Redirect exact from="/" to="/play" />
-          <Redirect exact from="/index.html" to="/play" />
-          <Route path="/play" component={LocalModList} />
-          <Route path="/explore" component={RemoteModList} />
-          <Route path="/settings">
-            <Settings />
-          </Route>
-          <Route path="/mod/:modid/:version?" component={LocalMod} />
-          <Route path="/rmod/:modid/:version?" component={RemoteMod} />
-          <Route path="/">
-            <div className="text-white">Page not found</div>
-          </Route>
-        </Switch>
+        {props.gs.startupDone ? (
+          <Switch>
+            <Redirect exact from="/" to="/play" />
+            <Redirect exact from="/index.html" to="/play" />
+            <Route path="/play" component={LocalModList} />
+            <Route path="/explore" component={RemoteModList} />
+            <Route path="/settings">
+              <Settings />
+            </Route>
+            <Route path="/mod/:modid/:version?" component={LocalMod} />
+            <Route path="/rmod/:modid/:version?" component={RemoteMod} />
+            <Route path="/">
+              <div className="text-white">Page not found</div>
+            </Route>
+          </Switch>
+        ) : (
+          <Spinner />
+        )}
       </ErrorBoundary>
     </div>
   );
@@ -138,8 +145,8 @@ export default function Root(): React.ReactElement {
   const history = useHistory();
   const [isMaximized, setMaximized] = useState<boolean>(false);
   const [versionInfo, setVersionInfo] = useState<VersionInfo>({
-    version: "",
-    commit: "",
+    version: '',
+    commit: '',
   });
 
   useEffect(() => {
@@ -203,7 +210,7 @@ export default function Root(): React.ReactElement {
 
         <NavTabs />
       </div>
-      <ModContainer />
+      <ModContainer gs={gs} />
       <OverlayRenderer gs={gs} />
     </div>
   );

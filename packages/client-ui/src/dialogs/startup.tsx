@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Dialog, Classes, ProgressBar } from '@blueprintjs/core';
+import { runInAction } from 'mobx';
 import { GlobalState, useGlobalState } from '../lib/state';
 import { runUpdateCheck } from './updater';
 import { FirstRunWizard, FirstRunWizardProps } from './first-run-wizard';
@@ -44,7 +45,7 @@ async function initSequence(
   setLabel: React.Dispatch<React.SetStateAction<string>>,
 ): Promise<void> {
   try {
-    setLabel('Loading settings')
+    setLabel('Loading settings');
 
     const r = await gs.client.getSettings({});
     if (!r.response.firstRunDone) {
@@ -65,23 +66,26 @@ async function initSequence(
     setLabel('Loading installed mods');
     let success = await gs.tasks.runTask('Load local mods', (ref) => {
       gs.sendSignal('showTasks');
-      void gs.client.updateLocalModList({ref});
+      void gs.client.updateLocalModList({ ref });
     });
 
     if (!success) {
-      console.error('Local mod import failed!');
+      console.error('Local mod update failed!');
       setOpen(false);
       return;
     }
 
     setLabel('Updating mod list');
     success = await gs.tasks.runTask('Sync mods', (ref) => {
-      void gs.client.syncRemoteMods({ref});
+      void gs.client.syncRemoteMods({ ref });
     });
 
     if (!success) {
       console.error('Modsync failed!');
       setOpen(false);
+      runInAction(() => {
+        gs.startupDone = true;
+      });
       return;
     }
 
@@ -92,4 +96,7 @@ async function initSequence(
   }
 
   setOpen(false);
+  runInAction(() => {
+    gs.startupDone = true;
+  });
 }

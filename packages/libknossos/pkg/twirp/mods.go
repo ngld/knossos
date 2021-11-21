@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/rotisserie/eris"
 
 	"github.com/ngld/knossos/packages/api/client"
@@ -118,87 +119,79 @@ func (kn *knossosServer) UpdateLocalModList(ctx context.Context, req *client.Tas
 			return eris.Wrapf(err, "failed to read directory %s", settings.LibraryPath)
 		}
 
-		seenMods := map[string]bool{}
-		storage.ImportMods(ctx, func(ctx context.Context, importMod func(*common.ModMeta) error, importRelease func(*common.Release) error) error {
-			modFolders := make([]string, 0)
+		modInfos := []*common.ModMeta{}
+		releaseInfos := []*common.Release{}
+		for _, parent := range parentFolders {
+			if !parent.IsDir() {
+				continue
+			}
 
-			for _, parent := range parentFolders {
-				if !parent.IsDir() {
-					continue
-				}
+			subDir := filepath.Join(settings.LibraryPath, parent.Name())
+			items, err := os.ReadDir(subDir)
+			if err != nil {
+				return eris.Wrapf(err, "failed to list contents of %s", subDir)
+			}
 
-				parentFolder := filepath.Join(settings.LibraryPath, parent.Name())
+			for _, item := range items {
+				if item.IsDir() {
+					releasePath := filepath.Join(subDir, item.Name(), "knrelease.json")
+					encodedData, err := os.ReadFile(releasePath)
+					if err != nil {
+						if eris.Is(err, os.ErrNotExist) {
+							// Ignore file not found errors
+							continue
+						}
 
-				if parent.Name() != "bin" {
-					modFolders = append(modFolders, parentFolder)
-				}
-
-				subFolders, err := os.ReadDir(parentFolder)
-				if err != nil {
-					api.Log(ctx, api.LogError, "Failed to read directory %s! (%s)", parentFolder, err)
-					fail = true
-					continue
-				}
-				for _, subFolder := range subFolders {
-					if subFolder.IsDir() {
-						modFolders = append(modFolders, filepath.Join(parentFolder, subFolder.Name()))
+						return eris.Wrapf(err, "failed to read %s", releasePath)
 					}
+
+					var relaseInfo common.Release
+					err = json.Unmarshal(encodedData, &relaseInfo)
+					if err != nil {
+						return eris.Wrapf(err, "failed to parse %s", releasePath)
+					}
+
+					releaseInfos = append(releaseInfos, &relaseInfo)
+				} else if strings.HasPrefix(item.Name(), "knmod-") && strings.HasSuffix(item.Name(), ".json") {
+					modPath := filepath.Join(subDir, item.Name())
+					encodedData, err := os.ReadFile(modPath)
+					if err != nil {
+						return eris.Wrapf(err, "failed to read %s", modPath)
+					}
+
+					var modInfo common.ModMeta
+					err = json.Unmarshal(encodedData, &modInfo)
+					if err != nil {
+						return eris.Wrapf(err, "failed to parse %s", modPath)
+					}
+
+					modInfos = append(modInfos, &modInfo)
+				}
+			}
+		}
+
+		err = storage.ImportMods(ctx, func(ctx context.Context, importMod func(*common.ModMeta) error, importRelease func(*common.Release) error) error {
+			for _, modInfo := range modInfos {
+				spew.Dump(modInfo)
+				err := importMod(modInfo)
+				if err != nil {
+					return err
 				}
 			}
 
-			for _, modFolder := range modFolders {
-				modPath := filepath.Join(modFolder, "knmod.json")
-				modData, err := os.ReadFile(modPath)
+			for _, releaseInfo := range releaseInfos {
+				spew.Dump(releaseInfo)
+				err := importRelease(releaseInfo)
 				if err != nil {
-					if eris.Is(err, os.ErrNotExist) {
-						continue
-					}
-
-					return eris.Wrapf(err, "failed to read %s", modPath)
-				}
-
-				var mod common.ModMeta
-				err = json.Unmarshal(modData, &mod)
-				if err != nil {
-					api.Log(ctx, api.LogError, "Failed to parse %s, skipping the directory! (%s)", modPath, err)
-					fail = true
-					continue
-				}
-
-				if !seenMods[mod.Modid] {
-					seenMods[mod.Modid] = true
-					err = importMod(&mod)
-					if err != nil {
-						return eris.Wrapf(err, "failed to import mod %s from %s", mod.Modid, modPath)
-					}
-				}
-
-				releasePath := filepath.Join(modFolder, "knrelease.json")
-				releaseData, err := os.ReadFile(releasePath)
-				if err != nil {
-					if eris.Is(err, os.ErrNotExist) {
-						continue
-					}
-
-					return eris.Wrapf(err, "failed to read %s", releasePath)
-				}
-
-				var rel common.Release
-				err = json.Unmarshal(releaseData, &rel)
-				if err != nil {
-					fail = true
-					api.Log(ctx, api.LogError, "Failed to parse %s, skipping the directory! (%s)", releaseData, err)
-					continue
-				}
-
-				err = importRelease(&rel)
-				if err != nil {
-					return eris.Wrapf(err, "failed to import release %s %s from %s", rel.Modid, rel.Version, modFolder)
+					return err
 				}
 			}
 
 			return nil
 		})
+		if err != nil {
+			return eris.Wrap(err, "failed to import mod metadata")
+		}
 
 		if fail {
 			return eris.New("some files or folders could not be handled correctly; check the previous messages for details")
