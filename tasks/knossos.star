@@ -82,7 +82,6 @@ def knossos_configure(binext, libext, generator):
         ],
         outputs = [
             "../../build/libknossos/libknossos%s" % libext,
-            "../../build/libknossos/dynknossos.{h,cc}",
         ],
         env = {
             # cgo only supports gcc, make sure it doesn't try to use a compiler meant for our other packages
@@ -90,11 +89,7 @@ def knossos_configure(binext, libext, generator):
             "CXX": "g++",
             "CGO_LDFLAGS": "-static-libstdc++" + " -static-libgcc" if OS != "darwin" else "",
         },
-        cmds = [
-            "go build %s -o ../../build/libknossos/libknossos%s -trimpath -buildmode c-shared ./api" % (libkn_flags, libext),
-            "tool gen-dyn-loader ../../build/libknossos/libknossos.h ../../build/libknossos/dynknossos.h",
-            "cp ./api/cef_bridge.h ../../build/libknossos",
-        ],
+        cmds = ["go build %s -o ../../build/libknossos/libknossos%s -trimpath -buildmode c-shared ./api" % (libkn_flags, libext)],
     )
 
     if generator == "Ninja":
@@ -147,7 +142,7 @@ def knossos_configure(binext, libext, generator):
         hidden = True,
         base = "build/client",
         deps = ["client-build"],
-        cmds = ['%s --url="http://localhost:8080/" --libkn="%s"' % (kn_bin, libkn_path)],
+        cmds = ['%s --log-severity=verbose --url="http://localhost:8080/" --libkn="%s"' % (kn_bin, libkn_path)],
     )
 
     task(
@@ -163,7 +158,6 @@ def knossos_configure(binext, libext, generator):
         ],
         outputs = [
             "../../build/libknossos/dev-server%s" % binext,
-            "../../build/libknossos/dynknossos.{h,cc}",
         ],
         env = {
             # cgo only supports gcc, make sure it doesn't try to use a compiler meant for our other packages

@@ -13,9 +13,7 @@ static void KnossosLogger(uint8_t level, char* message, int length) {
   std::string msg((const char*)message, length);
   switch (level) {
   case KNOSSOS_LOG_DEBUG:
-#ifndef NDEBUG
-    LOG(INFO) << "D: " << msg;
-#endif
+    VLOG(1) << "D: " << msg;
     break;
   case KNOSSOS_LOG_INFO:
     LOG(INFO) << msg;

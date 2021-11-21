@@ -3,7 +3,6 @@
 # can be found in the LICENSE file.
 
 include_directories(.
-                    ../../../build/libknossos
                     ../../../third_party/libarchive
                     )
 
@@ -56,7 +55,7 @@ set(KNOSSOS_SRCS
   browser/knossos_file_result_handler.cc
   browser/knossos_handler.cc
   browser/knossos_resource_handler.cc
-  ../../../build/libknossos/dynknossos.cc
+  browser/dynknossos.cc
 )
 
 set(KNOSSOS_SRCS_LINUX
