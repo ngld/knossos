@@ -68,6 +68,11 @@ message FSOSettings {
 
     bool ForceFullscreen = 16;
     uint32 MaxFPS = 17;
+
+    uint32 ScreenshotNum = 19;
+
+    string NetworkConnection = 20;
+    string ConnectionSpeed = 21;
   }
 
   message SoundSettings {
@@ -91,10 +96,17 @@ message FSOSettings {
     uint32 Strength = 1;
   }
 
+  message PXOSettings {
+    string Login = 1;
+    string Password = 2;
+    string SquadName = 3;
+  }
+
   DefaultSettings Default = 1;
   SoundSettings Sound = 2;
   VideoSettings Video = 3;
   ForceFeedbackSettings ForceFeedback = 4;
+  PXOSettings PXO = 5;
 }
 
 message Settings {

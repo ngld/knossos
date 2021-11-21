@@ -55,7 +55,7 @@ func skipWhitespace(f io.RuneScanner) error {
 	}
 }
 
-func parseFile(f io.RuneScanner, dest interface{}) error {
+func parseFile(ctx context.Context, f io.RuneScanner, dest interface{}) error {
 	destVal := reflect.ValueOf(dest).Elem()
 	if destVal.Kind() != reflect.Struct {
 		panic("expected dest to be a struct")
@@ -151,7 +151,8 @@ func parseFile(f io.RuneScanner, dest interface{}) error {
 				}
 
 				if !ok {
-					return eris.Errorf("found unknown key %s", key)
+					api.Log(ctx, api.LogWarn, "fs2_open.ini: found unknown key %s", key)
+					continue
 				}
 			}
 
@@ -162,17 +163,21 @@ func parseFile(f io.RuneScanner, dest interface{}) error {
 			case reflect.Uint32:
 				num, err := strconv.Atoi(value)
 				if err != nil {
-					return eris.Errorf("failed to parse value %s for key %s", value, key)
+					if value == "No Joystick" {
+						num = 0
+					} else {
+						api.Log(ctx, api.LogWarn, "fs2_open.ini: failed to parse value %s for key %s", value, key)
+					}
+				} else {
+					field.Set(reflect.ValueOf(uint32(num)))
 				}
-
-				field.Set(reflect.ValueOf(uint32(num)))
 			case reflect.Bool:
 				num, err := strconv.Atoi(value)
 				if err != nil {
-					return eris.Errorf("failed to parse value %s for key %s", value, key)
+					api.Log(ctx, api.LogWarn, "fs2_open.ini: failed to parse value %s for key %s", value, key)
+				} else {
+					field.Set(reflect.ValueOf(num > 0))
 				}
-
-				field.Set(reflect.ValueOf(num > 0))
 			default:
 				panic(fmt.Sprintf("unexpected type %s for field %s", field.Type().Name(), fieldType.Name))
 			}
@@ -203,8 +208,9 @@ func LoadSettings(ctx context.Context) (*client.FSOSettings, error) {
 	settings.ForceFeedback = &client.FSOSettings_ForceFeedbackSettings{
 		Strength: 100,
 	}
+	settings.PXO = &client.FSOSettings_PXOSettings{}
 
-	err = parseFile(buffer, &settings)
+	err = parseFile(ctx, buffer, &settings)
 	if err != nil {
 		return nil, eris.Wrapf(err, "failed to parse %s", iniPath)
 	}
