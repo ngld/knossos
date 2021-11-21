@@ -79,6 +79,7 @@ def knossos_configure(binext, libext, generator):
             "**/*.go",
             "../libarchive/**/*.go",
             "../libinnoextract/**/*.go",
+            "../api/**/*.go",
         ],
         outputs = [
             "../../build/libknossos/libknossos%s" % libext,

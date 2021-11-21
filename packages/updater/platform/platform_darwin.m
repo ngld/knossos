@@ -1,6 +1,5 @@
 #import <Cocoa/Cocoa.h>
 #include <libgen.h>
-#include <string>
 #include "platform.h"
 
 void PlatformInit() {}
