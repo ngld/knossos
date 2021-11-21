@@ -253,6 +253,7 @@ void KnossosApp::InitializeSettings(CefSettings &settings,
 
   _settings_path = config_path;
 
+  settings.persist_user_preferences = 1;
   settings.background_color = CefColorSetARGB(0xff, 0x1c, 0x1c, 0x1c);
 }
 

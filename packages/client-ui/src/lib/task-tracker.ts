@@ -222,13 +222,3 @@ export class TaskTracker extends EventEmitter {
     delete this.taskMap[id];
   }
 }
-
-export function useTaskTracker(gs: GlobalState): TaskTracker {
-  const [tracker] = useState(() => new TaskTracker(gs));
-
-  useEffect(() => {
-    return tracker.listen();
-  }, [tracker]);
-
-  return tracker;
-}
