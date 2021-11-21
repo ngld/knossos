@@ -48,7 +48,7 @@ const NoteBox = styled(Callout).attrs({
 
 interface InstallState {
   loading: boolean;
-  error: boolean;
+  error: null | string;
   userSelected: Record<string, boolean>;
   nodes: TreeNodeInfo<NodeData>[];
   title: string;
@@ -61,10 +61,20 @@ async function getInstallInfo(
   props: InstallModDialogProps,
   setState: React.Dispatch<React.SetStateAction<InstallState>>,
 ): Promise<void> {
-  const result = await gs.client.getModInstallInfo({
-    id: props.modid ?? '',
-    version: props.version ?? '',
-  });
+  let result;
+  try {
+    result = await gs.client.getModInstallInfo({
+      id: props.modid ?? '',
+      version: props.version ?? '',
+    });
+  } catch (e) {
+    setState((prev) => ({
+      ...prev,
+      error: e instanceof Error ? e.message : String(e),
+      loading: false,
+    }));
+    return;
+  }
 
   const nodes = [] as TreeNodeInfo<NodeData>[];
   const userSelected = {} as Record<string, boolean>;
@@ -99,7 +109,7 @@ async function getInstallInfo(
   processDependencies(userSelected, nodes, setState);
   setState({
     loading: false,
-    error: false,
+    error: null,
     nodes,
     title: result.response.title,
     notes: '',
@@ -198,7 +208,7 @@ export const InstallModDialog = observer(function InstallModDialog(props: Instal
   const [isOpen, setOpen] = useState(true);
   const [state, setState] = useState<InstallState>({
     loading: true,
-    error: false,
+    error: null,
     userSelected: {},
     modVersions: {},
     nodes: [],
@@ -295,7 +305,7 @@ export const InstallModDialog = observer(function InstallModDialog(props: Instal
           </>
         ) : (
           <Callout intent="danger" title="Failed to fetch data">
-            <pre>{'???'}</pre>
+            <pre>{state.error}</pre>
           </Callout>
         )}
       </div>

@@ -354,7 +354,10 @@ func (p genericModProvider) GetVersionsForMod(ctx context.Context, id string) ([
 		return nil, eris.Errorf("No versions found for mod %s", id)
 	}
 
-	return result, nil
+	// Protect against changes
+	resultCopy := make([]string, len(result))
+	copy(resultCopy, result)
+	return resultCopy, nil
 }
 
 var _ ModProvider = (*genericModProvider)(nil)
