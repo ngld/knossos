@@ -68,16 +68,34 @@ DialogResult OpenFolderDialog(const char *title, const char *folder) {
 }
 
 extern char* GetDesktopDirectory() {
-  std::string path = getenv("HOME");
-  path += "/Desktop";
+  char* home_path = getenv("HOME");
+  char* path = malloc(sizeof(char) * (strlen(home_path) + 9));
 
-  return path.c_str();
+  strcpy(path, home_path);
+  strcat(path, "/Desktop");
+  return path;
 }
 
 extern char* GetStartMenuDirectory() {
-  return nullptr;
+  return NULL;
 }
 
 extern bool IsElevated() {
   return false;
+}
+
+extern const char* CreateShortcut(const char* shortcut, const char* target) {
+  const char* error = "unsupported platform";
+  int errlen = sizeof(char) * (strlen(error) + 1);
+  char* result = (char*)malloc(errlen);
+  memcpy(result, error, errlen);
+  return result;
+}
+
+extern char *RunElevated(const char *program, const char *args) {
+  const char* error = "unsupported platform";
+  int errlen = sizeof(char) * (strlen(error) + 1);
+  char* result = (char*)malloc(errlen);
+  memcpy(result, error, errlen);
+  return result;
 }

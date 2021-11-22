@@ -21,3 +21,5 @@ github.com/veandco/go-sdl2 v0.4.0 h1:l9q6K+Dvpd/VlZdw2ufApKnWhAQqx9UL8Zrvbjtm3Lw
 github.com/veandco/go-sdl2 v0.4.0/go.mod h1:FB+kTpX9YTE+urhYiClnRzpOXbiWgaU3+5F2AB78DPg=
 github.com/veandco/go-sdl2 v0.4.10 h1:8QoD2bhWl7SbQDflIAUYWfl9Vq+mT8/boJFAUzAScgY=
 github.com/veandco/go-sdl2 v0.4.10/go.mod h1:OROqMhHD43nT4/i9crJukyVecjPNYYuCofep6SNiAjY=
+github.com/veandco/go-sdl2 v0.5.0-alpha.1 h1:Y5vuUphXqB2qSjiTjqnHohgucJzkMfgE5MhHNLg85U8=
+github.com/veandco/go-sdl2 v0.5.0-alpha.1/go.mod h1:OROqMhHD43nT4/i9crJukyVecjPNYYuCofep6SNiAjY=

@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <X11/Xlib.h>
@@ -106,3 +107,18 @@ extern bool IsElevated() {
   return false;
 }
 
+extern const char* CreateShortcut(const char* shortcut, const char* target) {
+  const char* error = "unsupported platform";
+  int errlen = sizeof(char) * (strlen(error) + 1);
+  char* result = (char*)malloc(errlen);
+  memcpy(result, error, errlen);
+  return result;
+}
+
+extern "C" char *RunElevated(const char *program, const char *args) {
+  const char* error = "unsupported platform";
+  int errlen = sizeof(char) * (strlen(error) + 1);
+  char* result = (char*)malloc(errlen);
+  memcpy(result, error, errlen);
+  return result;
+}

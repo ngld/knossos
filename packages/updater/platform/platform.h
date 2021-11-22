@@ -29,10 +29,7 @@ extern const char* CreateShortcut(const char* shortcut, const char* target);
 extern char* GetDesktopDirectory();
 extern char* GetStartMenuDirectory();
 extern bool IsElevated();
-
-#ifdef WIN32
 extern char* RunElevated(const char* program, const char* args);
-#endif
 
 #ifdef __cplusplus
 }
