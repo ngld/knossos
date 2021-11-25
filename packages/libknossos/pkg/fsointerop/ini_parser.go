@@ -186,13 +186,6 @@ func parseFile(ctx context.Context, f io.RuneScanner, dest interface{}) error {
 }
 
 func LoadSettings(ctx context.Context) (*client.FSOSettings, error) {
-	iniPath := filepath.Join(GetPrefPath(ctx), "fs2_open.ini")
-	data, err := os.ReadFile(iniPath)
-	if err != nil {
-		return nil, eris.Wrapf(err, "failed to read %s", iniPath)
-	}
-
-	buffer := strings.NewReader(string(data))
 	var settings client.FSOSettings
 	// assign defaults
 
@@ -209,6 +202,19 @@ func LoadSettings(ctx context.Context) (*client.FSOSettings, error) {
 		Strength: 100,
 	}
 	settings.PXO = &client.FSOSettings_PXOSettings{}
+
+	iniPath := filepath.Join(GetPrefPath(ctx), "fs2_open.ini")
+	data, err := os.ReadFile(iniPath)
+	if err != nil {
+		// If the file doesn't exist, just return the default settings.
+		if eris.Is(err, os.ErrNotExist) {
+			return &settings, nil
+		}
+
+		return nil, eris.Wrapf(err, "failed to read %s", iniPath)
+	}
+
+	buffer := strings.NewReader(string(data))
 
 	err = parseFile(ctx, buffer, &settings)
 	if err != nil {
