@@ -113,7 +113,7 @@ const ModContainer = observer(function ModContainer(props: {
               <div className="text-white">Page not found</div>
             </Route>
           </Switch>
-        ) : (
+        ) : props.gs.overlays.length > 0 ? null : (
           <Spinner />
         )}
       </ErrorBoundary>

@@ -14,6 +14,7 @@ import { makeAutoObservable, action, runInAction } from 'mobx';
 import { observer } from 'mobx-react-lite';
 import { HandleRetailFilesRequest_Operation } from '@api/client';
 import { useGlobalState, GlobalState } from '../lib/state';
+import ErrorDialog from './error-dialog';
 
 class WizardState {
   libraryPath: string = '';
@@ -29,9 +30,16 @@ interface LinkProps {
   children: React.ReactNode | React.ReactNode[];
 }
 
-function linkHandler(e: React.MouseEvent, gs: GlobalState, link: string): void {
+async function linkHandler(e: React.MouseEvent, gs: GlobalState, link: string): Promise<void> {
   e.preventDefault();
-  void gs.client.openLink({ link });
+  try {
+    await gs.client.openLink({ link });
+  } catch (e) {
+    gs.launchOverlay(ErrorDialog, {
+      title: 'Error',
+      message: e instanceof Error ? e.message : String(e),
+    });
+  }
 }
 
 function Link(props: LinkProps): React.ReactElement {
@@ -179,6 +187,7 @@ async function retailHandler(
       });
     }
   });
+  gs.sendSignal('showTasks');
 
   try {
     await gs.client.handleRetailFiles({ ref, op, installerPath, libraryPath: state.libraryPath });
@@ -285,7 +294,12 @@ export const FirstRunWizard = observer(function FirstRunWizard(
     <MultistepDialog
       className="bp3-ui-text large-dialog"
       title="First Run"
-      finalButtonProps={{ text: 'Finish', onClick() { setOpen(false); } }}
+      finalButtonProps={{
+        text: 'Finish',
+        onClick() {
+          setOpen(false);
+        },
+      }}
       canOutsideClickClose={false}
       isCloseButtonShown={false}
       isOpen={isOpen}
