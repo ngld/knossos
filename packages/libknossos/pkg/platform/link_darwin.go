@@ -7,9 +7,13 @@ import (
 )
 
 func OpenLink(link string) error {
-	_, err := os.StartProcess("open", []string{link}, nil)
+	proc := exec.Command("open", link)
+	proc.Stderr = os.Stderr
+	proc.Stdout = os.Stdout
+	proc.Stdin = nil
+	err := proc.Start()
 	if err != nil {
-		eris.Wrap(err, "failed to launch open")
+		return eris.Wrap(err, "failed to launch xdg-open")
 	}
 
 	return nil

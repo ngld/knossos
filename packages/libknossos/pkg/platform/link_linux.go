@@ -2,12 +2,17 @@ package platform
 
 import (
 	"os"
+	"os/exec"
 
 	"github.com/rotisserie/eris"
 )
 
 func OpenLink(link string) error {
-	_, err := os.StartProcess("xdg-open", []string{link}, nil)
+	proc := exec.Command("xdg-open", link)
+	proc.Stderr = os.Stderr
+	proc.Stdout = os.Stdout
+	proc.Stdin = nil
+	err := proc.Start()
 	if err != nil {
 		return eris.Wrap(err, "failed to launch xdg-open")
 	}

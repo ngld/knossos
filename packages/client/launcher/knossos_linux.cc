@@ -63,6 +63,22 @@ int main(int argc, char* argv[]) {
     settings.chrome_runtime = true;
   }
 
+  char* appDataParent = getenv("XDG_STATE_HOME");
+  if (appDataParent == nullptr) {
+    appDataParent = getenv("XDG_CONFIG_HOME");
+  }
+
+  std::string appDataPath;
+  if (appDataParent == nullptr) {
+    appDataPath = getenv("HOME");
+    appDataPath += "/.knossos";
+  } else {
+    appDataPath = appDataParent;
+    appDataPath += "knossos";
+  }
+
+  app->InitializeSettings(settings, appDataPath);
+
 // When generating projects with CMake the CEF_USE_SANDBOX value will be defined
 // automatically. Pass -DUSE_SANDBOX=OFF to the CMake command-line to disable
 // use of the sandbox.

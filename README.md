@@ -46,8 +46,12 @@ You'll need the following:
 * Docker (only for Nebula)
 * GCC
 * GTK 3
+* NSS
+* Boost
+* OpenAL
 * liblzma
 * libzstd
+* SDL2
 * ninja (optional)
 * zlib
 

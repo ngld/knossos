@@ -80,6 +80,8 @@ func KnossosInit(params *C.KnossosInitParams) bool {
 		return false
 	}
 
+	Log(api.LogInfo, "Loading settings from %s", settingsPath)
+
 	ctx := api.WithKnossosContext(context.Background(), api.KnossosCtxParams{
 		SettingsPath: settingsPath,
 		ResourcePath: staticRoot,
