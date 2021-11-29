@@ -13,10 +13,9 @@ import {
 } from '@api/client';
 import { FinishedUnaryCall } from '@protobuf-ts/runtime-rpc';
 import { GlobalState, useGlobalState } from '../lib/state';
-import FormContext from '../elements/form-context';
+import FormContext, { useFormContext } from '../elements/form-context';
 import { FormCheckbox, FormInputGroup, FormSelect, FormSlider } from '../elements/form-elements';
 import ErrorDialog from '../dialogs/error-dialog';
-import { useFormContext } from '../elements/form-context';
 
 class SettingsState {
   loading = true;
@@ -344,11 +343,12 @@ export default observer(function SettingsPage(): React.ReactElement {
                 <FormContext value={formState.knSettings as unknown as Record<string, unknown>}>
                   <div className="flex flex-row gap-4">
                     <FormGroup className="flex-1" label="Max Downloads">
-                      <FormInputGroup name="maxDownloads" />
+                      <FormInputGroup type="number" name="maxDownloads" />
                     </FormGroup>
 
                     <FormGroup className="flex-1" label="Download bandwidth limit">
                       <FormInputGroup
+                        type="number"
                         name="bandwidthLimit"
                         rightElement={<Tag minimal={true}>KiB/s</Tag>}
                       />
@@ -417,7 +417,7 @@ export default observer(function SettingsPage(): React.ReactElement {
 
                   <div className="flex flex-row gap-4">
                     <FormGroup className="flex-1" label="Sample Rate">
-                      <FormInputGroup name="sampleRate" />
+                      <FormInputGroup type="number" name="sampleRate" />
                     </FormGroup>
 
                     <FormContext

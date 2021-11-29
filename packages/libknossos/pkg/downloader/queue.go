@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/ngld/knossos/packages/libknossos/pkg/api"
+	"github.com/ngld/knossos/packages/libknossos/pkg/storage"
 	"github.com/rotisserie/eris"
 )
 
@@ -52,15 +53,25 @@ var dlClient = http.Client{
 }
 var userAgent = fmt.Sprintf("Knossos %s (+https://fsnebula.org/knossos/)", api.Version)
 
-func NewQueue(items []*QueueItem) *Queue {
+func NewQueue(ctx context.Context, items []*QueueItem) (*Queue, error) {
+	settings, err := storage.GetSettings(ctx)
+	if err != nil {
+		return nil, eris.Wrap(err, "failed to read settings")
+	}
+
 	q := &Queue{
 		result:       nil,
 		queued:       items,
-		MaxParallel:  3,
+		MaxParallel:  int(settings.MaxDownloads),
 		Retries:      5,
 		progress:     make([]*uint32, len(items)),
 		activeLock:   sync.NewCond(&sync.Mutex{}),
 		finishedLock: sync.NewCond(&sync.Mutex{}),
+	}
+
+	// Enforce sane default.
+	if q.MaxParallel < 1 {
+		q.MaxParallel = 3
 	}
 
 	for idx := range q.progress {
@@ -74,7 +85,7 @@ func NewQueue(items []*QueueItem) *Queue {
 		q.totalBytes += int(item.Filesize)
 	}
 
-	return q
+	return q, nil
 }
 
 func (q *Queue) Run(ctx context.Context) error {

@@ -215,7 +215,11 @@ func FetchModChecksums(ctx context.Context, modVersions map[string]string) (map[
 		})
 	}
 
-	queue := downloader.NewQueue(queueItems)
+	queue, err := downloader.NewQueue(ctx, queueItems)
+	if err != nil {
+		return nil, eris.Wrap(err, "failed to init download queue")
+	}
+
 	err = queue.Run(ctx)
 	if err != nil {
 		return nil, eris.Wrap(err, "failed to download checksums")

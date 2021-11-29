@@ -46,7 +46,11 @@ export const FormInputGroup = observer(function FormInputGroup(
     <InputGroup
       value={ctx[name] as string}
       onChange={action((e) => {
-        ctx[name] = e.target.value;
+        if (props.type === 'number') {
+          ctx[name] = parseInt(e.target.value, 10);
+        } else {
+          ctx[name] = e.target.value;
+        }
       })}
       {...props}
     />
