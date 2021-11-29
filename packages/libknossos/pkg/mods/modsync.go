@@ -106,13 +106,16 @@ func processRemoteMod(ctx context.Context, params storage.RemoteImportCallbackPa
 		}
 	}
 
-	versionMismatch := !bytes.Equal(versionHash, entry.VersionChecksum)
-	if versionMismatch {
-		api.Log(ctx, api.LogInfo, "Version mismatch detected, clearing releases for %s.", entry.Modid)
+	versionMismatch := true
+	if len(localVersions) > 0 {
+		versionMismatch = !bytes.Equal(versionHash, entry.VersionChecksum)
+		if versionMismatch {
+			api.Log(ctx, api.LogInfo, "Version mismatch detected, clearing releases for %s.", entry.Modid)
 
-		err = params.RemoveModReleases(entry.Modid)
-		if err != nil {
-			return nil, err
+			err = params.RemoveModReleases(entry.Modid)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
