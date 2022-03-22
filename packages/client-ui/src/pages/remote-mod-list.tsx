@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Button, NonIdealState, Spinner } from '@blueprintjs/core';
-import { History } from 'history';
 import { observer } from 'mobx-react-lite';
 import { fromPromise } from 'mobx-utils';
+import { useNavigate } from 'react-router-dom';
 import { SimpleModList_Item } from '@api/client';
 import { GlobalState, useGlobalState } from '../lib/state';
 import { installMod } from '../dialogs/install-mod';
@@ -15,12 +15,9 @@ async function fetchMods(gs: GlobalState): Promise<SimpleModList_Item[]> {
   return result.response.mods;
 }
 
-export interface RemoteModListProps {
-  history: History;
-}
-
-export default observer(function RemoteModList(props: RemoteModListProps): React.ReactElement {
+export default observer(function RemoteModList(): React.ReactElement {
   const gs = useGlobalState();
+  const navigate = useNavigate();
   const [modList] = useState(() => fromPromise(fetchMods(gs)));
 
   return (
@@ -51,7 +48,7 @@ export default observer(function RemoteModList(props: RemoteModListProps): React
                     </Button>
 
                     <Button
-                      onClick={() => props.history.push('/rmod/' + mod.modid + '/' + mod.version)}
+                      onClick={() => navigate('/rmod/' + mod.modid + '/' + mod.version)}
                     >
                       Details
                     </Button>

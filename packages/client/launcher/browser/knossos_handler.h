@@ -105,7 +105,7 @@ public:
   CefRefPtr<CefBrowser> GetMainBrowser() { return browser_list_.front(); };
 
   bool PostKnossosTask(CefRefPtr<CefTask> task);
-  bool PostKnossosTask(const base::Closure &closure);
+  bool PostKnossosTask(base::OnceClosure closure);
 
   static void ShowError(std::string message);
 

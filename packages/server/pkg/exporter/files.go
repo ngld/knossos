@@ -14,14 +14,7 @@ func GetFileURLs(ctx context.Context, q queries.Querier, fid int) ([]string, err
 		return []string{}, eris.Wrapf(err, "failed to fetch file %d", fid)
 	}
 
-	var key string
-	if data.StorageKey == nil {
-		key = ""
-	} else {
-		key = *data.StorageKey
-	}
-
-	return GetFileURLsFromValues(ctx, fid, key, data.External)
+	return GetFileURLsFromValues(ctx, fid, data.StorageKey, data.External)
 }
 
 func GetFileURLsFromValues(ctx context.Context, fid int, storageKey string, external []string) ([]string, error) {

@@ -177,11 +177,11 @@ void KnossosApp::OnContextInitialized() {
 #else
     CefRect screen_size = handler->GetScreenSize();
 
-    window_info.width = 1200;
-    window_info.height = 800;
+    window_info.bounds.width = 1200;
+    window_info.bounds.height = 800;
 
-    window_info.x = (screen_size.width - window_info.width) / 2;
-    window_info.y = (screen_size.height - window_info.height) / 2 - 200;
+    window_info.bounds.x = (screen_size.width - window_info.bounds.width) / 2;
+    window_info.bounds.y = (screen_size.height - window_info.bounds.height) / 2 - 200;
 #endif
 
     // Create the first browser window.
@@ -190,7 +190,7 @@ void KnossosApp::OnContextInitialized() {
   }
 
   // Load libknossos on the thread dedicated to Knossos tasks
-  handler->PostKnossosTask(base::Bind(PrepareLibKnossos, _settings_path));
+  handler->PostKnossosTask(base::BindOnce(PrepareLibKnossos, _settings_path));
 }
 
 // We can't use CefDirectoryExists() here because it expects threads to have

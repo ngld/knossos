@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button, NonIdealState, Spinner } from '@blueprintjs/core';
 import { observer } from 'mobx-react-lite';
 import { fromPromise } from 'mobx-utils';
-import { History } from 'history';
+import { useNavigate } from 'react-router-dom';
 import { SimpleModList_Item } from '@api/client';
 import { ModType } from '@api/mod';
 import { GlobalState, useGlobalState } from '../lib/state';
@@ -17,11 +17,9 @@ async function fetchMods(gs: GlobalState): Promise<SimpleModList_Item[]> {
   return result.response.mods;
 }
 
-export interface LocalModListProps {
-  history: History;
-}
-export default observer(function LocalModList(props: LocalModListProps): React.ReactElement {
+export default observer(function LocalModList(): React.ReactElement {
   const gs = useGlobalState();
+  const navigate = useNavigate();
   const [modList] = useState(() => fromPromise(fetchMods(gs)));
 
   return (
@@ -57,7 +55,7 @@ export default observer(function LocalModList(props: LocalModListProps): React.R
                     <Button onClick={() => launchMod(gs, mod.modid, mod.version)}>Play</Button>
                   ) : null}
                   <Button
-                    onClick={() => props.history.push('/mod/' + mod.modid + '/' + mod.version)}
+                    onClick={() => navigate('/mod/' + mod.modid + '/' + mod.version)}
                   >
                     Details
                   </Button>

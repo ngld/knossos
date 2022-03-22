@@ -94,9 +94,9 @@ func buildReleaseFromRow(ctx context.Context, q queries.Querier, row queries.Get
 		return nil, eris.Wrapf(err, "failed to fetch package dependencies for %d (%s)", *row.ID, *row.Modid)
 	}
 
-	depMap := make(map[int32][]*queries.GetPublicPackageDependencsByReleaseIDRow)
+	depMap := make(map[int32][]queries.GetPublicPackageDependencsByReleaseIDRow)
 	for _, dep := range pkgDeps {
-		depMap[*dep.PackageID] = append(depMap[*dep.PackageID], &dep)
+		depMap[*dep.PackageID] = append(depMap[*dep.PackageID], dep)
 	}
 
 	pkgArchives, err := q.GetPublicPackageArchivesByReleaseID(ctx, *row.ID)
@@ -234,7 +234,7 @@ func buildReleaseFromRow(ctx context.Context, q queries.Querier, row queries.Get
 		return nil, eris.Wrapf(err, "failed to serialise checksum pack for release %d", *row.ID)
 	}
 
-	err = ioutil.WriteFile(filepath.Join(storagePath, fmt.Sprintf("c.%s.%s", *row.Modid, *row.Version)), encoded, 0660)
+	err = ioutil.WriteFile(filepath.Join(storagePath, fmt.Sprintf("c.%s.%s", *row.Modid, *row.Version)), encoded, 0o660)
 	if err != nil {
 		return nil, eris.Wrapf(err, "failed to write checksum pack for release %d", *row.ID)
 	}
@@ -270,7 +270,7 @@ func writePack(ctx context.Context, modID string, storagePath string, packnum ui
 	}
 
 	packPath := filepath.Join(storagePath, fmt.Sprintf("m.%s.%03d", modID, packnum))
-	err = ioutil.WriteFile(packPath, encoded, 0660)
+	err = ioutil.WriteFile(packPath, encoded, 0o660)
 	if err != nil {
 		return eris.Wrapf(err, "failed to write pack %d for release %d", packnum, relID)
 	}
@@ -423,7 +423,7 @@ func updateModIndex(ctx context.Context, q queries.Querier, entry *common.ModInd
 				return eris.Wrapf(err, "failed to serialise pack %d from mod %s", packnum, entry.Modid)
 			}
 
-			err = ioutil.WriteFile(packPath, encoded, 0660)
+			err = ioutil.WriteFile(packPath, encoded, 0o660)
 			if err != nil {
 				return eris.Wrapf(err, "failed to write pack %d from mod %s", packnum, entry.Modid)
 			}
@@ -433,32 +433,35 @@ func updateModIndex(ctx context.Context, q queries.Querier, entry *common.ModInd
 	// add new entries
 	current := uint32(len(entry.PacksLastModified) - 1)
 	encoded, err := ioutil.ReadFile(fmt.Sprintf("m.%s.%03d", entry.Modid, current))
-	if err != nil {
+	if err != nil && !eris.Is(err, os.ErrNotExist) {
 		return eris.Wrapf(err, "failed to open last pack (%d) from mod %s", current, entry.Modid)
 	}
 
-	err = proto.Unmarshal(encoded, &pack)
-	if err != nil {
-		return eris.Wrapf(err, "failed to deserialise last pack (%d) from mod %s", current, entry.Modid)
-	}
+	var rels []*common.Release
+	if !eris.Is(err, os.ErrNotExist) {
+		err = proto.Unmarshal(encoded, &pack)
+		if err != nil {
+			return eris.Wrapf(err, "failed to deserialise last pack (%d) from mod %s", current, entry.Modid)
+		}
 
-	rels := pack.Releases
-	for _, pbRel := range convertedRels {
-		versionNumbers = append(versionNumbers, pbRel.Version)
-		rels = append(rels, pbRel)
-		if len(rels) >= packSize {
-			err = writePack(ctx, entry.Modid, storagePath, current, -1, rels)
-			if err != nil {
-				return err
-			}
+		rels = pack.Releases
+		for _, pbRel := range convertedRels {
+			versionNumbers = append(versionNumbers, pbRel.Version)
+			rels = append(rels, pbRel)
+			if len(rels) >= packSize {
+				err = writePack(ctx, entry.Modid, storagePath, current, -1, rels)
+				if err != nil {
+					return err
+				}
 
-			rels = make([]*common.Release, 0, packSize)
-			if len(entry.PacksLastModified) <= int(current) {
-				entry.PacksLastModified = append(entry.PacksLastModified, timestamppb.Now())
-			} else {
-				entry.PacksLastModified[current] = timestamppb.Now()
+				rels = make([]*common.Release, 0, packSize)
+				if len(entry.PacksLastModified) <= int(current) {
+					entry.PacksLastModified = append(entry.PacksLastModified, timestamppb.Now())
+				} else {
+					entry.PacksLastModified[current] = timestamppb.Now()
+				}
+				current++
 			}
-			current++
 		}
 	}
 
@@ -513,7 +516,7 @@ func writeModMetaFile(ctx context.Context, mod queries.GetPublicModUpdatedDatesR
 		return eris.Wrapf(err, "failed to serialise metadata for mod %s", *mod.Modid)
 	}
 
-	err = ioutil.WriteFile(filepath.Join(storagePath, fmt.Sprintf("m.%s", *mod.Modid)), encoded, 0660)
+	err = ioutil.WriteFile(filepath.Join(storagePath, fmt.Sprintf("m.%s", *mod.Modid)), encoded, 0o660)
 	if err != nil {
 		return eris.Wrapf(err, "failed to write mod metadata file for mod %s", *mod.Modid)
 	}
@@ -607,7 +610,7 @@ func UpdateModsyncExport(ctx context.Context, q queries.Querier, storagePath str
 		return eris.Wrap(err, "failed to serialize mod index")
 	}
 
-	err = ioutil.WriteFile(indexFile, encoded, 0660)
+	err = ioutil.WriteFile(indexFile, encoded, 0o660)
 	if err != nil {
 		return eris.Wrapf(err, "failed to write mod index to %s", indexFile)
 	}

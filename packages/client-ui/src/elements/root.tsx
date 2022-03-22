@@ -12,7 +12,7 @@ import { observer } from 'mobx-react-lite';
 import { Spinner } from '@blueprintjs/core';
 import { Tooltip2 } from '@blueprintjs/popover2';
 import cx from 'classnames';
-import { Switch, Route, Redirect, useHistory, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import ErrorBoundary from './error-boundary';
 import HoverLink from './hover-link';
 import { GlobalState, useGlobalState } from '../lib/state';
@@ -25,7 +25,7 @@ import LocalMod from '../pages/local-mod';
 import RemoteMod from '../pages/remote-mod';
 
 const NavTabs = function NavTabs(): React.ReactElement {
-  const history = useHistory();
+  const navigate = useNavigate();
   const location = useLocation();
   const items = {
     play: 'Play',
@@ -45,7 +45,7 @@ const NavTabs = function NavTabs(): React.ReactElement {
           }
           onClick={(e) => {
             e.preventDefault();
-            history.push('/' + key);
+            navigate('/' + key);
           }}
         >
           {label}
@@ -99,20 +99,16 @@ const ModContainer = observer(function ModContainer(props: {
     >
       <ErrorBoundary>
         {props.gs.startupDone ? (
-          <Switch>
-            <Redirect exact from="/" to="/play" />
-            <Redirect exact from="/index.html" to="/play" />
-            <Route path="/play" component={LocalModList} />
-            <Route path="/explore" component={RemoteModList} />
-            <Route path="/settings">
-              <Settings />
-            </Route>
-            <Route path="/mod/:modid/:version?" component={LocalMod} />
-            <Route path="/rmod/:modid/:version?" component={RemoteMod} />
-            <Route path="/">
-              <div className="text-white">Page not found</div>
-            </Route>
-          </Switch>
+          <Routes>
+            <Route path="/" element={<Navigate to="/play" />}/>
+            <Route path="/index.html" element={<Navigate to="/play" />}/>
+            <Route path="/play" element={<LocalModList />} />
+            <Route path="/explore" element={<RemoteModList />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/mod/:modid/:version" element={<LocalMod />} />
+            <Route path="/rmod/:modid/:version" element={<RemoteMod />} />
+            <Route path="/" element={<div className="text-white">Page not found</div>} />
+          </Routes>
         ) : props.gs.overlays.length > 0 ? null : (
           <Spinner />
         )}
@@ -142,7 +138,7 @@ interface VersionInfo {
 
 export default function Root(): React.ReactElement {
   const gs = useGlobalState();
-  const history = useHistory();
+  const navigate = useNavigate();
   const [isMaximized, setMaximized] = useState<boolean>(false);
   const [versionInfo, setVersionInfo] = useState<VersionInfo>({
     version: '',
@@ -203,7 +199,7 @@ export default function Root(): React.ReactElement {
             <CiPictureLine className="ml-2" />
           </TooltipButton>
           <CiFilterLine className="ml-2" />
-          <TooltipButton tooltip="Settings" onClick={() => history.push('/settings')}>
+          <TooltipButton tooltip="Settings" onClick={() => navigate('/settings')}>
             <CiCogLine className="ml-2" />
           </TooltipButton>
         </div>

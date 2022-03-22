@@ -40,11 +40,11 @@ void KnossosShowDevTools(CefRefPtr<CefBrowser> browser) {
 
 #ifdef OS_MAC
   CefRect screen_size = KnossosHandler::GetInstance()->GetScreenSize();
-  window_info.width = screen_size.width - 200;
-  window_info.height = 400;
+  window_info.bounds.width = screen_size.width - 200;
+  window_info.bounds.height = 400;
 
-  window_info.x = (screen_size.width - window_info.width) / 2;
-  window_info.y = screen_size.height / 2 + 500;
+  window_info.bounds.x = (screen_size.width - window_info.bounds.width) / 2;
+  window_info.bounds.y = screen_size.height / 2 + 500;
 
   CefString(&window_info.window_name).FromASCII("dev_tools");
 #endif

@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { observer } from 'mobx-react-lite';
 import { fromPromise } from 'mobx-utils';
-import type { RouteComponentProps } from 'react-router-dom';
+import { useParams, useNavigate, Params } from 'react-router-dom';
 import { Button, Spinner, Callout, NonIdealState, HTMLSelect, Tab, Tabs } from '@blueprintjs/core';
 import styled from 'astroturf/react';
 
@@ -14,16 +14,13 @@ import { InstallModDialog } from '../dialogs/install-mod';
 
 async function getModDetails(gs: GlobalState, params: ModDetailsParams): Promise<ModInfoResponse> {
   const response = await gs.client.getRemoteModInfo({
-    id: params.modid,
+    id: params.modid ?? '',
     version: params.version ?? '',
   });
   return response.response;
 }
 
-export interface ModDetailsParams {
-  modid: string;
-  version?: string;
-}
+export type ModDetailsParams = Partial<Params<'modid' | 'version'>>;
 
 const ModPageContainer = styled.div`
   > :global(.bp3-tabs) > :global(.bp3-tab-panel) {
@@ -31,14 +28,11 @@ const ModPageContainer = styled.div`
   }
 `;
 
-export default observer(function RemoteModDetailsPage(
-  props: RouteComponentProps<ModDetailsParams>,
-): React.ReactElement {
+export default observer(function RemoteModDetailsPage(): React.ReactElement {
   const gs = useGlobalState();
-  const modDetails = useMemo(
-    () => fromPromise(getModDetails(gs, props.match.params)),
-    [gs, props.match.params],
-  );
+  const params = useParams<ModDetailsParams>();
+  const navigate = useNavigate();
+  const modDetails = useMemo(() => fromPromise(getModDetails(gs, params)), [gs, params]);
 
   const rawDesc = (modDetails.value as ModInfoResponse | undefined)?.release?.description;
   const description = useMemo(() => {
@@ -70,9 +64,9 @@ export default observer(function RemoteModDetailsPage(
                     <span className="text-3xl">{mod.mod?.title}</span>
                     <HTMLSelect
                       className="ml-2 -mt-2"
-                      value={props.match.params.version ?? mod.versions[0]}
+                      value={params.version ?? mod.versions[0]}
                       onChange={(e) => {
-                        props.history.push(`/rmod/${props.match.params.modid}/${e.target.value}`);
+                        navigate(`/rmod/${params.modid}/${e.target.value}`);
                       }}
                     >
                       {mod.versions.map((version) => (
@@ -88,7 +82,14 @@ export default observer(function RemoteModDetailsPage(
                 )}
               </div>
               <Callout>
-                <Button onClick={() => gs.launchOverlay(InstallModDialog, props.match.params)}>
+                <Button
+                  onClick={() =>
+                    gs.launchOverlay(InstallModDialog, {
+                      modid: params.modid ?? '',
+                      version: params.version,
+                    })
+                  }
+                >
                   Install
                 </Button>
               </Callout>

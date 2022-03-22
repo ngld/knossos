@@ -149,7 +149,7 @@ void KnossosHandler::OnLoadError(CefRefPtr<CefBrowser> browser,
 void KnossosHandler::CloseAllBrowsers(bool force_close) {
   if (!CefCurrentlyOn(TID_UI)) {
     // Execute on the UI thread.
-    CefPostTask(TID_UI, base::Bind(&KnossosHandler::CloseAllBrowsers, this,
+    CefPostTask(TID_UI, base::BindOnce(&KnossosHandler::CloseAllBrowsers, this,
                                    force_close));
     return;
   }
@@ -292,8 +292,8 @@ bool KnossosHandler::PostKnossosTask(CefRefPtr<CefTask> task) {
   return knossos_thread_->GetTaskRunner()->PostTask(task);
 }
 
-bool KnossosHandler::PostKnossosTask(const base::Closure &closure) {
-  return PostKnossosTask(CefCreateClosureTask(closure));
+bool KnossosHandler::PostKnossosTask(base::OnceClosure closure) {
+  return PostKnossosTask(CefCreateClosureTask(std::move(closure)));
 }
 
 void KnossosHandler::OnDraggableRegionsChanged(

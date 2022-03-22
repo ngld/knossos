@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { action, makeAutoObservable } from 'mobx';
 import { observer } from 'mobx-react-lite';
 import { fromPromise } from 'mobx-utils';
-import type { RouteComponentProps } from 'react-router-dom';
+import { useParams, useNavigate, Params } from 'react-router-dom';
 import {
   Spinner,
   Callout,
@@ -25,7 +25,7 @@ import ErrorDialog from '../dialogs/error-dialog';
 
 async function getModDetails(gs: GlobalState, params: ModDetailsParams): Promise<ModInfoResponse> {
   const response = await gs.client.getModInfo({
-    id: params.modid,
+    id: params.modid ?? '',
     version: params.version ?? '',
   });
   return response.response;
@@ -36,7 +36,7 @@ async function getModDependencies(
   params: ModDetailsParams,
 ): Promise<ModDependencySnapshot> {
   const response = await gs.client.getModDependencies({
-    id: params.modid,
+    id: params.modid ?? '',
     version: params.version ?? '',
   });
   return response.response;
@@ -46,7 +46,7 @@ async function getFlagInfos(
   gs: GlobalState,
   params: ModDetailsParams,
 ): Promise<[Record<string, FlagInfo_Flag[]>, string]> {
-  const response = await gs.client.getModFlags({ id: params.modid, version: params.version ?? '' });
+  const response = await gs.client.getModFlags({ id: params.modid ?? '', version: params.version ?? '' });
 
   const mappedFlags = {} as Record<string, FlagInfo_Flag[]>;
   for (const info of Object.values(response.response.flags)) {
@@ -77,7 +77,7 @@ async function saveFlagInfos(
 ): Promise<void> {
   try {
     void (await gs.client.saveModFlags({
-      modid: params.modid,
+      modid: params.modid ?? '',
       version: params.version ?? '',
       flags,
       freeform,
@@ -104,7 +104,7 @@ async function changeDepSnapshot(
 ): Promise<void> {
   try {
     const result = await gs.client.depSnapshotChange({
-      modid: props.modid,
+      modid: props.modid ?? '',
       version: props.version ?? '',
       depModid: modid,
       depVersion: version,
@@ -263,10 +263,7 @@ const FlagsInfo = observer(function FlagsInfo(props: DepInfoProps): React.ReactE
   });
 });
 
-export interface ModDetailsParams {
-  modid: string;
-  version?: string;
-}
+export type ModDetailsParams = Partial<Params<'modid' | 'version'>>;
 
 const ModPageContainer = styled.div`
   > :global(.bp3-tabs) > :global(.bp3-tab-panel) {
@@ -274,13 +271,13 @@ const ModPageContainer = styled.div`
   }
 `;
 
-export default observer(function ModDetailsPage(
-  props: RouteComponentProps<ModDetailsParams>,
-): React.ReactElement {
+export default observer(function ModDetailsPage(): React.ReactElement {
   const gs = useGlobalState();
+  const params = useParams<ModDetailsParams>();
+  const navigate = useNavigate();
   const modDetails = useMemo(
-    () => fromPromise(getModDetails(gs, props.match.params)),
-    [gs, props.match.params],
+    () => fromPromise(getModDetails(gs, params)),
+    [gs, params],
   );
 
   const rawDesc = (modDetails.value as ModInfoResponse)?.release?.description;
@@ -313,9 +310,9 @@ export default observer(function ModDetailsPage(
                     <span className="text-3xl">{response.mod?.title}</span>
                     <HTMLSelect
                       className="ml-2 -mt-2"
-                      value={props.match.params.version ?? response.versions[0]}
+                      value={params.version ?? response.versions[0]}
                       onChange={(e) => {
-                        props.history.push(`/mod/${props.match.params.modid}/${e.target.value}`);
+                        navigate(`/mod/${params.modid}/${e.target.value}`);
                       }}
                     >
                       {response.versions.map((version) => (
@@ -326,7 +323,7 @@ export default observer(function ModDetailsPage(
                     </HTMLSelect>
                   </h1>
                 </div>
-                {props.match.params.modid === 'FS2' ? (
+                {params.modid === 'FS2' ? (
                   <img
                     src={require('../resources/banner-retail.png').default}
                     className="object-contain w-full h-300px"
@@ -355,8 +352,8 @@ export default observer(function ModDetailsPage(
                     <div className="bg-base p-2 rounded text-white">
                       <DepInfo
                         release={response.release}
-                        modid={props.match.params.modid}
-                        version={props.match.params.version}
+                        modid={params.modid}
+                        version={params.version}
                       />
                     </div>
                   }
@@ -370,8 +367,8 @@ export default observer(function ModDetailsPage(
                       <div className="bg-base p-2 rounded text-white">
                         <FlagsInfo
                           release={response.release}
-                          modid={props.match.params.modid}
-                          version={props.match.params.version}
+                          modid={params.modid}
+                          version={params.version}
                         />
                       </div>
                     }
