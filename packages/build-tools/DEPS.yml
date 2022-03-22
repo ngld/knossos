@@ -1,12 +1,12 @@
 vars:
   PROTOC: 3.18.0
-  LIBARCHIVE: 3.5.2
-  CEF: 94.4.5+g0fd0d6f+chromium-94.0.4606.71
-  MSYS_BUILD: 20210725
-  NODEJS: 14.18.0
+  LIBARCHIVE: 3.6.0
+  CEF: 99.2.12+g2977b3a+chromium-99.0.4844.74
+  MSYS_BUILD: 20220319
+  NODEJS: 16.14.2
   BROTLI: 1.0.9
   NINJA: 1.10.2
-  GOLANG_CI: 1.42.1
+  GOLANG_CI: 1.45.0
   INNOEXTRACT: 1.9
   OPENAL_SOFT: 1.21.1
 
@@ -72,28 +72,28 @@ deps:
     dest: third_party/protoc-dist
 
   cef-linux-full:
-    sha256: 143ffc646b8dcded15693df0d7a26441961c80028e38c4070d21e82144c5a0b2
+    sha256: 3b05238ba0a5624821fbcc06e91dc025f09cd8328d9dfe9163e7f6a898467c17
     if: linux && amd64 && !ci
     url: https://cef-builds.spotifycdn.com/cef_binary_{CEF}_linux64.tar.bz2
     strip: 1
     dest: third_party/cef
 
   cef-linux:
-    sha256: 6d6e6fd673bed4ab4003083a816be22408551899989619efd601153c922bf6b0
+    sha256: 72ce99834d1f9195ba598bc58f21278c04319276ae1ba2706e10b4265331bc6a
     if: linux && amd64 && ci
     url: https://cef-builds.spotifycdn.com/cef_binary_{CEF}_linux64_minimal.tar.bz2
     strip: 1
     dest: third_party/cef
 
   cef-darwin-full:
-    sha256: 774ae8fc3a637a4a3176f8ee6da48525cc0b934dffc0c5218c53cd91d3889a27
-    if: darwin && (amd64 || arm64) && !ci
+    sha256: 1bd612830af5f166473ba2806cd5f2813794ea090a695354bbc0be6c2fa3a1cc
+    if: darwin && amd64 && !ci
     url: https://cef-builds.spotifycdn.com/cef_binary_{CEF}_macosx64.tar.bz2
     strip: 1
     dest: third_party/cef
 
   cef-darwin-arm64-full:
-    sha256: f67881b4cbe695228d244a79ef1d9f31f8d8a618945234d2c17bfbbf97de89ce
+    sha256: 74fca89e12fb5bb776c21bcb394fa312e1edbaec31a299ec80ee49a13c465f80
     # See the note about cef-darwin-arm64 below
     if: darwin && arm64 # && !ci
     url: https://cef-builds.spotifycdn.com/cef_binary_{CEF}_macosarm64.tar.bz2
@@ -101,7 +101,7 @@ deps:
     dest: third_party/cef
 
   cef-darwin:
-    sha256: 90cb88df0c8225977b8a50ff572ada0fed9b8f552912ceb26593f433735e926b
+    sha256: 90f803f7539527f11e6cea69f0d651b6dc52036a822791cdead6427f38885e07
     if: darwin && amd64 && ci
     url: https://cef-builds.spotifycdn.com/cef_binary_{CEF}_macosx64_minimal.tar.bz2
     strip: 1
@@ -116,21 +116,21 @@ deps:
 #    dest: third_party/cef
 
   cef-win64-full:
-    sha256: c513d5d743cd72f2980f5d8c5ce057182398a8460be9d051dc0790fa4c7d998a
+    sha256: 441a80c3040292963db78c0c06d418ad1ae2c60918eceedb0138c9b7e7ef68b8
     if: windows && amd64 && !ci
     url: https://cef-builds.spotifycdn.com/cef_binary_{CEF}_windows64.tar.bz2
     strip: 1
     dest: third_party/cef
 
   cef-win64:
-    sha256: 02e4433734b878529ffa4835deba9e68f732a520615c1f6600d0da23bf3e6632
+    sha256: d5620e55ba2ac946e7924a447fe77fbbd1af12aaeb4ba8a6710073d5f007ec81
     if: windows && amd64 && ci
     url: https://cef-builds.spotifycdn.com/cef_binary_{CEF}_windows64_minimal.tar.bz2
     strip: 1
     dest: third_party/cef
 
   libarchive:
-    sha256: 5f245bd5176bc5f67428eb0aa497e09979264a153a074d35416521a5b8e86189
+    sha256: a36613695ffa2905fdedc997b6df04a3006ccfd71d747a339b78aa8412c3d852
     url: https://github.com/libarchive/libarchive/releases/download/v{LIBARCHIVE}/libarchive-{LIBARCHIVE}.tar.gz
     strip: 1
     dest: third_party/libarchive
@@ -142,28 +142,28 @@ deps:
     dest: third_party/brotli
 
   msys2:
-    sha256: 43c09824def2b626ff187c5b8a0c3e68c1063e7f7053cf20854137dc58f08592
+    sha256: 0548cc4c1f667ba8ab22760e039d2c8a088b419b432c9597eb8adf8235c13fab
     if: windows && amd64 && !ci
     url: http://repo.msys2.org/distrib/x86_64/msys2-base-x86_64-{MSYS_BUILD}.sfx.exe
     sfxArgs: "-y -othird_party"
     dest: third_party/msys64
 
   nodejs-linux:
-    sha256: 5c0bc18b19fd09ff80beb16772e69cb033ee4992a4ccd35bd884fd8f02e6d1ec
+    sha256: e40c6f81bfd078976d85296b5e657be19e06862497741ad82902d0704b34bb1b
     if: linux && amd64
     url: https://nodejs.org/dist/v{NODEJS}/node-v{NODEJS}-linux-x64.tar.xz
     strip: 1
     dest: third_party/nodejs
 
   nodejs-darwin:
-    sha256: 6b9b4d60bcb4eba95488380be8c4da4af98fce3f4a01c9a76db881cbb736656d
+    sha256: d3076ca7fcc7269c8ff9b03fe7d1c277d913a7e84a46a14eff4af7791ff9d055
     if: darwin && (amd64 || arm64)
     url: https://nodejs.org/dist/v{NODEJS}/node-v{NODEJS}-darwin-x64.tar.gz
     strip: 1
     dest: third_party/nodejs
 
   nodejs-win64:
-    sha256: 2883e83ac3b1e1cb9a9bf65554043640849b39e86761e7c7ac50b664f42f20ff
+    sha256: 4731da4fbb2015d414e871fa9118cabb643bdb6dbdc8a69a3ed563266ac93229
     if: windows && amd64
     url: https://nodejs.org/dist/v{NODEJS}/node-v{NODEJS}-win-x64.zip
     strip: 1
@@ -176,21 +176,21 @@ deps:
     dest: third_party/ninja
 
   golangci-linux:
-    sha256: 214b093c15863430c4b66dd39df677dab6e38fc873ded147e331740d50eea51f
+    sha256: ca06a2b170f41a9e1e34d40ca88b15b8fed2d7e37310f0c08b7fc244c34292a9
     if: linux && amd64
     url: https://github.com/golangci/golangci-lint/releases/download/v{GOLANG_CI}/golangci-lint-{GOLANG_CI}-linux-amd64.tar.gz
     strip: 1
     dest: third_party/golangci
 
   golangci-darwin:
-    sha256: 9c0042e91218dc1dd4eb7b54e29c7331eff081b3ac3f88b0d5df89b976fcd45c
+    sha256: f53826957a96a3312f5e932299024a1274b31c8b70d54510803222fb5d9f7af8
     if: darwin && (amd64 || arm64)
     url: https://github.com/golangci/golangci-lint/releases/download/v{GOLANG_CI}/golangci-lint-{GOLANG_CI}-darwin-amd64.tar.gz
     strip: 1
     dest: third_party/golangci
 
   golangci-win64:
-    sha256: 607d68f0960e3a7b69c73bc0164710dabb4ece06c509afa3584b475194e8d720
+    sha256: a8176b8ff5133de7da4393965091c429f251ecd74405289a80318f62d8284e47
     if: windows && amd64
     url: https://github.com/golangci/golangci-lint/releases/download/v{GOLANG_CI}/golangci-lint-{GOLANG_CI}-windows-amd64.zip
     strip: 1

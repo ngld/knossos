@@ -20,6 +20,7 @@
     "@types/classnames": "^2.3.1",
     "@types/lodash-es": "^4.17.6",
     "@types/mini-css-extract-plugin": "^2.5.1",
+    "@types/postcss-url": "^10",
     "@types/react": "^17.0.41",
     "@types/react-dom": "^17.0.14",
     "@types/react-router-dom": "^5.3.3",
@@ -64,6 +65,7 @@
     "clean-webpack-plugin": "^4.0.0",
     "compression-webpack-plugin": "^9.2.0",
     "css-loader": "^6.7.1",
+    "cssnano": "^5.1.5",
     "duplicate-package-checker-webpack-plugin": "^3.0.0",
     "eventemitter3": "^4.0.7",
     "fecha": "^4.2.1",
@@ -83,6 +85,8 @@
     "postcss-cli": "^9.1.0",
     "postcss-import": "^14.0.2",
     "postcss-loader": "^6.2.1",
+    "postcss-nested-ancestors": "^2.0.0",
+    "postcss-url": "^10.1.3",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "react-infinite-scroll-component": "^6.1.0",
@@ -98,9 +102,6 @@
     "webpack-merge": "^5.8.0",
     "xbbcode": "^2.0.4"
   },
-  "resolutions": {
-    "react-popper": "2.2.4"
-  },
   "dependenciesMeta": {
     "@blueprintjs/core": {
       "unplugged": true
@@ -110,7 +111,7 @@
     }
   },
   "volta": {
-    "node": "14.17.3"
+    "node": "16.14.2"
   },
   "packageManager": "yarn@3.2.0"
 }
