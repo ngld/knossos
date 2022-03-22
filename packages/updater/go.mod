@@ -4,11 +4,11 @@ go 1.17
 
 require (
 	github.com/Masterminds/semver/v3 v3.1.1
-	github.com/go-gl/gl v0.0.0-20210905235341-f7a045908259
-	github.com/inkyblackness/imgui-go/v4 v4.3.0
+	github.com/go-gl/gl v0.0.0-20211210172815-726fda9656d6
+	github.com/inkyblackness/imgui-go/v4 v4.4.0
 	github.com/ngld/knossos/packages/libarchive v0.0.0-20211005231007-d4686ca19d5d
-	github.com/rotisserie/eris v0.5.1
-	github.com/veandco/go-sdl2 v0.5.0-alpha.1
+	github.com/rotisserie/eris v0.5.2
+	github.com/veandco/go-sdl2 v0.5.0-alpha.3
 )
 
 replace github.com/ngld/knossos/packages/libarchive => ../libarchive
