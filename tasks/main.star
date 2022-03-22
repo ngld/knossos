@@ -97,6 +97,9 @@ def configure():
         libext = ".dylib"
         binext = ""
 
+        setenv("GOARCH", execute("arch"))
+        info("Building for architecture %s" % getenv("GOARCH"))
+
         if generator == "":
             if execute("ninja -h") != False:
                 generator = "Ninja"

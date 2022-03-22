@@ -62,7 +62,7 @@ def nebula_configure(binext):
         deps = ["database-migrate", "importer-build"],
         base = "build/nebula",
         cmds = [
-            "curl -o repo.json https://cf.fsnebula.org/storage/repo.json",
+            "curl -Lo repo.json https://cf.fsnebula.org/storage/repo.json",
             "./importer",
         ],
     )
