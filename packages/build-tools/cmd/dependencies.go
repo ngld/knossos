@@ -94,7 +94,7 @@ var fetchDepsCmd = &cobra.Command{
 			return nil
 		}
 
-		jErr = ioutil.WriteFile(stampPath, stampData, os.FileMode(0660))
+		jErr = ioutil.WriteFile(stampPath, stampData, os.FileMode(0o660))
 		if jErr != nil {
 			pkg.PrintError(jErr.Error())
 		}
@@ -426,6 +426,10 @@ func downloadAndExtract(cmd *cobra.Command, cfg depConfig, cfgData string, stamp
 		}
 		defer resp.Body.Close()
 
+		if resp.StatusCode < 200 || resp.StatusCode > 299 {
+			return eris.Errorf("Failed to download %s, got status code %d", meta.URL, resp.StatusCode)
+		}
+
 		hash := sha256.New()
 		bar := getProgressBar(resp.ContentLength, "     download")
 		defer bar.Finish()
@@ -527,7 +531,7 @@ func downloadAndExtract(cmd *cobra.Command, cfg depConfig, cfgData string, stamp
 					return eris.Wrapf(err, "Failed to read permissions for %s", binPath)
 				}
 
-				err = os.Chmod(binPath, fi.Mode()|0700)
+				err = os.Chmod(binPath, fi.Mode()|0o700)
 				if err != nil {
 					return eris.Wrapf(err, "Failed to mark %s as executable", binPath)
 				}
@@ -571,7 +575,7 @@ func downloadAndExtract(cmd *cobra.Command, cfg depConfig, cfgData string, stamp
 			}
 		}
 
-		err = ioutil.WriteFile(filepath.Join(projectRoot, "packages", "build-tools", "DEPS.yml"), []byte(generated), os.FileMode(0660))
+		err = ioutil.WriteFile(filepath.Join(projectRoot, "packages", "build-tools", "DEPS.yml"), []byte(generated), os.FileMode(0o660))
 		if err != nil {
 			return err
 		}
@@ -594,7 +598,7 @@ func openExtractorDest(destPath string, item string, ds depSpec) (*os.File, stri
 	}
 
 	destParent := filepath.Dir(dest)
-	err := os.MkdirAll(destParent, os.FileMode(0770))
+	err := os.MkdirAll(destParent, os.FileMode(0o770))
 	if err != nil {
 		return nil, "", eris.Wrapf(err, "Failed to create directory %s", destParent)
 	}
