@@ -259,6 +259,8 @@ func KnossosHandleRequest(urlPtr *C.char, urlLen C.int, bodyPtr unsafe.Pointer, 
 	resp.response_length = C.size_t(len(response))
 	resp.response_data = unsafe.Pointer(C.CString(response))
 
+	Log(api.LogError, "Request %s failed: %s", reqURL, eris.ToString(err, true))
+
 	return resp
 }
 

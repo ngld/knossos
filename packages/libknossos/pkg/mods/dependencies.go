@@ -15,50 +15,28 @@ import (
 	"github.com/ngld/knossos/packages/libknossos/pkg/storage"
 )
 
-type (
-	DependencySnapshot map[string]string
-	constraintItem     struct {
-		constraint *semver.Constraints
-		preReq     map[string]string
-		source     string
-	}
-)
+type DependencySnapshot map[string]string
 
-type modRequest struct {
-	mod    *common.Release
-	preReq map[string]string
-	source string
+type modConstraint struct {
+	constraint *semver.Constraints
+	modID      string
 }
 
-func (item constraintItem) String() string {
-	return fmt.Sprintf("%s (%s)", item.constraint, item.source)
-}
-
-func dupStringSlice(input []string) []string {
-	result := make([]string, len(input))
-	copy(result, input)
-	return result
+type resolvePathNode struct {
+	versionSnapshot map[string][]string
+	modID           string
+	version         string
+	constraints     []modConstraint
 }
 
 func makeVersionSnapshot(versions map[string][]string) map[string][]string {
 	result := make(map[string][]string)
 	for k, list := range versions {
-		result[k] = dupStringSlice(list)
+		result[k] = make([]string, len(list))
+		copy(result[k], list)
 	}
 
 	return result
-}
-
-type modConstraint struct {
-	modID      string
-	constraint *semver.Constraints
-}
-
-type pathNode struct {
-	modID           string
-	version         string
-	constraints     []modConstraint
-	versionSnapshot map[string][]string
 }
 
 var noPreRelConstraintPattern = regexp.MustCompile(`[>=~]*\s*[0-9]+\.[0-9]+\.[0-9]+(?:-)?`)
@@ -67,7 +45,7 @@ func GetDependencySnapshot(ctx context.Context, mods storage.ModProvider, releas
 	startTime := time.Now()
 
 	availableVersions := make(map[string][]string)
-	path := make([]pathNode, 0)
+	path := make([]resolvePathNode, 0)
 	queue := []string{release.Modid}
 	conflicts := make(map[string]map[string]string)
 
@@ -223,7 +201,7 @@ func GetDependencySnapshot(ctx context.Context, mods storage.ModProvider, releas
 			availableVersions[con.modID] = versions
 		}
 
-		path = append(path, pathNode{
+		path = append(path, resolvePathNode{
 			modID:           modID,
 			version:         version,
 			constraints:     cons,

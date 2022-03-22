@@ -2,6 +2,7 @@ package platform
 
 import (
 	"os"
+	"os/exec"
 
 	"github.com/rotisserie/eris"
 )

@@ -463,6 +463,11 @@ func (kn *knossosServer) InstallMod(ctx context.Context, req *client.InstallModR
 					return eris.Wrapf(err, "failed to build folder path for %s %s", rel.Modid, rel.Version)
 				}
 
+				err = os.MkdirAll(modFolder, 0700)
+				if err != nil {
+					return eris.Wrapf(err, "failed to create mod folder %s for %s %s", modFolder, rel.Modid, rel.Version)
+				}
+
 				releaseData, err := json.MarshalIndent(rel, "", "  ")
 				if err != nil {
 					return eris.Wrapf(err, "failed to serialise release %s %s", rel.Modid, rel.Version)
