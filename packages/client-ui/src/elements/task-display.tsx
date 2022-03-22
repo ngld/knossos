@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Classes, Button, Dialog, ProgressBar, Text } from '@blueprintjs/core';
-import { CiTimesLine } from '@meronex/icons/ci';
+import CiTimesLine from "~icons/clarity/times-line"
 import { Tooltip2 } from '@blueprintjs/popover2';
 import { action } from 'mobx';
 import { observer } from 'mobx-react-lite';

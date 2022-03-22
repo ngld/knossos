@@ -1,12 +1,11 @@
-import {
-  CiWindowMinLine,
-  CiWindowRestoreLine,
-  CiWindowMaxLine,
-  CiWindowCloseLine,
-  CiPictureLine,
-  CiFilterLine,
-  CiCogLine,
-} from '@meronex/icons/ci';
+import CiWindowMinLine from "~icons/clarity/window-min-line";
+import CiWindowRestoreLine from "~icons/clarity/window-restore-line";
+import CiWindowMaxLine from "~icons/clarity/window-max-line";
+import CiWindowCloseLine from "~icons/clarity/window-close-line";
+import CiPictureLine from "~icons/clarity/picture-line";
+import CiFilterLine from "~icons/clarity/filter-line";
+import CiCogLine from "~icons/clarity/cog-line";
+
 import { useState, useEffect } from 'react';
 import { observer } from 'mobx-react-lite';
 import { Spinner } from '@blueprintjs/core';

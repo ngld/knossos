@@ -12,7 +12,7 @@
       "@api/*": ["../api/api/*"],
     },
     "typeRoots": ["node_modules/@types", "../front/types"],
-    "types": ["node"]
+    "types": ["node", "unplugin-icons/types/react"]
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"],
 }
