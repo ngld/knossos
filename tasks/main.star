@@ -97,7 +97,7 @@ def configure():
         libext = ".dylib"
         binext = ""
 
-        setenv("GOARCH", execute("arch"))
+        setenv("GOARCH", ARCH)
         info("Building for architecture %s" % getenv("GOARCH"))
 
         if generator == "":
@@ -269,6 +269,11 @@ def configure():
         updater_goldflags += " -H windowsgui -extldflags -static"
         #updater_cmds.append('cp %s ../../build/updater' % str(resolve_path(msys2_path, 'mingw64/bin/SDL2.dll')).replace('\\', '/'))
 
+    if OS != "linux":
+        updater_goflags = " -tags static"
+    else:
+        updater_goflags = ""
+
     task(
         "updater-build",
         desc = "Builds the Knossos updater",
@@ -280,7 +285,7 @@ def configure():
         cmds = [
             "mkdir -p build/updater",
             "cd packages/updater",
-            "go build -tags static -ldflags '%s' -o ../../build/updater/updater%s" % (updater_goldflags, binext),
+            "go build %s -ldflags '%s' -o ../../build/updater/updater%s" % (updater_goflags, updater_goldflags, binext),
         ] + updater_cmds,
     )
 
