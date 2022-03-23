@@ -13,6 +13,7 @@ import (
 	"github.com/ngld/knossos/packages/api/common"
 	"github.com/ngld/knossos/packages/libinnoextract"
 	"github.com/ngld/knossos/packages/libknossos/pkg/api"
+	"github.com/ngld/knossos/packages/libknossos/pkg/mods"
 	"github.com/ngld/knossos/packages/libknossos/pkg/platform"
 	"github.com/ngld/knossos/packages/libknossos/pkg/storage"
 	"github.com/rotisserie/eris"
@@ -58,7 +59,7 @@ func copyFromGameFolder(ctx context.Context, libraryPath, gameFolder string, mov
 	api.Log(ctx, api.LogInfo, "Looking for retail files")
 
 	fs2Path := filepath.Join(libraryPath, "FS2")
-	err := os.MkdirAll(fs2Path, 0770)
+	err := os.MkdirAll(fs2Path, 0o770)
 	if err != nil {
 		return eris.Wrapf(err, "failed to create %s", fs2Path)
 	}
@@ -149,7 +150,7 @@ func copyFromGameFolder(ctx context.Context, libraryPath, gameFolder string, mov
 		}
 
 		// Make sure the necessary directories exist
-		err = os.MkdirAll(filepath.Dir(destPath), 0770)
+		err = os.MkdirAll(filepath.Dir(destPath), 0o770)
 		if err != nil {
 			return eris.Wrapf(err, "failed to create directories for %s", destPath)
 		}
@@ -241,16 +242,47 @@ func copyFromGameFolder(ctx context.Context, libraryPath, gameFolder string, mov
 		}},
 	}
 
-	// TODO: Install FSO first
-	/*retailSnapshot, err := mods.GetDependencySnapshot(ctx, storage.LocalMods, retailRel)
-	if err != nil {
-		return eris.Wrap(err, "failed to build dependency snapshot for FS2")
-	}
-
-	retailRel.DependencySnapshot = retailSnapshot*/
 	err = storage.SaveLocalModRelease(ctx, retailRel)
 	if err != nil {
 		return eris.Wrap(err, "failed to create FS2 release")
+	}
+
+	api.Log(ctx, api.LogInfo, "Installing FSO")
+	fsoVersions, err := storage.RemoteMods.GetVersionsForMod(ctx, "FSO")
+	if err != nil || len(fsoVersions) < 1 {
+		return eris.Wrap(err, "failed to retrieve FSO versions")
+	}
+
+	var fsoRel *common.Release
+	var packageNames []string
+	for idx := len(fsoVersions) - 1; idx >= 0; idx-- {
+		fsoRel, err = storage.RemoteMods.GetModRelease(ctx, "FSO", fsoVersions[idx])
+		if err != nil {
+			return eris.Wrapf(err, "failed to load FSO release %s", fsoVersions[idx])
+		}
+
+		// Make sure this release is actually supported on this platform
+		fsoRel.Packages = mods.FilterUnsupportedPackages(ctx, fsoRel.Packages)
+		packageNames = make([]string, len(fsoRel.Packages))
+
+		for idx, pkg := range fsoRel.Packages {
+			packageNames[idx] = pkg.Name
+		}
+
+		if len(fsoRel.Packages) > 0 {
+			break
+		}
+	}
+
+	// NOTE: We assume that FSO has no dependencies here. If that changes, we'll have to perform dependency resolution
+	// as well which means we should probably refactor the above code as well to make installing mods/packages through
+	// the API simpler.
+	err = mods.InstallMod(ctx, &client.InstallModRequest{
+		Mods:          []*client.InstallModRequest_Mod{{Modid: "FSO", Version: fsoRel.Version, Packages: packageNames}},
+		SnapshotAfter: []*client.InstallModRequest_Mod{{Modid: "FS2", Version: "1.20.0"}},
+	})
+	if err != nil {
+		return eris.Wrap(err, "failed to install FSO")
 	}
 
 	api.Log(ctx, api.LogInfo, "Done")
@@ -274,7 +306,7 @@ func handleInnoextract(ctx context.Context, libraryPath, installer string) error
 	}
 
 	tempParent := filepath.Join(libraryPath, "temp")
-	_ = os.MkdirAll(tempParent, 0770)
+	_ = os.MkdirAll(tempParent, 0o770)
 
 	tempFolder, err := os.MkdirTemp(tempParent, "installer-data-")
 	if err != nil {

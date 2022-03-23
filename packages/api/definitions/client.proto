@@ -224,10 +224,10 @@ message InstallModRequest {
   }
 
   uint32 ref = 1;
-  string modid = 2;
-  string version = 3;
+  reserved 2, 3;
 
   repeated Mod mods = 4;
+  repeated Mod snapshot_after = 5;
 }
 
 message UpdaterInfoResult {
