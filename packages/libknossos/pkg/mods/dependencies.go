@@ -114,7 +114,7 @@ func GetDependencySnapshot(ctx context.Context, mods storage.ModProvider, releas
 					ok, err := con.constraint.Validate(parsedVersion)
 					if !ok {
 						api.Log(ctx, api.LogDebug, "DEP: Conflict with %s %s: %s", node.modID, node.version, err)
-						availableVersions[modID] = availableVersions[modID][1:]
+						availableVersions[modID] = availableVersions[modID][:len(availableVersions[modID])-1]
 						goto repickVersion
 					}
 				}
@@ -127,8 +127,15 @@ func GetDependencySnapshot(ctx context.Context, mods storage.ModProvider, releas
 			return nil, eris.Wrapf(err, "failed to retrieve mod %s %s", modID, version)
 		}
 
+		pkgs := FilterUnsupportedPackages(ctx, rel.Packages)
+		if len(pkgs) < 1 {
+			api.Log(ctx, api.LogDebug, "DEP: Conflict: %s %s not supported on current platform, picking next version.", modID, version)
+			availableVersions[modID] = availableVersions[modID][:len(availableVersions[modID])-1]
+			goto repickVersion
+		}
+
 		cons := make([]modConstraint, 0)
-		for _, pkg := range FilterUnsupportedPackages(ctx, rel.Packages) {
+		for _, pkg := range pkgs {
 			for _, dep := range pkg.Dependencies {
 				rawConstraint := dep.Constraint
 				if rawConstraint == "" || rawConstraint == "*" {
@@ -155,8 +162,11 @@ func GetDependencySnapshot(ctx context.Context, mods storage.ModProvider, releas
 			}
 		}
 
-		// Remove all conflicting versions from availableVersions
 		conflictSnapshot := makeVersionSnapshot(availableVersions)
+		queueSnapshot := make([]string, len(queue))
+		copy(queueSnapshot, queue)
+
+		// Remove all conflicting versions from availableVersions
 		for _, con := range cons {
 			versions, ok := availableVersions[con.modID]
 			if !ok {
@@ -194,7 +204,8 @@ func GetDependencySnapshot(ctx context.Context, mods storage.ModProvider, releas
 				msgs[modID] = fmt.Sprintf("%s requires %s %s which couldn't be fulfilled", modID, con.modID, con.constraint)
 
 				availableVersions = conflictSnapshot
-				availableVersions[modID] = availableVersions[modID][1:]
+				availableVersions[modID] = availableVersions[modID][:len(availableVersions[modID])-1]
+				queue = queueSnapshot
 				goto repickVersion
 			}
 
