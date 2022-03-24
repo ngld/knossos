@@ -34,12 +34,13 @@ export default observer(function UninstallModDialog(
       }
     }
 
-    const ref = gs.tasks.startTask('Uninstall mod');
+    const ref = gs.tasks.startTask('Uninstall mod', () => gs.sendSignal('reloadLocalMods'));
     void gs.client.uninstallMod({ modid: props.modid, versions, ref });
     gs.sendSignal('showTasks');
     setOpen(false);
   }
 
+  let anyValidVersions = false;
   return (
     <Dialog
       className="bp3-ui-text"
@@ -61,36 +62,47 @@ export default observer(function UninstallModDialog(
               <pre>{e instanceof Error ? e.message : String(e)}</pre>
             </Callout>
           ),
-          fulfilled: ({ response }) => (
-            <ul>
-              {response.versions.map((version) => (
-                <li>
-                  <Checkbox
-                    checked={!!checkedVersions[version] && !response.errors[version]}
-                    disabled={!!response.errors[version]}
-                    onChange={(e) =>
-                      setCheckedVersions((versions) => ({
-                        ...versions,
-                        [version]: (e.target as HTMLInputElement).checked,
-                      }))
-                    }
-                  >
-                    {version}
-                  </Checkbox>
-                  {response.errors[version] ? <>
-                    <Callout className="mb-4">
-                      {response.errors[version]}
-                    </Callout>
-                  </> : null}
-                </li>
-              ))}
-            </ul>
-          ),
+          fulfilled: ({ response }) => {
+            for (const version of response.versions) {
+              if (checkedVersions[version] && !response.errors[version]) {
+                anyValidVersions = true;
+                break;
+              }
+            }
+
+            return (
+              <ul>
+                {response.versions.map((version) => (
+                  <li>
+                    <Checkbox
+                      checked={!!checkedVersions[version] && !response.errors[version]}
+                      disabled={!!response.errors[version]}
+                      onChange={(e) =>
+                        setCheckedVersions((versions) => ({
+                          ...versions,
+                          [version]: (e.target as HTMLInputElement).checked,
+                        }))
+                      }
+                    >
+                      {version}
+                    </Checkbox>
+                    {response.errors[version] ? (
+                      <>
+                        <Callout className="mb-4">{response.errors[version]}</Callout>
+                      </>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            );
+          },
         })}
       </div>
       <div className={Classes.DIALOG_FOOTER}>
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>
-          <Button intent="primary" onClick={triggerUninstall}>Uninstall selected versions</Button>
+          <Button intent="primary" disabled={!anyValidVersions} onClick={triggerUninstall}>
+            Uninstall selected versions
+          </Button>
           <Button onClick={() => setOpen(false)}>Close</Button>
         </div>
       </div>

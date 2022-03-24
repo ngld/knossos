@@ -203,7 +203,9 @@ interface InstallModDialogProps {
   onFinished?: () => void;
 }
 
-export const InstallModDialog = observer(function InstallModDialog(props: InstallModDialogProps): React.ReactElement {
+export const InstallModDialog = observer(function InstallModDialog(
+  props: InstallModDialogProps,
+): React.ReactElement {
   const gs = useGlobalState();
   const [isOpen, setOpen] = useState(true);
   const [state, setState] = useState<InstallState>({
@@ -295,10 +297,15 @@ export const InstallModDialog = observer(function InstallModDialog(props: Instal
             <NoteBox title="Notes">{state.notes}</NoteBox>
             <div className={Classes.DIALOG_FOOTER}>
               <div className={Classes.DIALOG_FOOTER_ACTIONS}>
-                <Button intent="primary" onClick={() => {
-                  setOpen(false);
-                  triggerModInstallation(gs, state, props);
-                }}>Install Mod</Button>
+                <Button
+                  intent="primary"
+                  onClick={() => {
+                    setOpen(false);
+                    triggerModInstallation(gs, state, props);
+                  }}
+                >
+                  Install Mod
+                </Button>
                 <Button onClick={() => setOpen(false)}>Cancel</Button>
               </div>
             </div>
@@ -317,7 +324,11 @@ export function installMod(gs: GlobalState, modid: string, version: string): voi
   gs.launchOverlay(InstallModDialog, { modid, version });
 }
 
-function triggerModInstallation(gs: GlobalState, state: InstallState, props: InstallModDialogProps): void {
+function triggerModInstallation(
+  gs: GlobalState,
+  state: InstallState,
+  props: InstallModDialogProps,
+): void {
   const mods = {} as Record<string, InstallModRequest_Mod>;
   for (const [key, selected] of Object.entries(state.userSelected)) {
     if (selected) {
@@ -335,10 +346,13 @@ function triggerModInstallation(gs: GlobalState, state: InstallState, props: Ins
   }
 
   void gs.client.installMod({
-    modid: props.modid ?? '',
-    version: props.version ?? '',
-    ref: gs.tasks.startTask('Installing mod ' + state.title, undefined, true),
+    ref: gs.tasks.startTask(
+      'Installing mod ' + state.title,
+      () => gs.sendSignal('reloadLocalMods'),
+      true,
+    ),
     mods: Object.values(mods),
+    snapshotAfter: [],
   });
   gs.sendSignal('showTasks');
 }

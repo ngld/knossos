@@ -24,6 +24,8 @@ var knossosStr = C.CString("knossos")
 
 type Archive struct {
 	handle     *C.struct_archive
+	fileHandle *os.File
+	fileSize   int64
 	buffer     unsafe.Pointer
 	Filename   string
 	Entry      Header
@@ -31,9 +33,10 @@ type Archive struct {
 }
 
 type Header struct {
-	Pathname string
-	Mode     os.FileMode
-	Size     int64
+	Pathname    string
+	SymlinkDest string
+	Mode        os.FileMode
+	Size        int64
 }
 
 func CompiledVersion() int {
@@ -42,6 +45,10 @@ func CompiledVersion() int {
 
 func Version() int {
 	return int(C.archive_version_number())
+}
+
+func VersionInfo() string {
+	return C.GoString(C.archive_version_details())
 }
 
 func OpenArchive(filename string) (*Archive, error) {
@@ -72,10 +79,26 @@ func OpenArchive(filename string) (*Archive, error) {
 
 	a.Filename = filename
 
-	cfilename := C.CString(a.Filename)
-	code := C.archive_read_open_filename(a.handle, cfilename, 4096)
-	C.free(unsafe.Pointer(cfilename))
+	var err error
+	a.fileHandle, err = os.Open(a.Filename)
+	if err != nil {
+		a.Close()
+		return nil, eris.Wrap(err, "failed to open file")
+	}
 
+	size, err := a.fileHandle.Seek(0, io.SeekEnd)
+	if err != nil {
+		a.Close()
+		return nil, eris.Wrapf(err, "failed to seek in %s", a.Filename)
+	}
+
+	a.fileSize = size
+	if _, err = a.fileHandle.Seek(0, io.SeekStart); err != nil {
+		a.Close()
+		return nil, eris.Wrapf(err, "failed to seek in %s", a.Filename)
+	}
+
+	code := C.archive_read_open_fd(a.handle, C.int(a.fileHandle.Fd()), 4096)
 	if code != C.ARCHIVE_OK {
 		err := a.code2error(code)
 		a.Close()
@@ -102,6 +125,19 @@ func (a *Archive) code2error(code C.int) error {
 	return eris.Errorf("%d: %s", code, msg)
 }
 
+func (a *Archive) Size() int64 {
+	return a.fileSize
+}
+
+func (a *Archive) Position() int64 {
+	pos, err := a.fileHandle.Seek(0, io.SeekCurrent)
+	if err != nil {
+		return -1
+	}
+
+	return pos
+}
+
 func (a *Archive) Next() error {
 	var entry *C.struct_archive_entry
 	code := C.archive_read_next_header(a.handle, &entry)
@@ -112,6 +148,13 @@ func (a *Archive) Next() error {
 	a.Entry.Pathname = C.GoString(C.archive_entry_pathname(entry))
 	a.Entry.Mode = os.FileMode(C.archive_entry_mode(entry))
 	a.Entry.Size = int64(C.archive_entry_size(entry))
+
+	symlinkDest := C.archive_entry_symlink_utf8(entry)
+	if symlinkDest == nil {
+		a.Entry.SymlinkDest = ""
+	} else {
+		a.Entry.SymlinkDest = C.GoString(symlinkDest)
+	}
 	return nil
 }
 
@@ -150,6 +193,14 @@ func (a *Archive) Close() error {
 	if a.buffer != nil {
 		C.free(a.buffer)
 		a.buffer = nil
+	}
+
+	if a.fileHandle != nil {
+		if err := a.fileHandle.Close(); err != nil {
+			return eris.Wrap(err, "failed to close file handle")
+		}
+
+		a.fileHandle = nil
 	}
 
 	runtime.SetFinalizer(a, nil)

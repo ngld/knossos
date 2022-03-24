@@ -11,6 +11,8 @@ interface OverlayProps {
   onFinished?: () => void;
 }
 
+type SignalName = 'remoteRefreshMods' | 'hideTasks' | 'showTasks' | 'reloadLocalMods' | 'reloadRemoteMods';
+
 export class GlobalState {
   toaster: IToaster;
   client: KnossosClient;
@@ -18,10 +20,12 @@ export class GlobalState {
   tasks: TaskTracker;
   _nextOverlayID = 0;
   overlays: [React.FunctionComponent<OverlayProps> | React.ComponentClass<OverlayProps>, Record<string, unknown>, number][];
-  signalListeners: Record<string,(() => void)[]> = {
+  signalListeners: Record<SignalName,(() => void)[]> = {
     remoteRefreshMods: [],
     showTasks: [],
     hideTasks: [],
+    reloadLocalMods: [],
+    reloadRemoteMods: [],
   };
   startupDone: boolean;
 
@@ -65,7 +69,7 @@ export class GlobalState {
     this.overlays.splice(index, 1);
   }
 
-  useSignal(name: string, listener: () => void): void {
+  useSignal(name: SignalName, listener: () => void): void {
     useEffect(() => {
       this.signalListeners[name].push(listener);
       return () => {
@@ -80,7 +84,7 @@ export class GlobalState {
     });
   }
 
-  sendSignal(name: string): void {
+  sendSignal(name: SignalName): void {
     for (const listener of this.signalListeners[name]) {
       listener();
     }

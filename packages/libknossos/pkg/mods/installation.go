@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync/atomic"
+	"time"
 
 	"github.com/ngld/knossos/packages/api/client"
 	"github.com/ngld/knossos/packages/api/common"
@@ -26,7 +27,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func handleArchive(ctx context.Context, archivePath string, step *ModInstallStep, hasher hash.Hash, buffer []byte) error {
+func handleArchive(ctx context.Context, archivePath string, step *ModInstallStep, hasher hash.Hash, buffer []byte, progress *uint32) error {
 	fileLookup := make(map[string][]byte)
 	for _, item := range step.files {
 		fileLookup[strings.TrimPrefix(item.Filename, "./")] = item.Checksum
@@ -37,6 +38,9 @@ func handleArchive(ctx context.Context, archivePath string, step *ModInstallStep
 		return err
 	}
 	defer archive.Close()
+
+	size := archive.Size()
+	progressOffset := atomic.LoadUint32(progress)
 
 	done := make(map[string]bool)
 	for {
@@ -50,6 +54,25 @@ func handleArchive(ctx context.Context, archivePath string, step *ModInstallStep
 
 		// We only care about files
 		if archive.Entry.Mode&os.ModeType != 0 {
+			continue
+		}
+
+		if archive.Entry.SymlinkDest != "" {
+			if filepath.IsAbs(archive.Entry.SymlinkDest) {
+				return eris.Errorf("symlink %s points to the absolute path %s which is not allowed; found in %s for %s", archive.Entry.Pathname, archive.Entry.SymlinkDest, step.pkgInfo.Name, step.modInfo.Title)
+			}
+
+			destPath := filepath.Join(step.folder, step.destination, archive.Entry.Pathname)
+			err = os.MkdirAll(filepath.Dir(destPath), 0o770)
+			if err != nil {
+				return eris.Wrapf(err, "failed to create %s for %s in %s", destPath, step.pkgInfo.Name, step.modInfo.Title)
+			}
+
+			err = os.Symlink(archive.Entry.SymlinkDest, destPath)
+			if err != nil {
+				return eris.Wrapf(err, "failed to create symlink %s pointing to %s for %s in %s", destPath, archive.Entry.SymlinkDest, step.pkgInfo.Name, step.modInfo.Title)
+			}
+
 			continue
 		}
 
@@ -89,6 +112,13 @@ func handleArchive(ctx context.Context, archivePath string, step *ModInstallStep
 			return eris.Wrapf(err, "failed to open %s for %s in %s", destPath, step.pkgInfo.Name, step.modInfo.Title)
 		}
 
+		if archive.Entry.Mode&0o700 == 0o700 {
+			err = os.Chmod(destPath, 0o777)
+			if err != nil {
+				return eris.Wrapf(err, "failed to set executable attribute on %s for %s in %s", destPath, step.pkgInfo.Name, step.modInfo.Title)
+			}
+		}
+
 		for {
 			n, readErr := archive.Read(buffer)
 			if n > 0 {
@@ -108,6 +138,10 @@ func handleArchive(ctx context.Context, archivePath string, step *ModInstallStep
 				f.Close()
 				return eris.Wrapf(err, "failed to read %s from %s in %s", archive.Entry.Pathname, step.label, step.modInfo.Title)
 			}
+
+			// Rescale the position to [0-100] range and add it to the progress offset
+			pos := archive.Position()
+			atomic.StoreUint32(progress, progressOffset+uint32(float32(100*pos)/float32(size)))
 		}
 
 		err = f.Close()
@@ -125,6 +159,9 @@ func handleArchive(ctx context.Context, archivePath string, step *ModInstallStep
 			return eris.Errorf("checksum error (%x != %x) in %s for %s in %s", writtenSum, checksum, archive.Entry.Pathname, step.pkgInfo.Name, step.modInfo.Title)
 		}
 	}
+
+	// Make sure we're at exactly 100% once we're done
+	atomic.StoreUint32(progress, progressOffset+100)
 	return nil
 }
 
@@ -315,7 +352,7 @@ func InstallMod(ctx context.Context, req *client.InstallModRequest) error {
 		}
 	}
 
-	stepCount := len(plan)
+	stepCount := len(plan) * 100
 	done := uint32(0)
 
 	queue := downloader.NewQueue(dlItems)
@@ -327,8 +364,28 @@ func InstallMod(ctx context.Context, req *client.InstallModRequest) error {
 	}
 
 	api.Log(ctx, api.LogInfo, "Starting download")
-	// Any error returned here is later checked through queue.Error()
-	go queue.Run(ctx) // nolint: errcheck
+
+	active := true
+	defer func() { active = false }()
+	go func() {
+		defer api.CrashReporter(ctx)
+
+		// Any error returned here is later checked through queue.Error()
+		queue.Run(ctx) // nolint: errcheck
+
+		for active {
+			done := atomic.LoadUint32(&done)
+			progress := float32(done) / float32(stepCount)
+
+			if progress == 1 {
+				api.SetProgress(ctx, 1, "Finishing")
+				return
+			}
+
+			api.SetProgress(ctx, 0.5+(progress/2), "Extracting")
+			time.Sleep(300 * time.Millisecond)
+		}
+	}()
 
 	hasher := sha256.New()
 	buffer := make([]byte, 4096)
@@ -337,13 +394,11 @@ func InstallMod(ctx context.Context, req *client.InstallModRequest) error {
 		step := plan[item.Key]
 
 		api.Log(ctx, api.LogInfo, "Opening archive %s for %s", step.label, step.modInfo.Title)
-		err = handleArchive(ctx, item.Filepath, &step, hasher, buffer)
+		err = handleArchive(ctx, item.Filepath, &step, hasher, buffer, &done)
 		if err != nil {
 			queue.Abort()
 			return err
 		}
-
-		atomic.AddUint32(&done, 1)
 	}
 
 	err = queue.Error()

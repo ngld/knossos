@@ -20,7 +20,11 @@ async function fetchMods(gs: GlobalState): Promise<SimpleModList_Item[]> {
 export default observer(function LocalModList(): React.ReactElement {
   const gs = useGlobalState();
   const navigate = useNavigate();
-  const [modList] = useState(() => fromPromise(fetchMods(gs)));
+  const [modList, setModList] = useState(() => fromPromise(fetchMods(gs)));
+
+  gs.useSignal('reloadLocalMods', () => {
+    setModList(fromPromise(fetchMods(gs)));
+  });
 
   return (
     <div className="text-white">
@@ -35,43 +39,52 @@ export default observer(function LocalModList(): React.ReactElement {
         ),
         fulfilled: (mods: SimpleModList_Item[]) => (
           <div className="flex flex-row flex-wrap justify-between gap-4">
-            {mods.map((mod) => (
-              <div key={mod.modid} className="mod-tile bg-important flex flex-col overflow-hidden">
-                {mod.teaser?.fileid ? (
-                  <img src={API_URL + '/ref/' + mod.teaser?.fileid} />
-                ) : mod.modid === 'FS2' ? (
-                  <img src={require('../resources/mod-retail.png').default} />
-                ) : (
-                  <img src={ModstockImage} />
-                )}
-                <div className="flex-1 flex flex-col justify-center text-white">
-                  <div className="flex-initial text-center overflow-ellipsis overflow-hidden">
-                    {mod.title}
+            {mods.length > 0 ? (
+              mods.map((mod) => (
+                <div
+                  key={mod.modid}
+                  className="mod-tile bg-important flex flex-col overflow-hidden"
+                >
+                  {mod.teaser?.fileid ? (
+                    <img src={API_URL + '/ref/' + mod.teaser?.fileid} />
+                  ) : mod.modid === 'FS2' ? (
+                    <img src={require('../resources/mod-retail.png').default} />
+                  ) : (
+                    <img src={ModstockImage} />
+                  )}
+                  <div className="flex-1 flex flex-col justify-center text-white">
+                    <div className="flex-initial text-center overflow-ellipsis overflow-hidden">
+                      {mod.title}
+                    </div>
+                  </div>
+
+                  <div className="cover flex flex-col justify-center gap-2">
+                    {mod.type === ModType.MOD || mod.type === ModType.TOTAL_CONVERSION ? (
+                      <Button onClick={() => launchMod(gs, mod.modid, mod.version)}>Play</Button>
+                    ) : null}
+                    <Button onClick={() => navigate('/mod/' + mod.modid + '/' + mod.version)}>
+                      Details
+                    </Button>
+                    <Button
+                      onClick={() =>
+                        gs.launchOverlay(UninstallModDialog, {
+                          modid: mod.modid,
+                          version: mod.version,
+                        })
+                      }
+                    >
+                      Uninstall
+                    </Button>
                   </div>
                 </div>
-
-                <div className="cover flex flex-col justify-center gap-2">
-                  {mod.type === ModType.MOD || mod.type === ModType.TOTAL_CONVERSION ? (
-                    <Button onClick={() => launchMod(gs, mod.modid, mod.version)}>Play</Button>
-                  ) : null}
-                  <Button
-                    onClick={() => navigate('/mod/' + mod.modid + '/' + mod.version)}
-                  >
-                    Details
-                  </Button>
-                  <Button
-                    onClick={() =>
-                      gs.launchOverlay(UninstallModDialog, {
-                        modid: mod.modid,
-                        version: mod.version,
-                      })
-                    }
-                  >
-                    Uninstall
-                  </Button>
-                </div>
-              </div>
-            ))}{' '}
+              ))
+            ) : (
+              <NonIdealState
+                icon="search"
+                title="No mods found"
+                description="You don't have any mods, go to the Explore tab to install some."
+              />
+            )}{' '}
           </div>
         ),
       })}
