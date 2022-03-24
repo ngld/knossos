@@ -8,8 +8,8 @@
 #include <string>
 
 #if !defined(OS_WIN)
-#include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #endif
 
 #include "include/cef_browser.h"
@@ -60,7 +60,9 @@ public:
     return true;
   }
 
-  bool IsFrameless(CefRefPtr<CefWindow> window) override { return main_browser_; }
+  bool IsFrameless(CefRefPtr<CefWindow> window) override {
+    return main_browser_;
+  }
 
   CefRect GetInitialBounds(CefRefPtr<CefWindow> window) override {
     CefRect screen_size = KnossosHandler::GetInstance()->GetScreenSize();
@@ -129,21 +131,9 @@ void KnossosApp::OnContextInitialized() {
   CefRefPtr<CefCommandLine> command_line =
       CefCommandLine::GetGlobalCommandLine();
 
-  const bool enable_chrome_runtime =
-      command_line->HasSwitch("enable-chrome-runtime");
-
-#if defined(OS_WIN) || defined(OS_LINUX)
-  // The Views framework is currently only supported on Windows and Linux.
-  const bool use_views = true;
-#else
-  const bool use_views = true;
-#endif
-
-  std::string url;
-
   // Check if a "--url=" value was provided via the command-line. If so, use
   // that instead of the default URL.
-  url = command_line->GetSwitchValue("url");
+  std::string url = command_line->GetSwitchValue("url");
   if (url.empty())
     url = "https://files.client.fsnebula.org/index.html";
 
@@ -151,43 +141,19 @@ void KnossosApp::OnContextInitialized() {
         std::string(CefURIEncode(url, true));
 
   // KnossosHandler implements browser-level callbacks.
-  CefRefPtr<KnossosHandler> handler(
-      new KnossosHandler(use_views, _settings_path));
+  CefRefPtr<KnossosHandler> handler(new KnossosHandler(_settings_path));
 
   // Specify CEF browser settings here.
   CefBrowserSettings browser_settings;
 
-  if (use_views && !enable_chrome_runtime) {
-    // Create the BrowserView.
-    CefRefPtr<CefBrowserView> browser_view = CefBrowserView::CreateBrowserView(
-        handler, url, browser_settings, nullptr, nullptr,
-        new KnossosBrowserViewDelegate());
+  // Create the BrowserView.
+  CefRefPtr<CefBrowserView> browser_view = CefBrowserView::CreateBrowserView(
+      handler, url, browser_settings, nullptr, nullptr,
+      new KnossosBrowserViewDelegate());
 
-    // Create the Window. It will show itself after creation.
-    CefWindow::CreateTopLevelWindow(
-        new KnossosWindowDelegate(browser_view, true));
-  } else {
-    // Information used when creating the native window.
-    CefWindowInfo window_info;
-
-#if defined(OS_WIN)
-    // On Windows we need to specify certain flags that will be passed to
-    // CreateWindowEx().
-    window_info.SetAsPopup(NULL, "knossos");
-#else
-    CefRect screen_size = handler->GetScreenSize();
-
-    window_info.bounds.width = 1200;
-    window_info.bounds.height = 800;
-
-    window_info.bounds.x = (screen_size.width - window_info.bounds.width) / 2;
-    window_info.bounds.y = (screen_size.height - window_info.bounds.height) / 2 - 200;
-#endif
-
-    // Create the first browser window.
-    CefBrowserHost::CreateBrowser(window_info, handler, url, browser_settings,
-                                  nullptr, nullptr);
-  }
+  // Create the Window. It will show itself after creation.
+  CefWindow::CreateTopLevelWindow(
+      new KnossosWindowDelegate(browser_view, true));
 
   // Load libknossos on the thread dedicated to Knossos tasks
   handler->PostKnossosTask(base::BindOnce(PrepareLibKnossos, _settings_path));
@@ -198,7 +164,8 @@ void KnossosApp::OnContextInitialized() {
 static bool DirectoryExists(std::string path) {
 #if defined(OS_WIN)
   auto attrs = GetFileAttributesA(path.c_str());
-  return attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_DIRECTORY) != 0;
+  return attrs != INVALID_FILE_ATTRIBUTES &&
+         (attrs & FILE_ATTRIBUTE_DIRECTORY) != 0;
 #else
   struct stat statbuf;
   auto error = stat(path.c_str(), &statbuf);

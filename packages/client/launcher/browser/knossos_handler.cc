@@ -31,8 +31,8 @@ const int kReloadMenuItem = MENU_ID_USER_FIRST + 1;
 
 } // namespace
 
-KnossosHandler::KnossosHandler(bool use_views, std::string settings_path)
-    : use_views_(use_views), is_closing_(false), _settings_path(settings_path) {
+KnossosHandler::KnossosHandler(std::string settings_path)
+    : is_closing_(false), _settings_path(settings_path) {
   DCHECK(!g_instance);
 
   g_instance = this;
@@ -71,18 +71,13 @@ void KnossosHandler::OnTitleChange(CefRefPtr<CefBrowser> browser,
                                    const CefString &title) {
   CEF_REQUIRE_UI_THREAD();
 
-  if (use_views_) {
-    // Set the title of the window using the Views framework.
-    CefRefPtr<CefBrowserView> browser_view =
-        CefBrowserView::GetForBrowser(browser);
-    if (browser_view) {
-      CefRefPtr<CefWindow> window = browser_view->GetWindow();
-      if (window)
-        window->SetTitle(title);
-    }
-  } else {
-    // Set the title of the window using platform APIs.
-    PlatformTitleChange(browser, title);
+  // Set the title of the window using the Views framework.
+  CefRefPtr<CefBrowserView> browser_view =
+      CefBrowserView::GetForBrowser(browser);
+  if (browser_view) {
+    CefRefPtr<CefWindow> window = browser_view->GetWindow();
+    if (window)
+      window->SetTitle(title);
   }
 }
 

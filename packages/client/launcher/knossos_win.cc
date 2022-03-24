@@ -69,11 +69,6 @@ int APIENTRY wWinMain(HINSTANCE hInstance,
   }
   app->InitializeSettings(settings, appData);
 
-  if (command_line->HasSwitch("enable-chrome-runtime")) {
-    // Enable experimental Chrome runtime. See issue #2969 for details.
-    settings.chrome_runtime = true;
-  }
-
 #if !defined(CEF_USE_SANDBOX)
   settings.no_sandbox = true;
 #endif

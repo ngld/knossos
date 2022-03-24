@@ -18,7 +18,7 @@ class KnossosHandler : public CefClient,
                        public CefRequestHandler,
                        public CefDragHandler {
 public:
-  explicit KnossosHandler(bool use_views, std::string settings_path);
+  explicit KnossosHandler(std::string settings_path);
   ~KnossosHandler();
 
   // Provide access to the single global instance of this object.
@@ -127,9 +127,6 @@ private:
   void OpenFolderDialog(CefRefPtr<CefBrowser> browser, std::string title,
                         std::string folder,
                         CefRefPtr<CefRunFileDialogCallback> callback);
-
-  // True if the application is using the Views framework.
-  const bool use_views_;
 
   // List of existing browser windows. Only accessed on the CEF UI thread.
   typedef std::list<CefRefPtr<CefBrowser>> BrowserList;
