@@ -194,6 +194,8 @@ func InstallMod(ctx context.Context, req *client.InstallModRequest) error {
 		parent := modMeta.Parent
 		if modMeta.Type == common.ModType_ENGINE {
 			parent = "bin"
+		} else if modMeta.Type == common.ModType_TOTAL_CONVERSION {
+			parent = modMeta.Modid
 		} else if parent == "" {
 			parent = "FS2"
 		}
@@ -406,6 +408,7 @@ func InstallMod(ctx context.Context, req *client.InstallModRequest) error {
 				if ref != nil && (len(ref.Urls) != 1 || !strings.HasPrefix(ref.Urls[0], "file://")) {
 					dest := "ref_" + hex.EncodeToString([]byte(ref.Fileid)) + filepath.Ext(ref.Urls[0])
 					dest = filepath.Join(modFolder, dest)
+					mirrors := ref.Urls
 					ref.Urls = []string{"file://" + filepath.ToSlash(dest)}
 
 					// Only download missing images.
@@ -414,7 +417,7 @@ func InstallMod(ctx context.Context, req *client.InstallModRequest) error {
 						queueItems = append(queueItems, &downloader.QueueItem{
 							Key:      ref.Fileid,
 							Filepath: dest,
-							Mirrors:  ref.Urls,
+							Mirrors:  mirrors,
 							Checksum: nil,
 							Filesize: 0,
 						})

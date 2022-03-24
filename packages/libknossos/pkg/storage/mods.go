@@ -258,6 +258,10 @@ func (p genericModProvider) GetMods(ctx context.Context) ([]*common.Release, err
 		result = make([]*common.Release, 0)
 
 		return p.versionIndex.ForEach(func(modID string, versions []string) error {
+			if len(versions) < 1 {
+				return nil
+			}
+
 			item := bucket.Get([]byte(modID + "#" + versions[len(versions)-1]))
 			if item == nil {
 				return eris.Errorf("Failed to find mod %s from index", modID+"#"+versions[len(versions)-1])

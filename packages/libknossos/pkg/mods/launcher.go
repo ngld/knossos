@@ -38,7 +38,7 @@ func smartJoin(path ...string) string {
 func touchINI(ctx context.Context) error {
 	iniPath := filepath.Join(fso_interop.GetPrefPath(ctx), "fs2_open.ini")
 
-	f, err := os.OpenFile(iniPath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0660)
+	f, err := os.OpenFile(iniPath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o660)
 	if err != nil {
 		return eris.Wrapf(err, "failed to open %s", iniPath)
 	}
@@ -239,7 +239,14 @@ func LaunchMod(ctx context.Context, mod *common.Release, settings *client.UserSe
 	}
 
 	var parentFolder string
-	if modMeta.Parent != "FS2" && modMeta.Parent != "" {
+	if modMeta.Type == common.ModType_TOTAL_CONVERSION {
+		globalSettings, err := storage.GetSettings(ctx)
+		if err != nil {
+			return eris.Wrap(err, "failed to load settings")
+		}
+
+		parentFolder = filepath.Join(globalSettings.LibraryPath, modMeta.Modid)
+	} else if modMeta.Parent != "FS2" && modMeta.Parent != "" {
 		parentVersions, err := storage.LocalMods.GetVersionsForMod(ctx, modMeta.Parent)
 		if err != nil {
 			return err
@@ -307,7 +314,7 @@ func LaunchMod(ctx context.Context, mod *common.Release, settings *client.UserSe
 
 	cmdlineFile := filepath.Join(fso_interop.GetPrefPath(ctx), "data", "cmdline_fso.cfg")
 	cmdlineFolder := filepath.Dir(cmdlineFile)
-	err = os.MkdirAll(cmdlineFolder, 0770)
+	err = os.MkdirAll(cmdlineFolder, 0o770)
 	if err != nil {
 		return eris.Wrapf(err, "failed to create directories %s", cmdlineFolder)
 	}
