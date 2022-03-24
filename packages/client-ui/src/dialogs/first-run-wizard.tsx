@@ -10,14 +10,14 @@ import {
   ControlGroup,
   InputGroup,
 } from '@blueprintjs/core';
-import { makeAutoObservable, action, runInAction } from 'mobx';
+import { makeAutoObservable, runInAction } from 'mobx';
 import { observer } from 'mobx-react-lite';
 import { HandleRetailFilesRequest_Operation } from '@api/client';
 import { useGlobalState, GlobalState } from '../lib/state';
 import ErrorDialog from './error-dialog';
 
 class WizardState {
-  libraryPath: string = '';
+  libraryPath = '';
   retailDone = false;
 
   constructor() {
@@ -34,10 +34,10 @@ async function linkHandler(e: React.MouseEvent, gs: GlobalState, link: string): 
   e.preventDefault();
   try {
     await gs.client.openLink({ link });
-  } catch (e) {
+  } catch (err: unknown) {
     gs.launchOverlay(ErrorDialog, {
       title: 'Error',
-      message: e instanceof Error ? e.message : String(e),
+      message: err instanceof Error ? err.message : String(err),
     });
   }
 }
@@ -45,7 +45,7 @@ async function linkHandler(e: React.MouseEvent, gs: GlobalState, link: string): 
 function Link(props: LinkProps): React.ReactElement {
   const gs = useGlobalState();
   return (
-    <a href={props.href} onClick={(e) => linkHandler(e, gs, props.href)}>
+    <a href={props.href} onClick={(e) => void linkHandler(e, gs, props.href)}>
       {props.children}
     </a>
   );
@@ -211,20 +211,20 @@ const RetailPanel = observer(function RetailPanel(props: StepProps): React.React
           Solaris), you can skip this step.
         </p>
         <p>
-          <Button onClick={() => retailHandler(gs, props.state, ops.AUTO_GOG)}>
+          <Button onClick={() => void retailHandler(gs, props.state, ops.AUTO_GOG)}>
             Detect GOG installation
           </Button>{' '}
-          <Button onClick={() => retailHandler(gs, props.state, ops.AUTO_STEAM)}>
+          <Button onClick={() => void retailHandler(gs, props.state, ops.AUTO_STEAM)}>
             Detect Steam installation
           </Button>
         </p>
         <p>
-          <Button onClick={() => retailHandler(gs, props.state, ops.MANUAL_GOG)}>
+          <Button onClick={() => void retailHandler(gs, props.state, ops.MANUAL_GOG)}>
             Unpack GOG installer
           </Button>
         </p>
         <p>
-          <Button onClick={() => retailHandler(gs, props.state, ops.MANUAL_FOLDER)}>
+          <Button onClick={() => void retailHandler(gs, props.state, ops.MANUAL_FOLDER)}>
             Manually select FS2 folder
           </Button>
         </p>
@@ -249,7 +249,7 @@ const FinalPanel = observer(function FinalPanel(props: StepProps): React.ReactEl
         console.error('Failed to save library folder', e);
       }
     })();
-  }, [props.state.libraryPath]);
+  }, [gs.client, props.state.libraryPath]);
 
   return (
     <div className={Classes.DIALOG_BODY}>

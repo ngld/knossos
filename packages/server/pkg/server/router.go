@@ -10,6 +10,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/rotisserie/eris"
 	"github.com/rs/zerolog/log"
 	"github.com/unrolled/secure"
 
@@ -59,13 +60,13 @@ func startMux(pool *pgxpool.Pool, q *queries.DBQuerier, cfg *config.Config) erro
 
 	staticRoot, err := filepath.Abs(cfg.HTTP.StaticRoot)
 	if err != nil {
-		return err
+		return eris.Wrapf(err, "failed to construct path to static directory %s", cfg.HTTP.StaticRoot)
 	}
 	staticFS := http.Dir(staticRoot)
 
 	syncRoot, err := filepath.Abs(cfg.HTTP.SyncRoot)
 	if err != nil {
-		return err
+		return eris.Wrapf(err, "failed to construct path to sync directory %s", cfg.HTTP.SyncRoot)
 	}
 
 	r := mux.NewRouter()
@@ -113,5 +114,10 @@ func startMux(pool *pgxpool.Pool, q *queries.DBQuerier, cfg *config.Config) erro
 		}
 	}()
 
-	return muxServer.ListenAndServe()
+	err = muxServer.ListenAndServe()
+	if err != nil {
+		return eris.Wrap(err, "failed to listen")
+	}
+
+	return nil
 }

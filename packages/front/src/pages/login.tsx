@@ -1,7 +1,6 @@
 import React from 'react';
 import { runInAction } from 'mobx';
-import type { RouteComponentProps } from 'react-router-dom';
-import type { History } from 'history';
+import { useNavigate, NavigateFunction } from 'react-router-dom';
 
 import { useGlobalState, GlobalState } from '../lib/state';
 import { Form, Field, FormButton, Errors, DefaultOptions, twirpRequest } from '../components/form';
@@ -25,7 +24,7 @@ function validate(state: FormState): Errors<FormState> {
 async function submitForm(
   state: FormState,
   defaults: DefaultOptions,
-  history: History,
+  navigate: NavigateFunction,
   gs: GlobalState,
 ) {
   const response = await twirpRequest(gs.client.login.bind(gs.client), defaults, {
@@ -60,12 +59,13 @@ async function submitForm(
     );
 
     void gs.user?.login(response.token);
-    history.push('/');
+    navigate('/');
   }
 }
 
-export default function LoginPage(props: RouteComponentProps): React.ReactElement {
+export default function LoginPage(): React.ReactElement {
   const gs = useGlobalState();
+  const navigate = useNavigate();
 
   return (
     <div className="max-w-md">
@@ -77,16 +77,14 @@ export default function LoginPage(props: RouteComponentProps): React.ReactElemen
           } as FormState
         }
         onValidate={validate}
-        onSubmit={(s, d) => submitForm(s, d, props.history, gs)}
+        onSubmit={(s, d) => void submitForm(s, d, navigate, gs)}
       >
         <Field name="user" label="Username" />
         <Field name="password" label="Password" type="password" />
         <FormButton type="submit" intent="primary">
           Login
         </FormButton>{' '}
-        <FormButton onClick={() => props.history.push('/login/reset-password')}>
-          Reset Password
-        </FormButton>
+        <FormButton onClick={() => navigate('/login/reset-password')}>Reset Password</FormButton>
       </Form>
     </div>
   );

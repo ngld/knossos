@@ -50,7 +50,7 @@ function UpdaterPrompt(props: UpdaterPromptProps): React.ReactNode {
               intent="primary"
               onClick={() => {
                 setOpen(false);
-                triggerUpdate(gs, props);
+                void triggerUpdate(gs, props);
               }}
             >
               Yes

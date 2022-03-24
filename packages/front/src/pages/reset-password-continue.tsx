@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { runInAction } from 'mobx';
 import { fromPromise } from 'mobx-utils';
 import { observer } from 'mobx-react-lite';
-import type { RouteComponentProps } from 'react-router-dom';
-import type { History } from 'history';
+import { useParams, useNavigate, NavigateFunction } from 'react-router-dom';
 import type { TokenResponse } from '@api/service';
 import { RpcError } from '@protobuf-ts/runtime-rpc';
 import { Spinner, Callout, Button } from '@blueprintjs/core';
@@ -37,7 +36,7 @@ function validate(state: FormState): Errors<FormState> {
 async function submitForm(
   state: FormState,
   defaults: DefaultOptions,
-  history: History,
+  navigate: NavigateFunction,
   gs: GlobalState,
 ) {
   const response = await twirpRequest(gs.client.resetPassword.bind(gs.client), defaults, {
@@ -66,7 +65,7 @@ async function submitForm(
       'reset-password-continue-success',
     );
 
-    history.push('/login');
+    navigate('/login');
   }
 }
 
@@ -91,15 +90,11 @@ async function prepare(gs: GlobalState, token: string): Promise<string> {
   return response?.token ?? '';
 }
 
-export interface ResetPasswordParams {
-  token: string;
-}
-
-export default observer(function ResetPasswordPage(
-  props: RouteComponentProps<ResetPasswordParams>,
-): React.ReactElement {
+export default observer(function ResetPasswordPage(): React.ReactElement {
   const gs = useGlobalState();
-  const [info] = useState(() => fromPromise(prepare(gs, props.match.params.token)));
+  const params = useParams<'token'>();
+  const navigate = useNavigate();
+  const [info] = useState(() => fromPromise(prepare(gs, params.token ?? '')));
 
   return (
     <div className="max-w-md">
@@ -123,7 +118,7 @@ export default observer(function ResetPasswordPage(
                 intent="primary"
                 onClick={(e: React.MouseEvent) => {
                   e.preventDefault();
-                  props.history.push('/login/password-reset');
+                  navigate('/login/password-reset');
                 }}
               >
                 Reset Password
@@ -139,7 +134,7 @@ export default observer(function ResetPasswordPage(
                 } as FormState
               }
               onValidate={validate}
-              onSubmit={(s, d) => submitForm(s, d, props.history, gs)}
+              onSubmit={(s, d) => void submitForm(s, d, navigate, gs)}
             >
               <Field name="password" label="Password" type="password" />
               <Field

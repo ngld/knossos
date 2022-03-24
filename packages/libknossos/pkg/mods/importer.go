@@ -195,7 +195,7 @@ func ImportMods(ctx context.Context, modFiles []string) error {
 			if !mod.DevMode {
 				api.Log(ctx, api.LogInfo, "Converting folder structure to dev mode for %s %s", mod.Title, mod.Version)
 				workPath := filepath.Join(modPath, "__dev_work")
-				err := os.Mkdir(workPath, 0770)
+				err := os.Mkdir(workPath, 0o770)
 				if err != nil {
 					return eris.Wrapf(err, "failed to create working directory %s", workPath)
 				}
@@ -221,7 +221,7 @@ func ImportMods(ctx context.Context, modFiles []string) error {
 
 				for _, pkg := range mod.Packages {
 					pkgPath := filepath.Join(modPath, pkg.Folder)
-					err = os.Mkdir(pkgPath, 0770)
+					err = os.Mkdir(pkgPath, 0o770)
 					if err != nil && !eris.Is(err, os.ErrExist) {
 						return eris.Wrapf(err, "failed to create folder for package %s (%s)", pkg.Name, pkg.Folder)
 					}
@@ -231,7 +231,7 @@ func ImportMods(ctx context.Context, modFiles []string) error {
 						dest := filepath.Join(pkgPath, pkgFile.Filename)
 						destParent := filepath.Dir(dest)
 
-						err = os.MkdirAll(destParent, 0770)
+						err = os.MkdirAll(destParent, 0o770)
 						if err != nil {
 							relPath, suberr := filepath.Rel(modPath, dest)
 							if suberr != nil {
@@ -280,7 +280,7 @@ func ImportMods(ctx context.Context, modFiles []string) error {
 				}
 
 				data = bytes.Replace(data, []byte(`"dev_mode": false,`), []byte(`"dev_mode": true,`), 1)
-				err = os.WriteFile(modFile, data, 0600)
+				err = os.WriteFile(modFile, data, 0o600)
 				if err != nil {
 					return eris.Wrapf(err, "failed to update dev_mode field in %s", modFile)
 				}

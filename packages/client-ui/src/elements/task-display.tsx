@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Classes, Button, Dialog, ProgressBar, Text } from '@blueprintjs/core';
-import CiTimesLine from "~icons/clarity/times-line"
+import CiTimesLine from '~icons/clarity/times-line';
 import { Tooltip2 } from '@blueprintjs/popover2';
 import { action } from 'mobx';
 import { observer } from 'mobx-react-lite';
@@ -107,10 +107,11 @@ export default observer(function TaskDisplay(): React.ReactElement {
                 </Text>
                 {(task.progress === 1 || task.error) && (
                   <div className="absolute right-0 top-0">
-                    {task.canCancel &&
-                    <Button minimal small onClick={() => gs.tasks.cancelTask(task.id)}>
-                      Cancel
-                    </Button>}
+                    {task.canCancel && (
+                      <Button minimal small onClick={() => gs.tasks.cancelTask(task.id)}>
+                        Cancel
+                      </Button>
+                    )}
                     <Button
                       minimal
                       small

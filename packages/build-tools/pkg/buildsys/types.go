@@ -118,11 +118,15 @@ func (p StarlarkPath) Truth() starlark.Bool {
 }
 
 func (p StarlarkPath) Hash() (uint32, error) {
+	//nolint:wrapcheck  // This just forwards the call
 	return starlark.String(p).Hash()
 }
 
-func (p StarlarkPath) CompareSameType(op starsyntax.Token, y_ starlark.Value, depth int) (bool, error) {
-	y := y_.(StarlarkPath)
+func (p StarlarkPath) CompareSameType(op starsyntax.Token, rawY starlark.Value, depth int) (bool, error) {
+	y, ok := rawY.(StarlarkPath)
+	if !ok {
+		panic("expected StarlarkPath as second parameter but got a different type")
+	}
 
 	switch op {
 	case starsyntax.EQL:
@@ -137,9 +141,9 @@ func (p StarlarkPath) CompareSameType(op starsyntax.Token, y_ starlark.Value, de
 		return p > y, nil
 	case starsyntax.GE:
 		return p >= y, nil
+	default:
+		return false, eris.Errorf("unknown operator %v", op)
 	}
-
-	return false, eris.Errorf("unknown operator %v", op)
 }
 
 func (p StarlarkPath) Index(i int) starlark.Value {
@@ -180,7 +184,10 @@ func (a StarlarkShellArgs) Hash() (uint32, error) { return 0, eris.New("hashing 
 
 // Comparable
 func (a StarlarkShellArgs) CompareSameType(op starsyntax.Token, y starlark.Value, depth int) (bool, error) {
-	other := y.(StarlarkShellArgs)
+	other, ok := y.(StarlarkShellArgs)
+	if !ok {
+		panic("exepcted second parameter to be StarlarkShellArgs")
+	}
 
 	if len(a) != len(other) {
 		return false, nil

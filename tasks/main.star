@@ -43,7 +43,7 @@ Task help:
 """
 
 load("options.star", "build", "generator_opt", "msys2_path")
-load("helpers.star", "protoc", "yarn")
+load("helpers.star", "protoc", "yarn", "yarn_path")
 load("nebula.star", "nebula_configure")
 load("knossos.star", "knossos_configure")
 load("third_party.star", "third_party_configure")
@@ -244,6 +244,18 @@ def configure():
         deps = ["fetch-deps", "proto-build"],
         cmds = [yarn("lint")],
     )
+
+    if OS == "windows":
+        write_file("yarn.bat", """@echo off
+set "PATH=%s"
+node %s %*
+""" % (getenv("PATH"), yarn_path))
+    else:
+        write_file("yarn", """#!/bin/bash
+export PATH="%s"
+exec node "%s" "$@"
+""" % (getenv("PATH"), yarn_path))
+        execute("chmod u+x ./yarn")
 
     nebula_configure(binext)
     third_party_configure(binext, libext, generator)

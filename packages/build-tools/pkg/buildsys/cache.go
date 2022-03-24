@@ -3,6 +3,8 @@ package buildsys
 import (
 	"encoding/gob"
 	"os"
+
+	"github.com/rotisserie/eris"
 )
 
 func init() {
@@ -15,28 +17,33 @@ func init() {
 func WriteCache(file string, options map[string]string, list TaskList, scriptFiles []string) error {
 	handle, err := os.Create(file)
 	if err != nil {
-		return err
+		return eris.Wrapf(err, "failed to create %s", file)
 	}
 	defer handle.Close()
 
 	encoder := gob.NewEncoder(handle)
 	err = encoder.Encode(options)
 	if err != nil {
-		return err
+		return eris.Wrap(err, "failed to write options")
 	}
 
 	err = encoder.Encode(list)
 	if err != nil {
-		return err
+		return eris.Wrap(err, "failed to write tasks")
 	}
 
-	return encoder.Encode(scriptFiles)
+	err = encoder.Encode(scriptFiles)
+	if err != nil {
+		return eris.Wrap(err, "failed to write scripts")
+	}
+
+	return nil
 }
 
 func ReadCache(file string) (map[string]string, TaskList, []string, error) {
 	handle, err := os.Open(file)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, eris.Wrapf(err, "failed to open %s", file)
 	}
 	defer handle.Close()
 
@@ -45,19 +52,19 @@ func ReadCache(file string) (map[string]string, TaskList, []string, error) {
 	var options map[string]string
 	err = decoder.Decode(&options)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, eris.Wrap(err, "failed to parse options")
 	}
 
 	var result TaskList
 	err = decoder.Decode(&result)
 	if err != nil {
-		return options, nil, nil, err
+		return options, nil, nil, eris.Wrap(err, "failed to parse tasks")
 	}
 
 	var scriptFiles []string
 	err = decoder.Decode(&scriptFiles)
 	if err != nil {
-		return options, nil, nil, err
+		return options, nil, nil, eris.Wrap(err, "failed to parse scripts")
 	}
 
 	return options, result, scriptFiles, nil

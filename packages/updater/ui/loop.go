@@ -35,6 +35,8 @@ func RunApp(title string, width, height int32) error {
 	if err != nil {
 		return eris.Wrap(err, "failed to create window")
 	}
+	// If we fail to destroy the window during quitting, there's nothing we can do about it.
+	//nolint:errcheck
 	defer window.Destroy()
 
 	context := imgui.CreateContext(nil)
@@ -46,20 +48,21 @@ func RunApp(title string, width, height int32) error {
 	initKeyMapping(io)
 	loadFont(io)
 
+	// If we fail to set an attribute, it's fine since none of them are critical.
 	if runtime.GOOS == "darwin" {
 		// Always required on Mac
-		sdl.GLSetAttribute(sdl.GL_CONTEXT_FLAGS, sdl.GL_CONTEXT_FORWARD_COMPATIBLE_FLAG)
+		_ = sdl.GLSetAttribute(sdl.GL_CONTEXT_FLAGS, sdl.GL_CONTEXT_FORWARD_COMPATIBLE_FLAG)
 	} else {
-		sdl.GLSetAttribute(sdl.GL_CONTEXT_FLAGS, 0)
+		_ = sdl.GLSetAttribute(sdl.GL_CONTEXT_FLAGS, 0)
 	}
 
-	sdl.GLSetAttribute(sdl.GL_CONTEXT_PROFILE_MASK, sdl.GL_CONTEXT_PROFILE_CORE)
-	sdl.GLSetAttribute(sdl.GL_CONTEXT_MAJOR_VERSION, 3)
-	sdl.GLSetAttribute(sdl.GL_CONTEXT_MINOR_VERSION, 2)
+	_ = sdl.GLSetAttribute(sdl.GL_CONTEXT_PROFILE_MASK, sdl.GL_CONTEXT_PROFILE_CORE)
+	_ = sdl.GLSetAttribute(sdl.GL_CONTEXT_MAJOR_VERSION, 3)
+	_ = sdl.GLSetAttribute(sdl.GL_CONTEXT_MINOR_VERSION, 2)
 
-	sdl.GLSetAttribute(sdl.GL_DOUBLEBUFFER, 1)
-	sdl.GLSetAttribute(sdl.GL_DEPTH_SIZE, 24)
-	sdl.GLSetAttribute(sdl.GL_STENCIL_SIZE, 8)
+	_ = sdl.GLSetAttribute(sdl.GL_DOUBLEBUFFER, 1)
+	_ = sdl.GLSetAttribute(sdl.GL_DEPTH_SIZE, 24)
+	_ = sdl.GLSetAttribute(sdl.GL_STENCIL_SIZE, 8)
 
 	glCtx, err := window.GLCreateContext()
 	if err != nil {
@@ -71,7 +74,11 @@ func RunApp(title string, width, height int32) error {
 		return eris.Wrap(err, "failed to make the OpenGL context current")
 	}
 
-	sdl.GLSetSwapInterval(1)
+	err = sdl.GLSetSwapInterval(1)
+	if err != nil {
+		return eris.Wrap(err, "failed to set OpenGL swap interval")
+	}
+
 	renderer, err := NewOpenGL3(io)
 	if err != nil {
 		return eris.Wrap(err, "failed to initialise OpenGL3 renderer")
@@ -88,6 +95,7 @@ func RunApp(title string, width, height int32) error {
 			case sdl.QUIT:
 				running = false
 			case sdl.MOUSEWHEEL:
+				//nolint:forcetypeassert // type is guarenteed here
 				wheelEvent := event.(*sdl.MouseWheelEvent)
 				var deltaX, deltaY float32
 				if wheelEvent.X > 0 {
@@ -102,6 +110,7 @@ func RunApp(title string, width, height int32) error {
 				}
 				io.AddMouseWheelDelta(deltaX, deltaY)
 			case sdl.MOUSEBUTTONDOWN:
+				//nolint:forcetypeassert // type is guarenteed here
 				buttonEvent := event.(*sdl.MouseButtonEvent)
 				switch buttonEvent.Button {
 				case sdl.BUTTON_LEFT:
@@ -112,13 +121,16 @@ func RunApp(title string, width, height int32) error {
 					buttonsDown[2] = true
 				}
 			case sdl.TEXTINPUT:
+				//nolint:forcetypeassert // type is guarenteed here
 				inputEvent := event.(*sdl.TextInputEvent)
 				io.AddInputCharacters(string(inputEvent.Text[:]))
 			case sdl.KEYDOWN:
+				//nolint:forcetypeassert // type is guarenteed here
 				keyEvent := event.(*sdl.KeyboardEvent)
 				io.KeyPress(int(keyEvent.Keysym.Scancode))
 				updateKeyModifier(io)
 			case sdl.KEYUP:
+				//nolint:forcetypeassert // type is guarenteed here
 				keyEvent := event.(*sdl.KeyboardEvent)
 				io.KeyRelease(int(keyEvent.Keysym.Scancode))
 				updateKeyModifier(io)

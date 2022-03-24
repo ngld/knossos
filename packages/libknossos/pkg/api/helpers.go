@@ -109,7 +109,12 @@ func GetTaskContext(ctx context.Context, required bool) *TaskCtxParams {
 		return nil
 	}
 
-	return params.(*TaskCtxParams)
+	result, ok := params.(*TaskCtxParams)
+	if !ok {
+		panic("wrong type in task context")
+	}
+
+	return result
 }
 
 func logImpl(ctx context.Context, level LogLevel, message string, args ...interface{}) {
@@ -118,7 +123,12 @@ func logImpl(ctx context.Context, level LogLevel, message string, args ...interf
 		panic("Invalid context provided. This is not a KnossosContext")
 	}
 
-	params.(KnossosCtxParams).LogCallback(level, message, args...)
+	knCtx, ok := params.(KnossosCtxParams)
+	if !ok {
+		panic("wrong type in knossos context")
+	}
+
+	knCtx.LogCallback(level, message, args...)
 }
 
 // Log records the passed log message in the hosting application's log.
@@ -140,7 +150,12 @@ func DispatchMessage(ctx context.Context, event *client.ClientSentEvent) error {
 		panic("Invalid context provided. This is not a KnossosContext")
 	}
 
-	return params.(KnossosCtxParams).MessageCallback(event)
+	knCtx, ok := params.(KnossosCtxParams)
+	if !ok {
+		panic("wrong type in knossos context")
+	}
+
+	return knCtx.MessageCallback(event)
 }
 
 // ResourcePath returns the path to the bundled resource files
@@ -150,7 +165,12 @@ func ResourcePath(ctx context.Context) string {
 		panic("Invalid context provided. This is not a KnossosContext")
 	}
 
-	return params.(KnossosCtxParams).ResourcePath
+	knCtx, ok := params.(KnossosCtxParams)
+	if !ok {
+		panic("wrong type in knossos context")
+	}
+
+	return knCtx.ResourcePath
 }
 
 // SettingsPath returns the path to the current settings directory (either the current portable directory or the
@@ -161,7 +181,12 @@ func SettingsPath(ctx context.Context) string {
 		panic("Invalid context provided. This is not a KnossosContext")
 	}
 
-	return params.(KnossosCtxParams).SettingsPath
+	knCtx, ok := params.(KnossosCtxParams)
+	if !ok {
+		panic("wrong type in knossos context")
+	}
+
+	return knCtx.SettingsPath
 }
 
 // UpdateTask updates the state of a task started by the UI (JavaScript). `ref` contains the task ID and is used by the
@@ -282,7 +307,12 @@ func RunTask(ctx context.Context, ref uint32, task func(context.Context) error) 
 	ctx, cancel := context.WithCancel(ctx)
 	taskCancels[ref] = cancel
 
-	taskCtx := WithKnossosContext(context.Background(), ctx.Value(knKey{}).(KnossosCtxParams))
+	knCtx, ok := ctx.Value(knKey{}).(KnossosCtxParams)
+	if !ok {
+		panic("wrong type in knossos context")
+	}
+
+	taskCtx := WithKnossosContext(context.Background(), knCtx)
 	taskCtx = WithTaskContext(taskCtx, TaskCtxParams{Ref: ref})
 
 	go func() {

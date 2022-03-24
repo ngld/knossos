@@ -15,7 +15,6 @@ module.exports = {
     ],
   ],
   plugins: [
-    require.resolve('./import-fixer'),
     ['@babel/plugin-proposal-decorators', { legacy: true }],
     ['@babel/plugin-proposal-class-properties', { loose: false }],
     '@babel/plugin-transform-react-inline-elements',

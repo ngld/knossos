@@ -1,7 +1,7 @@
-import React, {useContext} from 'react';
-import {observer} from 'mobx-react-lite';
-import {Button, IButtonProps} from '@blueprintjs/core';
-import {FormContext} from './form-ctx';
+import React, { useContext } from 'react';
+import { observer } from 'mobx-react-lite';
+import { Button, IButtonProps } from '@blueprintjs/core';
+import { FormContext } from './form-ctx';
 
 interface ButtonProps extends IButtonProps {
   children?: React.ReactNode | React.ReactNode[];

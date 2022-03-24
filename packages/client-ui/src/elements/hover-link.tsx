@@ -6,6 +6,6 @@ export default styled.a`
 
   &:hover {
     color: #fff;
-	  opacity: 1;
+    opacity: 1;
   }
 `;

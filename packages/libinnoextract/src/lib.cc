@@ -103,4 +103,3 @@ void warning_suppressor::flush() {
 	logger::total_warnings += warnings;
 	logger::total_errors += errors;
 }
-

@@ -71,14 +71,14 @@ func GetDependencySnapshot(ctx context.Context, mods storage.ModProvider, releas
 
 				if messages == nil {
 					return nil, eris.New("unable to satisfy constraints")
-				} else {
-					msgList := make([]string, 0, len(messages))
-					for _, msg := range messages {
-						msgList = append(msgList, msg)
-					}
-
-					return nil, eris.Errorf("could not resolve conflict: %s which doesn't match what some of the other mods require", strings.Join(msgList, "\n"))
 				}
+
+				msgList := make([]string, 0, len(messages))
+				for _, msg := range messages {
+					msgList = append(msgList, msg)
+				}
+
+				return nil, eris.Errorf("could not resolve conflict: %s which doesn't match what some of the other mods require", strings.Join(msgList, "\n"))
 			}
 
 			// Remove the last path mod from the path, put it back in the queue (along with our current mod)

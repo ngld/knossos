@@ -89,10 +89,12 @@ func SendRegistrationMail(ctx context.Context, cfg *config.Config, params RegMai
 	case "STARTTLS":
 		err = mail.SendWithStartTLS(addr, auth, &tls.Config{
 			ServerName: cfg.Mail.Server,
+			MinVersion: tls.VersionTLS12,
 		})
 	case "SSL":
 		err = mail.SendWithTLS(addr, auth, &tls.Config{
 			ServerName: cfg.Mail.Server,
+			MinVersion: tls.VersionTLS12,
 		})
 	default:
 		err = mail.Send(addr, auth)

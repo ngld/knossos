@@ -26,27 +26,27 @@ var RootCmd = &cobra.Command{
 		options := make(map[string]string)
 		dryRun, err := cmd.Flags().GetBool("dry")
 		if err != nil {
-			return err
+			return eris.Wrap(err, "failed to check --dry flag")
 		}
 
 		force, err := cmd.Flags().GetBool("force")
 		if err != nil {
-			return err
+			return eris.Wrap(err, "failed to check --force flag")
 		}
 
 		listTasks, err := cmd.Flags().GetBool("list")
 		if err != nil {
-			return err
+			return eris.Wrap(err, "failed to check --list flag")
 		}
 
 		listOpts, err := cmd.Flags().GetBool("options")
 		if err != nil {
-			return err
+			return eris.Wrap(err, "failed to check --options flag")
 		}
 
 		noDeps, err := cmd.Flags().GetBool("no-deps")
 		if err != nil {
-			return err
+			return eris.Wrap(err, "failed to check --no-deps flag")
 		}
 
 		for _, part := range args {

@@ -63,7 +63,12 @@ func getAuthContext(ctx context.Context) (*authContext, error) {
 		return nil, ErrAuthCtxMissing
 	}
 
-	return authCtxPtr.(*authContext), nil
+	authCtx, ok := authCtxPtr.(*authContext)
+	if !ok {
+		panic("wrong type in auth context")
+	}
+
+	return authCtx, nil
 }
 
 // IssueToken generates a new session token with the associated user
@@ -74,7 +79,12 @@ func IssueToken(ctx context.Context, username string, uid int, roles []string) (
 	}
 
 	user := guardian.NewUserInfo(username, fmt.Sprint(uid), roles, nil)
-	return jwt.IssueAccessToken(user, *authCtx.jwtSecrets)
+	token, err := jwt.IssueAccessToken(user, *authCtx.jwtSecrets)
+	if err != nil {
+		return "", eris.Wrapf(err, "failed to issue access token for %s", username)
+	}
+
+	return token, nil
 }
 
 // GetUser returns the current user info
@@ -130,7 +140,7 @@ func CheckPermission(ctx context.Context, perm Permission, bag Bag) error {
 
 	allowed, err := role.Can(string(perm), encBag)
 	if err != nil {
-		return err
+		return eris.Wrapf(err, "failed to check permission %s against role %s", perm, role.RoleID)
 	}
 
 	if !allowed {

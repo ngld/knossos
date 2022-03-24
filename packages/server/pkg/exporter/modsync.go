@@ -242,7 +242,7 @@ func buildReleaseFromRow(ctx context.Context, q queries.Querier, row queries.Get
 	return rel, nil
 }
 
-func calcVersionsChecksum(ctx context.Context, versions []string) ([]byte, error) {
+func calcVersionsChecksum(_ context.Context, versions []string) ([]byte, error) {
 	// We use simple string sorting here instead of proper versioning sorting since it doesn't matter *how* the versions
 	// are sorted as long as they appear in the same order on server and client.
 	sort.Strings(versions)
@@ -251,14 +251,14 @@ func calcVersionsChecksum(ctx context.Context, versions []string) ([]byte, error
 	for _, version := range versions {
 		_, err := hasher.Write([]byte(version))
 		if err != nil {
-			return nil, err
+			return nil, eris.Wrap(err, "failed to calculate hash")
 		}
 	}
 
 	return hasher.Sum(nil), nil
 }
 
-func writePack(ctx context.Context, modID string, storagePath string, packnum uint32, relID int, pack []*common.Release) error {
+func writePack(_ context.Context, modID string, storagePath string, packnum uint32, relID int, pack []*common.Release) error {
 	modpack := &common.ReleasePack{
 		Modid:    modID,
 		Packnum:  packnum,
@@ -487,7 +487,7 @@ func updateModIndex(ctx context.Context, q queries.Querier, entry *common.ModInd
 	return err
 }
 
-func writeModMetaFile(ctx context.Context, mod queries.GetPublicModUpdatedDatesRow, storagePath string) error {
+func writeModMetaFile(_ context.Context, mod queries.GetPublicModUpdatedDatesRow, storagePath string) error {
 	// We always update the mod metadata files since they're small and fast to write and we don't have a marker
 	// to check for updates.
 	modMeta := &common.ModMeta{

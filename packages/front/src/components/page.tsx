@@ -10,7 +10,7 @@ import {
   Button,
 } from '@blueprintjs/core';
 import { Popover2 } from '@blueprintjs/popover2';
-import { Switch, Route, useHistory } from 'react-router-dom';
+import { Routes, Route, useNavigate } from 'react-router-dom';
 import { Observer } from 'mobx-react-lite';
 
 import { useGlobalState } from '../lib/state';
@@ -29,7 +29,7 @@ interface Props {
 
 export default function Page(_props: Props): React.ReactElement {
   const gs = useGlobalState();
-  const history = useHistory();
+  const navigate = useNavigate();
 
   return (
     <>
@@ -38,8 +38,8 @@ export default function Page(_props: Props): React.ReactElement {
           <NavbarGroup>
             <NavbarHeading>Neo Nebula</NavbarHeading>
             <NavbarDivider />
-            <Button minimal icon="home" text="Home" onClick={() => history.push('/')} />
-            <Button minimal icon="widget" text="Mods" onClick={() => history.push('/mods')} />
+            <Button minimal icon="home" text="Home" onClick={() => navigate('/')} />
+            <Button minimal icon="widget" text="Mods" onClick={() => navigate('/mods')} />
             <Observer>
               {() =>
                 gs.user?.loggedIn ? (
@@ -65,16 +65,16 @@ export default function Page(_props: Props): React.ReactElement {
                 gs.user?.loggedIn ? (
                   <>
                     {gs.user.username}
-                    <Button minimal={true} icon="log-out" onClick={() => history.push('/logout')}>
+                    <Button minimal={true} icon="log-out" onClick={() => navigate('/logout')}>
                       Logout
                     </Button>
                   </>
                 ) : (
                   <>
-                    <Button minimal={true} icon="log-in" onClick={() => history.push('/login')}>
+                    <Button minimal={true} icon="log-in" onClick={() => navigate('/login')}>
                       Login
                     </Button>
-                    <Button minimal={true} icon="key" onClick={() => history.push('/register')}>
+                    <Button minimal={true} icon="key" onClick={() => navigate('/register')}>
                       Register
                     </Button>
                   </>
@@ -86,25 +86,30 @@ export default function Page(_props: Props): React.ReactElement {
       </Navbar>
 
       <div className="container py-5 max-w-screen-lg mx-auto">
-        <Switch>
-          <Route exact path="/">
-            <H1>Welcome back!</H1>
-            <p>Well, here we go again...</p>
-            <p>Let's hope this attempt works out better than last time.</p>
-          </Route>
-          <Route exact path="/register" component={Register} />
-          <Route exact path="/login" component={Login} />
-          <Route exact path="/login/reset-password" component={ResetPassword} />
-          <Route exact path="/mail/reset/:token" component={ResetPasswordContinued} />
-          <Route exact path="/logout" component={Logout} />
-          <Route exact path="/mods" component={ModList} />
-          <Route path="/mod/:modid/:version" component={ModDetails} />
-          <Route path="/mod/:modid" component={ModDetails} />
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <>
+                <H1>Welcome back!</H1>
+                <p>Well, here we go again...</p>
+                <p>Let's hope this attempt works out better than last time.</p>
+              </>
+            }
+          />
+          <Route path="/register" element={<Register />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/login/reset-password" element={<ResetPassword />} />
+          <Route path="/mail/reset/:token" element={<ResetPasswordContinued />} />
+          <Route path="/logout" element={<Logout />} />
+          <Route path="/mods" element={<ModList />} />
+          <Route path="/mod/:modid/:version" element={<ModDetails />} />
+          <Route path="/mod/:modid" element={<ModDetails />} />
           <Route path="*">
             <H1>Not Found</H1>
             <p>I'm sorry but I could not find what you're looking for.</p>
           </Route>
-        </Switch>
+        </Routes>
       </div>
 
       <AlertContainer />

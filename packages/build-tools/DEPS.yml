@@ -107,13 +107,13 @@ deps:
     strip: 1
     dest: third_party/cef
 
-# Disabled for now since the download seems to be missing.
-#  cef-darwin-arm64:
-#    sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-#    if: darwin && arm64 && ci
-#    url: https://cef-builds.spotifycdn.com/cef_binary_{CEF}_macosarm64_minimal.tar.bz2
-#    strip: 1
-#    dest: third_party/cef
+  # Disabled for now since the download seems to be missing.
+  #  cef-darwin-arm64:
+  #    sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  #    if: darwin && arm64 && ci
+  #    url: https://cef-builds.spotifycdn.com/cef_binary_{CEF}_macosarm64_minimal.tar.bz2
+  #    strip: 1
+  #    dest: third_party/cef
 
   cef-win64-full:
     sha256: 441a80c3040292963db78c0c06d418ad1ae2c60918eceedb0138c9b7e7ef68b8
@@ -145,7 +145,7 @@ deps:
     sha256: 0548cc4c1f667ba8ab22760e039d2c8a088b419b432c9597eb8adf8235c13fab
     if: windows && amd64 && !ci
     url: http://repo.msys2.org/distrib/x86_64/msys2-base-x86_64-{MSYS_BUILD}.sfx.exe
-    sfxArgs: "-y -othird_party"
+    sfxArgs: '-y -othird_party'
     dest: third_party/msys64
 
   nodejs-linux:
@@ -204,7 +204,7 @@ deps:
 
   openal:
     sha256: c8ad767e9a3230df66756a21cc8ebf218a9d47288f2514014832204e666af5d8
-    if: "!windows"
+    if: '!windows'
     url: https://openal-soft.org/openal-releases/openal-soft-{OPENAL_SOFT}.tar.bz2
     strip: 1
     dest: third_party/openal

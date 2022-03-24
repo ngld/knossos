@@ -56,6 +56,7 @@ func LoadLibrary(libPath string) error {
 	cLibPath := C.CString(libPath)
 	defer C.free(unsafe.Pointer(cLibPath))
 
+	//nolint:gocritic // I have no clue what gocritic is talking about here
 	success := C.load_libinnoextract(cLibPath, &errorPtr)
 	if !success {
 		return eris.New(C.GoString(errorPtr))

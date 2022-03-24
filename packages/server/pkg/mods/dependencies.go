@@ -41,12 +41,12 @@ func (item constraintItem) String() string {
 	return fmt.Sprintf("%s (%s)", item.constraint, item.source)
 }
 
-func pickNaiveVersion(ctx context.Context, available []string, constraints *semver.Constraints) (string, error) {
+func pickNaiveVersion(_ context.Context, available []string, constraints *semver.Constraints) (string, error) {
 	parsedVersions := make(semver.Collection, len(available))
 	for idx, rawVer := range available {
 		ver, err := semver.StrictNewVersion(rawVer)
 		if err != nil {
-			return "", err
+			return "", eris.Wrapf(err, "failed to parse version %s", rawVer)
 		}
 
 		parsedVersions[idx] = ver
@@ -88,7 +88,7 @@ func GetDependencySnapshot(ctx context.Context, q *queries.DBQuerier, modid stri
 			var deps queryDependencyList
 			err = pkg.JsonbAgg.AssignTo(&deps)
 			if err != nil {
-				return nil, err
+				return nil, eris.Wrapf(err, "failed to parse dependencies for package %s of %s", *pkg.Name, modReq.modid)
 			}
 
 			for _, dep := range deps {

@@ -1,21 +1,22 @@
 import React, { useEffect } from 'react';
-import type { RouteComponentProps } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { H1, Spinner } from '@blueprintjs/core';
 
 import { useGlobalState } from '../lib/state';
 
-export default function LoginPage(props: RouteComponentProps): React.ReactElement {
+export default function LoginPage(): React.ReactElement {
   const gs = useGlobalState();
+  const navigate = useNavigate();
 
   useEffect(() => {
     gs.user?.logout();
-    props.history.push('/');
+    navigate('/');
 
     gs.toaster.show({
       message: "You're now logged out.",
       intent: 'success',
     });
-  }, [gs.user, props.history, gs.toaster]);
+  }, [gs.user, navigate, gs.toaster]);
 
   return (
     <div className="max-w-md">

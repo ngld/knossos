@@ -8,4 +8,3 @@ ADD ./templates /app/templates
 WORKDIR /app
 
 ENTRYPOINT ["/app/nebula"]
-

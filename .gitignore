@@ -25,6 +25,8 @@ compile_commands.json
 .yarn/unplugged/
 .yarn/*-state.*
 .pnp.cjs
+/yarn
+/yarn.bat
 
 # macOS
 .DS_Store

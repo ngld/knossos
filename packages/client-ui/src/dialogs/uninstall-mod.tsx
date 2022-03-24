@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Dialog, Callout, Button, Spinner, Checkbox, Classes } from '@blueprintjs/core';
-import cx from 'classnames';
 import { observer } from 'mobx-react-lite';
 import { fromPromise } from 'mobx-utils';
 import { useGlobalState } from '../lib/state';

@@ -1,14 +1,13 @@
 import React, { useMemo } from 'react';
 import { Callout, Spinner } from '@blueprintjs/core';
-import type { RouteComponentProps } from 'react-router-dom';
-import type { History } from 'history';
+import { useParams } from 'react-router-dom';
 import { fromPromise } from 'mobx-utils';
 import { observer } from 'mobx-react-lite';
 
 import { useGlobalState, GlobalState } from '../lib/state';
 import { alert } from '../lib/alert';
 
-async function sendValidation(gs: GlobalState, history: History, token: string): Promise<boolean> {
+async function sendValidation(gs: GlobalState, token: string): Promise<boolean> {
   const response = await gs.runTwirpRequest(gs.client.verifyAccount.bind(gs.client), {
     token,
   });
@@ -30,17 +29,12 @@ async function sendValidation(gs: GlobalState, history: History, token: string):
   }
 }
 
-interface Params {
-  token: string;
-}
-
-export default observer(function VerifyMailPage(
-  props: RouteComponentProps<Params>,
-): React.ReactElement {
+export default observer(function VerifyMailPage(): React.ReactElement {
   const gs = useGlobalState();
+  const params = useParams<'token'>();
   const validation = useMemo(
-    () => fromPromise(sendValidation(gs, props.history, props.match.params.token)),
-    [gs, props.history, props.match.params.token],
+    () => fromPromise(sendValidation(gs, params.token ?? '')),
+    [gs, params.token],
   );
 
   return (

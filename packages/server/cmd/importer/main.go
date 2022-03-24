@@ -65,7 +65,7 @@ func (fs *FilesSource) Values() ([]interface{}, error) {
 	digest, err := hex.DecodeString(file.Checksum[1])
 	if err != nil {
 		fs.err = err
-		return nil, err
+		return nil, eris.Wrapf(err, "failed to decode checksum %s as hexadecimal number", file.Checksum[1])
 	}
 
 	result := make([]interface{}, 6)
@@ -92,7 +92,12 @@ func CopyFromFiles(ctx context.Context, tx pgx.Tx, pkg int32, files []importer.K
 		err:       nil,
 	}
 
-	return tx.CopyFrom(ctx, pgx.Identifier{"mod_package_files"}, filesSourceCols, &source)
+	n, err := tx.CopyFrom(ctx, pgx.Identifier{"mod_package_files"}, filesSourceCols, &source)
+	if err != nil {
+		return 0, eris.Wrap(err, "failed to write files data to files table")
+	}
+
+	return n, nil
 }
 
 func main() {

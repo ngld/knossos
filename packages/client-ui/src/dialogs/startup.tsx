@@ -19,7 +19,7 @@ function StartupOverlay(props: StartupOverlayProps): React.ReactElement {
   const [isOpen, setOpen] = useState(true);
   const [label, setLabel] = useState('Launching...');
 
-  useEffect(() => void initSequence(gs, setOpen, setLabel), []);
+  useEffect(() => void initSequence(gs, setOpen, setLabel), [gs]);
 
   return (
     <Dialog
@@ -53,7 +53,7 @@ async function initSequence(
       const idx = gs.launchOverlay<FirstRunWizardProps>(FirstRunWizard, {
         onFinished() {
           gs.removeOverlay(idx);
-          initSequence(gs, setOpen, setLabel);
+          void initSequence(gs, setOpen, setLabel);
         },
       });
       setOpen(false);

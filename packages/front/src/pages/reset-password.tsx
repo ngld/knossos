@@ -1,7 +1,5 @@
 import React from 'react';
 import { runInAction } from 'mobx';
-import type { RouteComponentProps } from 'react-router-dom';
-import type { History } from 'history';
 
 import { useGlobalState, GlobalState } from '../lib/state';
 import { Form, Field, FormButton, Errors, DefaultOptions, twirpRequest } from '../components/form';
@@ -18,12 +16,7 @@ function validate(state: FormState): Errors<FormState> {
   }
 }
 
-async function submitForm(
-  state: FormState,
-  defaults: DefaultOptions,
-  history: History,
-  gs: GlobalState,
-) {
+async function submitForm(state: FormState, defaults: DefaultOptions, gs: GlobalState) {
   const response = await twirpRequest(gs.client.startPasswordReset.bind(gs.client), defaults, {
     email: state.email,
   });
@@ -52,7 +45,7 @@ async function submitForm(
   }
 }
 
-export default function ResetPasswordPage(props: RouteComponentProps): React.ReactElement {
+export default function ResetPasswordPage(): React.ReactElement {
   const gs = useGlobalState();
 
   return (
@@ -64,7 +57,7 @@ export default function ResetPasswordPage(props: RouteComponentProps): React.Rea
           } as FormState
         }
         onValidate={validate}
-        onSubmit={(s, d) => submitForm(s, d, props.history, gs)}
+        onSubmit={(s, d) => void submitForm(s, d, gs)}
       >
         <Field name="email" label="E-Mail" />
         <FormButton type="submit" intent="primary">

@@ -66,7 +66,7 @@ export default observer(function RemoteModDetailsPage(): React.ReactElement {
                       className="ml-2 -mt-2"
                       value={params.version ?? mod.versions[0]}
                       onChange={(e) => {
-                        navigate(`/rmod/${params.modid}/${e.target.value}`);
+                        navigate(`/rmod/${params.modid ?? 'missing'}/${e.target.value}`);
                       }}
                     >
                       {mod.versions.map((version) => (

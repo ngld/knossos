@@ -115,7 +115,7 @@ module.exports = function (env, args) {
           ],
         },
         {
-          test: /~icons[\\\/]/,
+          test: /~icons[\\/]/,
           use: [
             {
               loader: 'babel-loader',

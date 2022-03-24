@@ -61,7 +61,7 @@ class SettingsState {
       return '';
     }
 
-    return `${m[1]}x${m[2]} - ${this.fsoSettings.video?.display}`;
+    return `${m[1]}x${m[2]} - ${this.fsoSettings.video?.display ?? '0'}`;
   }
 
   set resolution(value: string) {
@@ -70,7 +70,7 @@ class SettingsState {
       return;
     }
 
-    let oldValue = /\(([0-9]+)x([0-9]+)\)x([0-9]+) bit/.exec(
+    const oldValue = /\(([0-9]+)x([0-9]+)\)x([0-9]+) bit/.exec(
       this.fsoSettings.default?.videocardFs2Open ?? '',
     );
 
@@ -88,7 +88,7 @@ class SettingsState {
       video = this.fsoSettings.video;
     }
 
-    video.display = parseInt(m[3]);
+    video.display = parseInt(m[3], 10);
   }
 
   get depth(): string {
@@ -126,7 +126,7 @@ class SettingsState {
       def = this.fsoSettings.default;
     }
 
-    def.textureFilter = parseInt(value);
+    def.textureFilter = parseInt(value, 10);
   }
 
   async saveKNSettings() {

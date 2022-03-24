@@ -1,8 +1,21 @@
+severity:
+  default-severity: warning
+  case-sensitive: false
+
+  rules:
+    - linters:
+        - errcheck
+        - errorlint
+        - nolintlint
+        - wrapcheck
+      severity: error
+
 linters:
   disable-all: false
   fast: false
   enable:
-    - bodyclose
+    # seems broken
+    #- bodyclose
     - deadcode
     - dogsled
     - dupl
@@ -21,7 +34,8 @@ linters:
     - ineffassign
     - makezero
     - megacheck
-    - nestif
+    # too much work required right now
+    #- nestif
     - nilerr
     #- nilnil
     - nolintlint
@@ -39,20 +53,26 @@ linters:
     - whitespace
     - wrapcheck
 
-    # TODO add to build scripts
-    #- gofumpt
-    #- gci
-
 linters-settings:
   goconst:
     min-len: 10
     min-occurrences: 3
+
+  gosec:
+    severity: medium
+    excludes:
+      - G306
+      - G107
 
   exhaustive:
     default-signifies-exhaustive: true
 
   nestif:
     min-complexity: 7
+
+  typecheck:
+    exclude:
+      - 'could not import C (cgo preprocessing failed)'
 
   wrapcheck:
     ignoreSigs:
@@ -74,6 +94,9 @@ linters-settings:
       - eris.New(
       - eris.Wrap(
       - eris.Wrapf(
+      # starlark argument errors are fairly obvious even without an accurate stacktrace
+      - starlark.UnpackPositionalArgs(
+      - starlark.UnpackArgs(
 
     ignorePackageGlobs:
       - github.com/ngld/knossos/packages/*

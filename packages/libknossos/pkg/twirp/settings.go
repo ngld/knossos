@@ -6,7 +6,7 @@ import (
 	"runtime"
 
 	"github.com/ngld/knossos/packages/api/client"
-	"github.com/ngld/knossos/packages/libknossos/pkg/fso_interop"
+	"github.com/ngld/knossos/packages/libknossos/pkg/fsointerop"
 	"github.com/ngld/knossos/packages/libknossos/pkg/platform"
 	"github.com/ngld/knossos/packages/libopenal"
 	"github.com/rotisserie/eris"
@@ -14,11 +14,11 @@ import (
 )
 
 func (kn *knossosServer) LoadFSOSettings(ctx context.Context, req *client.NullMessage) (*client.FSOSettings, error) {
-	return fso_interop.LoadSettings(ctx)
+	return fsointerop.LoadSettings(ctx)
 }
 
 func (kn *knossosServer) SaveFSOSettings(ctx context.Context, req *client.FSOSettings) (*client.SuccessResponse, error) {
-	err := fso_interop.SaveSettings(ctx, req)
+	err := fsointerop.SaveSettings(ctx, req)
 	if err != nil {
 		return nil, err
 	}

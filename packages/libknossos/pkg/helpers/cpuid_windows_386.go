@@ -1,4 +1,6 @@
+//go:build 386 && windows
 // +build 386,windows
+
 package helpers
 
 import "golang.org/x/sys/windows"

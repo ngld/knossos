@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import { makeObservable, action, observable, computed } from 'mobx';
 import EventEmitter from 'eventemitter3';
 import { LogMessage, LogMessage_LogLevel, ClientSentEvent } from '@api/client';
@@ -14,7 +13,7 @@ export interface TaskState {
   started: number;
   canCancel: boolean;
   logMessages: LogMessage[];
-  logContainer: HTMLDivElement,
+  logContainer: HTMLDivElement;
   finishCb?: (success: boolean) => void;
 }
 
@@ -149,19 +148,21 @@ export class TaskTracker extends EventEmitter {
         lineText.innerText = `[${getLogTime(task, msg)}]:`;
 
         line.appendChild(lineText);
-        line.innerHTML += '&nbsp;' + msg.message
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;')
-          .replace(/\n/g, '<br>')
-          .replace(/\t/g, '    ')
-          .replace(/ [ ]+/g, (m) => {
-            let result = '';
-            for (let i = 0; i < m.length; i++) {
-              result += '&nbsp;';
-            }
-            return result;
-          });
+        line.innerHTML +=
+          '&nbsp;' +
+          msg.message
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/\n/g, '<br>')
+            .replace(/\t/g, '    ')
+            .replace(/ [ ]+/g, (m) => {
+              let result = '';
+              for (let i = 0; i < m.length; i++) {
+                result += '&nbsp;';
+              }
+              return result;
+            });
 
         task.logContainer.appendChild(line);
         break;

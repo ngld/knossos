@@ -19,7 +19,7 @@ func Open(ctx context.Context) error {
 	var err error
 
 	dbPath := filepath.Join(api.SettingsPath(ctx), "state.db")
-	newDB, err := bolt.Open(dbPath, 0600, &bolt.Options{
+	newDB, err := bolt.Open(dbPath, 0o600, &bolt.Options{
 		Timeout: 1 * time.Second,
 	})
 	if err != nil {
@@ -87,7 +87,13 @@ func TxFromCtx(ctx context.Context) *bolt.Tx {
 	if val == nil {
 		return nil
 	}
-	return val.(*bolt.Tx)
+
+	tx, ok := val.(*bolt.Tx)
+	if !ok {
+		panic("wrong transaction type in context")
+	}
+
+	return tx
 }
 
 func view(ctx context.Context, cb func(*bolt.Tx) error) error {

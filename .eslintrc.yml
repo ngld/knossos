@@ -16,7 +16,7 @@ settings:
   react:
     version: detect
 overrides:
-  - files: ['*.config.js']
+  - files: ['*.config.js', '*.precss.js']
     env:
       browser: false
       node: true
@@ -24,7 +24,7 @@ overrides:
     parser: '@babel/eslint-parser'
     parserOptions:
       babelOptions:
-        configFile: ./babel-dev.config.js
+        configFile: ./packages/client-ui/babel-dev.config.js
   - files: ['*.ts', '*.tsx']
     extends:
       - plugin:@typescript-eslint/recommended
@@ -32,7 +32,8 @@ overrides:
     parser: '@typescript-eslint/parser'
     parserOptions:
       project:
-       - ./tsconfig.json
+        - ./packages/front/tsconfig.json
+        - ./packages/client-ui/tsconfig.json
     plugins: ['@typescript-eslint/eslint-plugin']
     rules:
       '@typescript-eslint/no-unused-vars':

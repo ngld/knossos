@@ -32,7 +32,12 @@ type parserCtx struct {
 // * Helpers
 
 func getCtx(thread *starlark.Thread) *parserCtx {
-	return thread.Local("parserCtx").(*parserCtx)
+	ctx, ok := thread.Local("parserCtx").(*parserCtx)
+	if !ok {
+		panic("found wrong type for parser context in starlark thread")
+	}
+
+	return ctx
 }
 
 type starlarkIterable interface {
@@ -65,6 +70,8 @@ func shellReadDir(path string) ([]os.FileInfo, error) {
 		path = "."
 	}
 
+	// This is just a simple wrapper around ioutil.ReadDir, there's not much of value to add here.
+	//nolint:wrapcheck
 	return ioutil.ReadDir(path)
 }
 
@@ -287,7 +294,7 @@ func task(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kw
 
 			rawValue, _, err := env.Get(rawKey)
 			if err != nil {
-				return nil, err
+				return nil, eris.Wrapf(err, "could not find key %s in env dict even though it appears in the key list", rawKey)
 			}
 			switch value := rawValue.(type) {
 			case starlark.String:
@@ -402,12 +409,12 @@ func loadModule(thread *starlark.Thread, module string) (starlark.StringDict, er
 
 		script, err := ioutil.ReadFile(module)
 		if err != nil {
-			return nil, err
+			return nil, eris.Wrapf(err, "failed to load %s", shortModule)
 		}
 
 		result, err = starlark.ExecFile(thread, shortModule, script, ctx.globals)
 		if err != nil {
-			return nil, err
+			return nil, eris.Wrapf(err, "failed to run %s", shortModule)
 		}
 
 		ctx.moduleCache[module] = result
@@ -422,12 +429,12 @@ func loadModule(thread *starlark.Thread, module string) (starlark.StringDict, er
 func RunScript(ctx context.Context, filename, projectRoot string, options map[string]string, doConfigure bool) (TaskList, map[string]ScriptOption, []string, error) {
 	projectRoot, err := filepath.Abs(projectRoot)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, eris.Wrapf(err, "failed to build absolute path to %s", projectRoot)
 	}
 
 	filename, err = filepath.Abs(filename)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, eris.Wrapf(err, "failed to build absolute path to %s", filename)
 	}
 
 	builtins := starlark.StringDict{
@@ -495,7 +502,8 @@ func RunScript(ctx context.Context, filename, projectRoot string, options map[st
 	// wrap the entire script in a function to work around the limitation that ifs are only allowed inside functions
 	globals, err := starlark.ExecFile(thread, simplifyPath(&threadCtx, filename), script, builtins)
 	if err != nil {
-		if evalError, ok := err.(*starlark.EvalError); ok {
+		var evalError *starlark.EvalError
+		if eris.As(err, &evalError) {
 			return nil, nil, nil, eris.Errorf("failed to execute %s:\n%s", simplifyPath(&threadCtx, filename), evalError.Backtrace())
 		}
 		return nil, nil, nil, eris.Wrap(err, "failed to execute")
@@ -516,7 +524,8 @@ func RunScript(ctx context.Context, filename, projectRoot string, options map[st
 		threadCtx.initPhase = false
 		_, err = starlark.Call(thread, configureFunc, make(starlark.Tuple, 0), make([]starlark.Tuple, 0))
 		if err != nil {
-			if evalError, ok := err.(*starlark.EvalError); ok {
+			var evalError *starlark.EvalError
+			if eris.As(err, &evalError) {
 				return nil, nil, nil, eris.New(evalError.Backtrace())
 			}
 			return nil, nil, nil, eris.Wrapf(err, "failed configure call in %s", simplifyPath(&threadCtx, filename))
@@ -535,7 +544,7 @@ func RunScript(ctx context.Context, filename, projectRoot string, options map[st
 	}
 
 	scriptFiles := make([]string, 0, len(threadCtx.moduleCache))
-	for path, _ := range threadCtx.moduleCache {
+	for path := range threadCtx.moduleCache {
 		scriptFiles = append(scriptFiles, path)
 	}
 

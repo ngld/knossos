@@ -1,7 +1,6 @@
 import React from 'react';
 import { Callout, Divider } from '@blueprintjs/core';
-import type { RouteComponentProps } from 'react-router-dom';
-import type { History } from 'history';
+import { useNavigate, NavigateFunction } from 'react-router-dom';
 import { RpcError } from '@protobuf-ts/runtime-rpc';
 
 import type { BoolResponse } from '@api/service';
@@ -37,7 +36,7 @@ function validate(state: FormState): Errors<FormState> {
 async function submitForm(
   state: FormState,
   defaults: DefaultOptions,
-  history: History,
+  navigate: NavigateFunction,
   gs: GlobalState,
 ) {
   defaults.spinning = true;
@@ -83,12 +82,13 @@ async function submitForm(
     );
 
     defaults.spinning = false;
-    history.push('/');
+    navigate('/');
   }
 }
 
-export default function RegisterPage(props: RouteComponentProps): React.ReactElement {
+export default function RegisterPage(): React.ReactElement {
   const gs = useGlobalState();
+  const navigate = useNavigate();
 
   return (
     <div className="flex container gap-4">
@@ -103,7 +103,7 @@ export default function RegisterPage(props: RouteComponentProps): React.ReactEle
             } as FormState
           }
           onValidate={validate}
-          onSubmit={(s, d) => submitForm(s, d, props.history, gs)}
+          onSubmit={(s, d) => void submitForm(s, d, navigate, gs)}
         >
           <Field name="user" label="Username" required />
           <Field name="email" label="E-Mail" type="email" required />

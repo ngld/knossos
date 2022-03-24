@@ -53,21 +53,33 @@ func (w *ConsoleWriter) Write(p []byte) (n int, err error) {
 
 	task, ok := evt["task"]
 	if ok {
-		w.buffer.WriteString(task.(string) + ": ")
+		taskName, ok := task.(string)
+		if !ok {
+			taskName = fmt.Sprint(task)
+		}
+		w.buffer.WriteString(taskName + ": ")
 	}
 
 	if evt["level"] == "error" {
 		w.buffer.WriteString("Error: ")
 	}
 
-	msg := evt["message"].(string)
+	msg, ok := evt["message"].(string)
+	if !ok {
+		panic("message key in log event is not a string")
+	}
 
 	path, ok := evt["path"]
 	if ok {
+		pathStr, ok := path.(string)
+		if !ok {
+			panic("path key in log event is not a string")
+		}
+
 		// simplify the path
-		relPath, err := filepath.Rel(".", path.(string))
+		relPath, err := filepath.Rel(".", pathStr)
 		if err == nil {
-			msg = strings.ReplaceAll(msg, path.(string), relPath)
+			msg = strings.ReplaceAll(msg, pathStr, relPath)
 		}
 	}
 
@@ -76,7 +88,7 @@ func (w *ConsoleWriter) Write(p []byte) (n int, err error) {
 	errorDetails, ok := evt["error"]
 	if ok {
 		w.buffer.WriteString("\n")
-		w.buffer.WriteString(errorDetails.(string))
+		w.buffer.WriteString(fmt.Sprint(errorDetails))
 	}
 
 	if os.Getenv("BUILDSYS_DEBUG") != "" {
@@ -87,7 +99,12 @@ func (w *ConsoleWriter) Write(p []byte) (n int, err error) {
 	}
 
 	w.buffer.WriteString("[reset]\n")
-	return colorstring.Fprint(os.Stderr, w.buffer.String())
+	n, err = colorstring.Fprint(os.Stderr, w.buffer.String())
+	if err != nil {
+		return 0, eris.Wrap(err, "failed parse color string")
+	}
+
+	return n, nil
 }
 
 func init() {

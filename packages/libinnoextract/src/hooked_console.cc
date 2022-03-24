@@ -180,4 +180,3 @@ void progress::set_enabled(bool enable) {
 bool progress::is_enabled() {
 	return show_progress;
 }
-

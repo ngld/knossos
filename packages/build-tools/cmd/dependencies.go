@@ -174,14 +174,14 @@ func getConfig(projectRoot string) (depConfig, string, map[string]string, error)
 	return cfg, string(cfgData), stamps, nil
 }
 
-func evalConditions(meta *depSpec, vars map[string]bool) (bool, error) {
-	if meta.Condition == "" {
+func evalConditions(condition string, vars map[string]bool) (bool, error) {
+	if condition == "" {
 		return true, nil
 	}
 
-	expr, err := pkg.ParseBoolExpr(meta.Condition)
+	expr, err := pkg.ParseBoolExpr(condition)
 	if err != nil {
-		return false, eris.Wrapf(err, "failed to evalute %s", meta.Condition)
+		return false, eris.Wrapf(err, "failed to evalute %s", condition)
 	}
 
 	return expr.Eval(vars), nil
@@ -334,7 +334,7 @@ func downloadAndExtract(cmd *cobra.Command, cfg depConfig, cfgData string, stamp
 
 	update, err := cmd.Flags().GetBool("update")
 	if err != nil {
-		return err
+		return eris.Wrap(err, "failed to check --update flag")
 	}
 
 	vars := cfg.Vars
@@ -369,7 +369,7 @@ func downloadAndExtract(cmd *cobra.Command, cfg depConfig, cfgData string, stamp
 		})
 
 		stampToken := meta.URL + "#" + meta.Sha256
-		shouldProcess, err := evalConditions(&meta, boolVars)
+		shouldProcess, err := evalConditions(meta.Condition, boolVars)
 		if err != nil {
 			return eris.Wrapf(err, "failed to evaluate condition for %s", name)
 		}
@@ -481,14 +481,14 @@ func downloadAndExtract(cmd *cobra.Command, cfg depConfig, cfgData string, stamp
 				err = os.Remove(destPath)
 			}
 			if err != nil {
-				return err
+				return eris.Wrapf(err, "failed to delete %s", destPath)
 			}
 		}
 
 		if sfx {
 			err = tempHandle.Close()
 			if err != nil {
-				return err
+				return eris.Wrapf(err, "failed to close temporary file %s", tempPath)
 			}
 
 			args := strings.Split(meta.SfxArgs, " ")
@@ -501,7 +501,7 @@ func downloadAndExtract(cmd *cobra.Command, cfg depConfig, cfgData string, stamp
 
 			err = cmd.Run()
 			if err != nil {
-				return err
+				return eris.Wrapf(err, "failed to run SFX extractor for %s", name)
 			}
 		} else {
 			extractor, err := getExtractor(meta.URL)
@@ -511,7 +511,7 @@ func downloadAndExtract(cmd *cobra.Command, cfg depConfig, cfgData string, stamp
 
 			_, err = tempHandle.Seek(0, io.SeekStart)
 			if err != nil {
-				return err
+				return eris.Wrap(err, "failed to seek to start of temporary file")
 			}
 			bar = getProgressBar(resp.ContentLength, "      extract")
 			err = extractor(tempHandle, bar, projectRoot, name, meta)
@@ -577,7 +577,7 @@ func downloadAndExtract(cmd *cobra.Command, cfg depConfig, cfgData string, stamp
 
 		err = ioutil.WriteFile(filepath.Join(projectRoot, "packages", "build-tools", "DEPS.yml"), []byte(generated), os.FileMode(0o660))
 		if err != nil {
-			return err
+			return eris.Wrap(err, "failed to update DEPS.yml")
 		}
 	}
 
@@ -616,12 +616,12 @@ func getExtractor(url string) (archiveExtractor, error) {
 		return func(f *os.File, bar *pb.ProgressBar, projectRoot string, name string, ds depSpec) error {
 			stat, err := f.Stat()
 			if err != nil {
-				return err
+				return eris.Wrapf(err, "failed to check temporary file %s", f.Name())
 			}
 
 			archive, err := zip.NewReader(f, stat.Size())
 			if err != nil {
-				return err
+				return eris.Wrapf(err, "failed to open temporary file %s as zip archive", f.Name())
 			}
 
 			buf := make([]byte, 4096)
@@ -675,11 +675,11 @@ func getExtractor(url string) (archiveExtractor, error) {
 		return func(f *os.File, bar *pb.ProgressBar, projectRoot string, name string, ds depSpec) error {
 			reader, err := gzip.NewReader(f)
 			if err != nil {
-				return err
+				return eris.Wrapf(err, "failed to open temporary file %s as gzip file", f.Name())
 			}
 			defer reader.Close()
 
-			return extractTar(reader, f, bar, projectRoot, name, ds)
+			return extractTar(reader, f, bar, projectRoot, ds)
 		}, nil
 	}
 
@@ -687,7 +687,7 @@ func getExtractor(url string) (archiveExtractor, error) {
 		return func(f *os.File, bar *pb.ProgressBar, projectRoot string, name string, ds depSpec) error {
 			reader := bzip2.NewReader(f)
 
-			return extractTar(reader, f, bar, projectRoot, name, ds)
+			return extractTar(reader, f, bar, projectRoot, ds)
 		}, nil
 	}
 
@@ -695,17 +695,17 @@ func getExtractor(url string) (archiveExtractor, error) {
 		return func(f *os.File, bar *pb.ProgressBar, projectRoot, name string, ds depSpec) error {
 			reader, err := xz.NewReader(f)
 			if err != nil {
-				return err
+				return eris.Wrapf(err, "failed to open temporary files %s as xz archive", f.Name())
 			}
 
-			return extractTar(reader, f, bar, projectRoot, name, ds)
+			return extractTar(reader, f, bar, projectRoot, ds)
 		}, nil
 	}
 
 	return nil, eris.New("Archive format not supported")
 }
 
-func extractTar(r io.Reader, f *os.File, bar *pb.ProgressBar, projectRoot string, name string, ds depSpec) error {
+func extractTar(r io.Reader, f *os.File, bar *pb.ProgressBar, projectRoot string, ds depSpec) error {
 	buf := make([]byte, 4096)
 	archive := tar.NewReader(r)
 	destPath := filepath.Join(projectRoot, ds.Dest)

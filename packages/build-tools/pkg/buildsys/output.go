@@ -11,10 +11,15 @@ type logKey struct{}
 func log(ctx context.Context) *zerolog.Logger {
 	logger := ctx.Value(logKey{})
 	if logger == nil {
-		panic("Logger is missing in context!")
+		panic("logger is missing in context")
 	}
 
-	return logger.(*zerolog.Logger)
+	zlogger, ok := logger.(*zerolog.Logger)
+	if !ok {
+		panic("logger has wrong type")
+	}
+
+	return zlogger
 }
 
 // WithLogger attaches the given logger to the context

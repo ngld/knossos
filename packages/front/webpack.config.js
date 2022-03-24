@@ -23,12 +23,8 @@ module.exports = function (env, args) {
     entry: './src/index.tsx',
     output: {
       path: path.resolve(__dirname, 'dist'),
-      filename: production
-        ? 'js/[name].[contenthash:7].js'
-        : 'js/[name].js',
-      chunkFilename: production
-        ? 'js/[name].[contenthash:7].js'
-        : 'js/[name].js',
+      filename: production ? 'js/[name].[contenthash:7].js' : 'js/[name].js',
+      chunkFilename: production ? 'js/[name].[contenthash:7].js' : 'js/[name].js',
       publicPath: '/',
     },
     optimization: {
@@ -41,22 +37,17 @@ module.exports = function (env, args) {
         '@': path.resolve(__dirname, './src'),
         '@api': path.resolve(__dirname, '../api/api'),
       },
-      extensions: [
-        '.tsx',
-        '.ts',
-        '.jsx',
-        '.js',
-      ],
+      extensions: ['.tsx', '.ts', '.jsx', '.js'],
     },
     module: {
       rules: [
         {
           test: /\.css$/,
           use: [
-            (production ? MiniCssExtractPlugin.loader : 'style-loader'),
+            production ? MiniCssExtractPlugin.loader : 'style-loader',
             {
               loader: 'css-loader',
-              options: {esModule: false},
+              options: { esModule: false },
             },
             'postcss-loader',
           ],
@@ -87,18 +78,12 @@ module.exports = function (env, args) {
       rules: [
         {
           test: /\.[tj]sx?$/,
-          include: [
-            path.resolve(__dirname, './src'),
-            path.resolve(__dirname, '../api/api'),
-          ],
+          include: [path.resolve(__dirname, './src'), path.resolve(__dirname, '../api/api')],
           use: [
             {
               loader: 'babel-loader',
               options: {
-                configFile: path.resolve(
-                  __dirname,
-                  `babel-${flavor}.config.js`,
-                ),
+                configFile: path.resolve(__dirname, `babel-${flavor}.config.js`),
               },
             },
           ],
@@ -114,7 +99,7 @@ module.exports = function (env, args) {
         'process.env.NODE_ENV': '"development"',
         'process.env.BLUEPRINT_NAMESPACE': 'null',
         'process.env.REACT_APP_BLUEPRINT_NAMESPACE': 'null',
-        'global': 'window',
+        global: 'window',
       }),
       new MiniCssExtractPlugin({
         filename: 'css/[name].css',
@@ -130,9 +115,7 @@ module.exports = function (env, args) {
       publicPath: '/',
       hot: true,
       historyApiFallback: {
-        rewrites: [
-          { from: /./, to: '/index.html' },
-        ],
+        rewrites: [{ from: /./, to: '/index.html' }],
       },
       proxy: {
         '/twirp': 'http://localhost:8200/',
@@ -147,7 +130,7 @@ module.exports = function (env, args) {
         'process.env.NODE_ENV': '"production"',
         'process.env.BLUEPRINT_NAMESPACE': 'null',
         'process.env.REACT_APP_BLUEPRINT_NAMESPACE': 'null',
-        'global': 'window',
+        global: 'window',
       }),
       new CleanWebpackPlugin(),
       new MiniCssExtractPlugin({

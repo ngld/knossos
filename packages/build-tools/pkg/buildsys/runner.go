@@ -23,7 +23,12 @@ type (
 )
 
 func getRuntimeCtx(ctx context.Context) *runtimeCtx {
-	return ctx.Value(runtimeCtxKey{}).(*runtimeCtx)
+	runCtx, ok := ctx.Value(runtimeCtxKey{}).(*runtimeCtx)
+	if !ok {
+		panic("found wrong type in runtime context")
+	}
+
+	return runCtx
 }
 
 func getTaskEnv(task *Task) expand.Environ {
@@ -73,10 +78,13 @@ func resolvePatternLists(ctx context.Context, base string, patterns []string) ([
 		item = filepath.ToSlash(item)
 
 		words := make([]*syntax.Word, 0)
-		parser.Words(strings.NewReader(item), func(w *syntax.Word) bool {
+		err := parser.Words(strings.NewReader(item), func(w *syntax.Word) bool {
 			words = append(words, w)
 			return true
 		})
+		if err != nil {
+			return nil, eris.Wrapf(err, "failed to parse pattern %s", item)
+		}
 
 		matches, err := expand.Fields(&cfg, words...)
 		if err != nil {
@@ -111,7 +119,7 @@ func RunTask(ctx context.Context, projectRoot, task string, tasks TaskList, dryR
 
 func runTaskInternal(ctx context.Context, task *Task, tasks TaskList, dryRun, force, canSkip bool) error {
 	if ctx.Err() != nil {
-		return ctx.Err()
+		return eris.Wrap(ctx.Err(), "context failed")
 	}
 
 	rctx := getRuntimeCtx(ctx)
@@ -238,11 +246,11 @@ func runTaskInternal(ctx context.Context, task *Task, tasks TaskList, dryRun, fo
 
 					rctx.runTasks[task.Short] = true
 					return nil
-				} else {
-					log(ctx).Info().
-						Str("task", task.Short).
-						Msgf("rebuild necessary since %s is newer than %s", newestInName, newestOutName)
 				}
+
+				log(ctx).Info().
+					Str("task", task.Short).
+					Msgf("rebuild necessary since %s is newer than %s", newestInName, newestOutName)
 			}
 		}
 	}
@@ -294,7 +302,7 @@ func runTaskInternal(ctx context.Context, task *Task, tasks TaskList, dryRun, fo
 							// try resetting the console but ignore any errors since the previous error is
 							// more important
 							_ = resetConsole()
-							return err
+							return eris.Wrapf(err, "failed to run script for %s", task.Short)
 						}
 					}
 
@@ -326,7 +334,7 @@ func runTaskInternal(ctx context.Context, task *Task, tasks TaskList, dryRun, fo
 		}
 
 		if err = ctx.Err(); err != nil {
-			return err
+			return eris.Wrap(err, "context failed")
 		}
 	}
 

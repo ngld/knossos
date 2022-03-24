@@ -229,11 +229,12 @@ func InstallMod(ctx context.Context, req *client.InstallModRequest) error {
 		}
 
 		parent := modMeta.Parent
-		if modMeta.Type == common.ModType_ENGINE {
+		switch {
+		case modMeta.Type == common.ModType_ENGINE:
 			parent = "bin"
-		} else if modMeta.Type == common.ModType_TOTAL_CONVERSION {
+		case modMeta.Type == common.ModType_TOTAL_CONVERSION:
 			parent = modMeta.Modid
-		} else if parent == "" {
+		case parent == "":
 			parent = "FS2"
 		}
 
@@ -519,7 +520,11 @@ func InstallMod(ctx context.Context, req *client.InstallModRequest) error {
 		for _, item := range snapQueue {
 			rel, ok := item.(*common.Release)
 			if !ok {
-				spec := item.(*client.InstallModRequest_Mod)
+				spec, ok := item.(*client.InstallModRequest_Mod)
+				if !ok {
+					panic("found impossible type in snapQueue")
+				}
+
 				rel, err = storage.LocalMods.GetModRelease(ctx, spec.Modid, spec.Version)
 				if err != nil {
 					return eris.Wrapf(err, "failed to look up mod %s (%s) for snapshotting", spec.Modid, spec.Version)
@@ -565,10 +570,10 @@ func InstallMod(ctx context.Context, req *client.InstallModRequest) error {
 				return eris.Wrapf(err, "failed to serialise release %s %s", rel.Modid, rel.Version)
 			}
 
-			releaseJson := filepath.Join(modFolder, "knrelease.json")
-			err = os.WriteFile(releaseJson, releaseData, 0o600)
+			releaseJSON := filepath.Join(modFolder, "knrelease.json")
+			err = os.WriteFile(releaseJSON, releaseData, 0o600)
 			if err != nil {
-				return eris.Wrapf(err, "failed to write %s for %s %s", releaseJson, rel.Modid, rel.Version)
+				return eris.Wrapf(err, "failed to write %s for %s %s", releaseJSON, rel.Modid, rel.Version)
 			}
 
 			modData, err := json.MarshalIndent(modMetas[rel.Modid], "", "  ")
@@ -576,10 +581,10 @@ func InstallMod(ctx context.Context, req *client.InstallModRequest) error {
 				return eris.Wrapf(err, "failed to serialise mod metadata for %s", rel.Modid)
 			}
 
-			modJson := filepath.Join(settings.LibraryPath, modMetas[rel.Modid].Parent, "knmod-"+rel.Modid+".json")
-			err = os.WriteFile(modJson, modData, 0o600)
+			modJSON := filepath.Join(settings.LibraryPath, modMetas[rel.Modid].Parent, "knmod-"+rel.Modid+".json")
+			err = os.WriteFile(modJSON, modData, 0o600)
 			if err != nil {
-				return eris.Wrapf(err, "failed to write %s for %s %s", modJson, rel.Modid, rel.Version)
+				return eris.Wrapf(err, "failed to write %s for %s %s", modJSON, rel.Modid, rel.Version)
 			}
 
 			rel.JsonExportUpdated = timestamppb.Now()

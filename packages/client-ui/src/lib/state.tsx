@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect } from 'react';
 import { makeAutoObservable } from 'mobx';
 import { TwirpFetchTransport } from '@protobuf-ts/twirp-transport';
 import { Toaster, IToaster } from '@blueprintjs/core';
@@ -11,7 +11,12 @@ interface OverlayProps {
   onFinished?: () => void;
 }
 
-type SignalName = 'remoteRefreshMods' | 'hideTasks' | 'showTasks' | 'reloadLocalMods' | 'reloadRemoteMods';
+type SignalName =
+  | 'remoteRefreshMods'
+  | 'hideTasks'
+  | 'showTasks'
+  | 'reloadLocalMods'
+  | 'reloadRemoteMods';
 
 export class GlobalState {
   toaster: IToaster;
@@ -19,8 +24,12 @@ export class GlobalState {
   nebula: NebulaClient;
   tasks: TaskTracker;
   _nextOverlayID = 0;
-  overlays: [React.FunctionComponent<OverlayProps> | React.ComponentClass<OverlayProps>, Record<string, unknown>, number][];
-  signalListeners: Record<SignalName,(() => void)[]> = {
+  overlays: [
+    React.FunctionComponent<OverlayProps> | React.ComponentClass<OverlayProps>,
+    Record<string, unknown>,
+    number,
+  ][];
+  signalListeners: Record<SignalName, (() => void)[]> = {
     remoteRefreshMods: [],
     showTasks: [],
     hideTasks: [],
@@ -39,7 +48,10 @@ export class GlobalState {
     );
     this.nebula = new NebulaClient(
       new TwirpFetchTransport({
-        baseUrl: process.env.NODE_ENV === 'production' ? 'https://nu.fsnebula.org/twirp' : 'http://localhost:8200/twirp',
+        baseUrl:
+          process.env.NODE_ENV === 'production'
+            ? 'https://nu.fsnebula.org/twirp'
+            : 'http://localhost:8200/twirp',
         deadline: process.env.NODE_ENV === 'production' ? 10000 : 1000,
       }),
     );
@@ -59,9 +71,19 @@ export class GlobalState {
     });
   }
 
-  launchOverlay<T extends OverlayProps = OverlayProps>(component: React.FunctionComponent<T> | React.ComponentClass<T> | ((props: T) => React.ReactNode), props: T): number {
+  launchOverlay<T extends OverlayProps = OverlayProps>(
+    component:
+      | React.FunctionComponent<T>
+      | React.ComponentClass<T>
+      | ((props: T) => React.ReactNode),
+    props: T,
+  ): number {
     const idx = this.overlays.length;
-    this.overlays.push([component as React.FunctionComponent<OverlayProps>, props as Record<string, unknown>, this._nextOverlayID++]);
+    this.overlays.push([
+      component as React.FunctionComponent<OverlayProps>,
+      props as Record<string, unknown>,
+      this._nextOverlayID++,
+    ]);
     return idx;
   }
 
@@ -70,12 +92,18 @@ export class GlobalState {
   }
 
   useSignal(name: SignalName, listener: () => void): void {
+    // This is not a class component so this error is bogus.
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     useEffect(() => {
       this.signalListeners[name].push(listener);
       return () => {
         const pos = this.signalListeners[name].indexOf(listener);
         if (pos === -1) {
-          console.error(this.signalListeners[name].map(cb => cb.toString()), listener.toString(), `Signal listener for ${name} vanished?!`);
+          console.error(
+            this.signalListeners[name].map((cb) => cb.toString()),
+            listener.toString(),
+            `Signal listener for ${name} vanished?!`,
+          );
           return;
         }
 

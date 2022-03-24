@@ -72,7 +72,7 @@ func (kn *knossosServer) UpdateUpdater(ctx context.Context, req *client.TaskRequ
 		}
 
 		updaterFolder := filepath.Join(api.ResourcePath(ctx), "updater")
-		err = os.MkdirAll(updaterFolder, 0770)
+		err = os.MkdirAll(updaterFolder, 0o770)
 		if err != nil {
 			return eris.Wrapf(err, "failed to create folder %s", updaterFolder)
 		}
@@ -141,7 +141,7 @@ func (kn *knossosServer) UpdateUpdater(ctx context.Context, req *client.TaskRequ
 			dest = filepath.Join(updaterFolder, filepath.FromSlash(dest))
 			fileNames = append(fileNames, dest)
 
-			err = os.MkdirAll(filepath.Dir(dest), 0770)
+			err = os.MkdirAll(filepath.Dir(dest), 0o770)
 			if err != nil {
 				return eris.Wrapf(err, "failed to create folders for %s", dest)
 			}
@@ -177,7 +177,7 @@ func (kn *knossosServer) UpdateUpdater(ctx context.Context, req *client.TaskRequ
 			return eris.New("somehow all updater files were removed")
 		}
 
-		err = os.WriteFile(filepath.Join(updaterFolder, "version.txt"), []byte(resp.Versions["updater"]), 0600)
+		err = os.WriteFile(filepath.Join(updaterFolder, "version.txt"), []byte(resp.Versions["updater"]), 0o600)
 		if err != nil {
 			return eris.Wrapf(err, "failed to write %s", filepath.Join(updaterFolder, "version.txt"))
 		}
@@ -250,8 +250,8 @@ func (kn *knossosServer) UpdateKnossos(ctx context.Context, req *client.TaskRequ
 		}
 
 		// Make sure the file is executable (aka a+x)
-		if info.Mode()&0111 != 0111 {
-			err = os.Chmod(updater, info.Mode()|0111)
+		if info.Mode()&0o111 != 0o111 {
+			err = os.Chmod(updater, info.Mode()|0o111)
 			if err != nil {
 				return eris.Wrapf(err, "failed to set execute permissions on %s", updater)
 			}

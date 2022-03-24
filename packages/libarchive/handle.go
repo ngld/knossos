@@ -140,6 +140,7 @@ func (a *Archive) Position() int64 {
 
 func (a *Archive) Next() error {
 	var entry *C.struct_archive_entry
+	//nolint:gocritic // I have no clue what gocritic is talking about here
 	code := C.archive_read_next_header(a.handle, &entry)
 	if code != C.ARCHIVE_OK {
 		return a.code2error(code)

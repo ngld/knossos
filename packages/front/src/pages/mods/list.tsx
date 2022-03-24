@@ -4,27 +4,29 @@
 import React, { useState, useMemo } from 'react';
 import { observer } from 'mobx-react-lite';
 import { fromPromise } from 'mobx-utils';
-import type { RouteComponentProps } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Spinner, Callout, NonIdealState, InputGroup } from '@blueprintjs/core';
-import type { AsyncReturnType } from 'type-fest';
 
 import { ModListRequest_SortType } from '@api/service';
 import { useGlobalState, GlobalState } from '../../lib/state';
 
-function debouncePromise<T extends (...args: any) => any>(func: T, delay: number): T {
+function debouncePromise<R, T extends (...args: any[]) => Promise<R>>(func: T, delay: number): T {
   let timer: NodeJS.Timeout | null = null;
   let callArgs: any[];
-  let promise: Promise<AsyncReturnType<T>> | null = null;
-  return ((...args: any[]) => {
+  let promise: Promise<R> | null = null;
+  return ((...args: any[]): Promise<R> => {
     if (timer !== null) {
       clearTimeout(timer);
       timer = null;
     }
 
     callArgs = args;
-    if (timer === null) {
+    if (timer === null || promise === null) {
       promise = new Promise((resolve) => {
         timer = setTimeout(() => {
+          // We're just passing through these parameters; we can't know which type they are and we can't tell TS
+          // that it'll work out (our return value is identical to the passed function).
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
           resolve(func(...callArgs));
           timer = null;
         }, delay);
@@ -45,10 +47,14 @@ const listMods = debouncePromise(async function listMods(gs: GlobalState, query:
   return response;
 }, 200);
 
-export default observer(function ModListPage(props: RouteComponentProps): React.ReactElement {
+export default observer(function ModListPage(): React.ReactElement {
   const gs = useGlobalState();
+  const navigate = useNavigate();
   const [query, setQuery] = useState('');
-  const modList = useMemo(() => fromPromise(listMods(gs, query) ?? Promise.resolve(null)), [gs, query]);
+  const modList = useMemo(
+    () => fromPromise(listMods(gs, query) ?? Promise.resolve(null)),
+    [gs, query],
+  );
 
   return (
     <div>
@@ -76,7 +82,7 @@ export default observer(function ModListPage(props: RouteComponentProps): React.
                       href={`/mod/${mod.modid}`}
                       onClick={(e) => {
                         e.preventDefault();
-                        props.history.push(`/mod/${mod.modid}`);
+                        navigate(`/mod/${mod.modid}`);
                       }}
                       className="block text-center no-underline pb-2"
                     >

@@ -15,7 +15,7 @@ import (
 func addFolderToArchive(a *libarchive.ArchiveWriter, folder, prefix string) error {
 	items, err := os.ReadDir(folder)
 	if err != nil {
-		return err
+		return eris.Wrapf(err, "failed to read directory contents for %s", folder)
 	}
 
 	for _, item := range items {
@@ -43,15 +43,15 @@ func addFolderToArchive(a *libarchive.ArchiveWriter, folder, prefix string) erro
 				return eris.Wrapf(err, "failed to seek in %s", filepath.Join(folder, item.Name()))
 			}
 
-			mode := libarchive.ModeRegular | 0666
+			mode := libarchive.ModeRegular | 0o666
 			stat, err := os.Stat(filepath.Join(folder, item.Name()))
 			if err != nil {
 				f.Close()
 				return eris.Wrapf(err, "failed to stat %s", filepath.Join(folder, item.Name()))
 			}
 
-			if stat.Mode().Perm()&0100 != 0 {
-				mode |= 0111
+			if stat.Mode().Perm()&0o100 != 0 {
+				mode |= 0o111
 			}
 
 			err = a.CreateFile(path.Join(prefix, item.Name()), mode, size)

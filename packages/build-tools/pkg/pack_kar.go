@@ -43,7 +43,7 @@ type KarWriter struct {
 func NewKarWriter(filename string) (*KarWriter, error) {
 	hdl, err := os.Create(filename)
 	if err != nil {
-		return nil, err
+		return nil, eris.Wrapf(err, "failed to create %s", filename)
 	}
 
 	root := new(KarFolder)
@@ -57,7 +57,7 @@ func NewKarWriter(filename string) (*KarWriter, error) {
 	_, err = hdl.Seek(int64(4+12), io.SeekStart)
 	if err != nil {
 		hdl.Close()
-		return nil, err
+		return nil, eris.Wrap(err, "failed to seek past header")
 	}
 
 	w := &KarWriter{
@@ -196,18 +196,18 @@ func (w *KarWriter) Close() error {
 	tocOffset, err := w.hdl.Seek(0, io.SeekCurrent)
 	if err != nil {
 		w.hdl.Close()
-		return err
+		return eris.Wrap(err, "failed to read current position")
 	}
 	err = writeDirectoryEntries(w.root, w.hdl, &items, buffer)
 	if err != nil {
 		w.hdl.Close()
-		return err
+		return eris.Wrap(err, "failed to write directory entries")
 	}
 
 	_, err = w.hdl.Seek(0, io.SeekStart)
 	if err != nil {
 		w.hdl.Close()
-		return err
+		return eris.Wrap(err, "failed to seek to start")
 	}
 
 	buffer[0] = 'K'
@@ -221,11 +221,11 @@ func (w *KarWriter) Close() error {
 	_, err = w.hdl.Write(buffer[:16])
 	if err != nil {
 		w.hdl.Close()
-		return err
+		return eris.Wrap(err, "failed to write header")
 	}
 	err = w.hdl.Close()
 	if err != nil {
-		return err
+		return eris.Wrap(err, "failed to close archive")
 	}
 
 	return nil
@@ -244,17 +244,17 @@ func writeDirectoryEntries(folder *KarFolder, hdl *os.File, items *int32, buffer
 		binary.LittleEndian.PutUint16(buffer[12:14], uint16(nameLen))
 		_, err := hdl.Write(buffer[:14])
 		if err != nil {
-			return err
+			return eris.Wrap(err, "failed to write folder")
 		}
 
 		_, err = hdl.WriteString(name)
 		if err != nil {
-			return err
+			return eris.Wrapf(err, "failed to write folder name %s", name)
 		}
 
 		err = writeDirectoryEntries(folder, hdl, items, buffer)
 		if err != nil {
-			return err
+			return eris.Wrapf(err, "failed to write entries for folder %s", name)
 		}
 
 		// offset
@@ -267,12 +267,12 @@ func writeDirectoryEntries(folder *KarFolder, hdl *os.File, items *int32, buffer
 		binary.LittleEndian.PutUint16(buffer[12:14], 2)
 		_, err = hdl.Write(buffer[:14])
 		if err != nil {
-			return err
+			return eris.Wrap(err, "failed to write folder end marker")
 		}
 
 		_, err = hdl.WriteString("..")
 		if err != nil {
-			return err
+			return eris.Wrap(err, "failed to write folder end marker name")
 		}
 	}
 
@@ -288,12 +288,12 @@ func writeDirectoryEntries(folder *KarFolder, hdl *os.File, items *int32, buffer
 		binary.LittleEndian.PutUint16(buffer[12:14], uint16(nameLen))
 		_, err := hdl.Write(buffer[:14])
 		if err != nil {
-			return err
+			return eris.Wrapf(err, "failed to write file entry for %s", name)
 		}
 
 		_, err = hdl.WriteString(name)
 		if err != nil {
-			return err
+			return eris.Wrapf(err, "failed to write file name %s", name)
 		}
 	}
 

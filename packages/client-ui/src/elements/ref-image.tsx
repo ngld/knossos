@@ -8,7 +8,11 @@ export default function RefImage(props: RefImageProps): React.ReactElement | nul
   return props.src ? (
     <img
       {...props}
-      src={props.src.urls.length > 0 && props.src.urls[0].indexOf('file://') !== 0 ? props.src.urls[0] : API_URL + '/ref/' + props.src.fileid}
+      src={
+        props.src.urls.length > 0 && props.src.urls[0].indexOf('file://') !== 0
+          ? props.src.urls[0]
+          : API_URL + '/ref/' + props.src.fileid
+      }
     />
   ) : null;
 }

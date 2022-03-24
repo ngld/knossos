@@ -22,6 +22,7 @@ import RefImage from '../elements/ref-image';
 import { useGlobalState, GlobalState } from '../lib/state';
 import bbparser from '../lib/bbparser';
 import ErrorDialog from '../dialogs/error-dialog';
+import RetailBanner from '../resources/banner-retail.png';
 
 async function getModDetails(gs: GlobalState, params: ModDetailsParams): Promise<ModInfoResponse> {
   const response = await gs.client.getModInfo({
@@ -46,7 +47,10 @@ async function getFlagInfos(
   gs: GlobalState,
   params: ModDetailsParams,
 ): Promise<[Record<string, FlagInfo_Flag[]>, string]> {
-  const response = await gs.client.getModFlags({ id: params.modid ?? '', version: params.version ?? '' });
+  const response = await gs.client.getModFlags({
+    id: params.modid ?? '',
+    version: params.version ?? '',
+  });
 
   const mappedFlags = {} as Record<string, FlagInfo_Flag[]>;
   for (const info of Object.values(response.response.flags)) {
@@ -275,10 +279,7 @@ export default observer(function ModDetailsPage(): React.ReactElement {
   const gs = useGlobalState();
   const params = useParams<ModDetailsParams>();
   const navigate = useNavigate();
-  const modDetails = useMemo(
-    () => fromPromise(getModDetails(gs, params)),
-    [gs, params],
-  );
+  const modDetails = useMemo(() => fromPromise(getModDetails(gs, params)), [gs, params]);
 
   const rawDesc = (modDetails.value as ModInfoResponse)?.release?.description;
   const description = useMemo(() => {
@@ -312,7 +313,7 @@ export default observer(function ModDetailsPage(): React.ReactElement {
                       className="ml-2 -mt-2"
                       value={params.version ?? response.versions[0]}
                       onChange={(e) => {
-                        navigate(`/mod/${params.modid}/${e.target.value}`);
+                        navigate(`/mod/${params.modid ?? 'missing'}/${e.target.value}`);
                       }}
                     >
                       {response.versions.map((version) => (
@@ -324,10 +325,7 @@ export default observer(function ModDetailsPage(): React.ReactElement {
                   </h1>
                 </div>
                 {params.modid === 'FS2' ? (
-                  <img
-                    src={require('../resources/banner-retail.png').default}
-                    className="object-contain w-full h-300px"
-                  />
+                  <img src={RetailBanner} className="object-contain w-full h-300px" />
                 ) : (
                   <RefImage
                     className="object-contain w-full h-300px"

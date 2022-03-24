@@ -1,3 +1,4 @@
+//go:build !cgo
 // +build !cgo
 
 // This file contains a bunch of stubs so gopls can still function with CGO_ENABLED=0.

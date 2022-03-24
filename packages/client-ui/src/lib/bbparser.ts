@@ -39,8 +39,7 @@ const parser = XBBCode.create({
   td: '<td>{content}</td>',
   code: '<pre>{content}</pre>',
   quote: '<blockquote>{content}</blockquote>',
-  yt:
-    '<iframe width="640" height="385" allowfullscreen src="https://www.youtube-nocookie.com/embed/{content}?version=3&vq=hd720"></iframe>',
+  yt: '<iframe width="640" height="385" allowfullscreen src="https://www.youtube-nocookie.com/embed/{content}?version=3&vq=hd720"></iframe>',
   p3d: '<iframe width="640" height="385" allowfullscreen src="http://p3d.in/e/{content}"></iframe>',
 }) as (input: string) => string;
 

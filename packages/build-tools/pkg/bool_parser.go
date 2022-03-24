@@ -77,7 +77,7 @@ func ParseBoolExpr(input string) (BoolNode, error) {
 			if eris.Is(err, io.EOF) {
 				break
 			}
-			return nil, err
+			return nil, eris.Wrap(err, "failed to read character")
 		}
 
 		switch state {
@@ -174,7 +174,7 @@ func ParseBoolExpr(input string) (BoolNode, error) {
 
 			err = scanner.UnreadRune()
 			if err != nil {
-				return nil, err
+				return nil, eris.Wrap(err, "failed to put last character back")
 			}
 
 			state = 3

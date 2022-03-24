@@ -48,6 +48,8 @@ func PerformInstallation(folder, version, token string) {
 
 			err := platform.RunElevated(filepath.Clean(os.Args[0]), "--auto", folder, selectedVersion, desktopShortcutStr, menuShortcutStr)
 			if err == nil {
+				// The defer block above is only meant to catch panics.
+				//nolint:gocritic
 				os.Exit(0)
 			}
 
@@ -57,7 +59,7 @@ func PerformInstallation(folder, version, token string) {
 	}
 
 	Log(LogInfo, "Installing Knossos %s in %s", version, folder)
-	err := os.MkdirAll(folder, 0770)
+	err := os.MkdirAll(folder, 0o770)
 	if err != nil {
 		Log(LogError, "Failed to create %s: %s", folder, eris.ToString(err, true))
 		return
@@ -125,7 +127,7 @@ func PerformInstallation(folder, version, token string) {
 
 		seenFiles = append(seenFiles, archive.Entry.Pathname)
 		dest := filepath.Join(folder, filepath.FromSlash(archive.Entry.Pathname))
-		err = os.MkdirAll(filepath.Dir(dest), 0770)
+		err = os.MkdirAll(filepath.Dir(dest), 0o770)
 		if err != nil {
 			Log(LogError, "Failed to create directory for %s", archive.Entry.Pathname)
 			return
@@ -145,7 +147,10 @@ func PerformInstallation(folder, version, token string) {
 		}
 
 		f.Close()
-		os.Chmod(dest, archive.Entry.Mode)
+		err = os.Chmod(dest, archive.Entry.Mode)
+		if err != nil {
+			Log(LogError, "Failed to set attributes on %s: %s", archive.Entry.Pathname, eris.ToString(err, true))
+		}
 	}
 	archive.Close()
 

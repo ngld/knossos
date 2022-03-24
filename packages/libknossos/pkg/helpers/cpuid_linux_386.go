@@ -1,4 +1,6 @@
+//go:build 386 && linux
 // +build 386,linux
+
 package helpers
 
 import "os"

@@ -1,4 +1,4 @@
-import {createContext, useContext} from 'react';
+import { createContext, useContext } from 'react';
 
 const ctx = createContext<Record<string, unknown>>({});
 export default ctx.Provider;

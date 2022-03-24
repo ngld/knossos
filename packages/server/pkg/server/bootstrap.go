@@ -5,6 +5,7 @@ import (
 
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/rotisserie/eris"
 	"github.com/rs/zerolog/log"
 
 	"github.com/ngld/knossos/packages/server/pkg/auth"
@@ -24,14 +25,14 @@ type nebula struct {
 func StartServer(cfg *config.Config) error {
 	dbConfig, err := pgxpool.ParseConfig(cfg.Database)
 	if err != nil {
-		return err
+		return eris.Wrap(err, "failed to parse database config")
 	}
 
 	dbConfig.ConnConfig.Logger = nblog.PgxLogger{}
 	dbConfig.ConnConfig.LogLevel = pgx.LogLevelDebug
 	pool, err := pgxpool.ConnectConfig(context.Background(), dbConfig)
 	if err != nil {
-		return err
+		return eris.Wrap(err, "failed to open database connection")
 	}
 
 	q := queries.NewQuerier(pool)

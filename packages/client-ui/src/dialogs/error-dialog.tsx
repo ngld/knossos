@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Dialog, Callout, Button, Classes } from '@blueprintjs/core';
-import cx from 'classnames';
 
 interface ErrorDialogProps {
   title?: string;
@@ -28,7 +27,9 @@ export default function ErrorDialog(props: ErrorDialogProps): React.ReactElement
       </div>
       <div className={Classes.DIALOG_FOOTER}>
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>
-          <Button intent="primary" onClick={() => setOpen(false)}>Close</Button>
+          <Button intent="primary" onClick={() => setOpen(false)}>
+            Close
+          </Button>
         </div>
       </div>
     </Dialog>

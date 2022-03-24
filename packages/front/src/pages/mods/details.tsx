@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { observer } from 'mobx-react-lite';
 import { fromPromise } from 'mobx-utils';
-import type { RouteComponentProps } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Spinner, Callout, NonIdealState, HTMLSelect, Tab, Tabs, H3, UL } from '@blueprintjs/core';
 import { ModDetailsResponse } from '@api/service';
 
@@ -14,7 +14,7 @@ async function getModDetails(
 ): Promise<ModDetailsResponse | undefined> {
   const response = await gs.runTwirpRequest(gs.client.getModDetails.bind(gs.client), {
     latest: !params.version,
-    modid: params.modid,
+    modid: params.modid ?? '',
     version: params.version ?? '',
     requestDownloads: true,
   });
@@ -23,17 +23,15 @@ async function getModDetails(
 }
 
 export interface ModDetailsParams {
-  modid: string;
+  modid?: string;
   version?: string;
 }
 
-export default observer(function ModDetailsPage(
-  props: RouteComponentProps<ModDetailsParams>,
-): React.ReactElement {
+export default observer(function ModDetailsPage(): React.ReactElement {
   const gs = useGlobalState();
-  const modDetails = useMemo(() => fromPromise(getModDetails(gs, props.match.params)), [
-    gs, props.match.params,
-  ]);
+  const params = useParams<'modid' | 'version'>();
+  const navigate = useNavigate();
+  const modDetails = useMemo(() => fromPromise(getModDetails(gs, params)), [gs, params]);
   const [selectedVersion, setVersion] = useState('unknown');
   const description = useMemo(
     () => ({
@@ -70,7 +68,7 @@ export default observer(function ModDetailsPage(
                       value={selectedVersion}
                       onChange={(e) => {
                         setVersion(e.target.value);
-                        props.history.push(`/mod/${props.match.params.modid}/${e.target.value}`);
+                        navigate(`/mod/${params.modid ?? 'missing'}/${e.target.value}`);
                       }}
                     >
                       {mod.versions.map((version) => (

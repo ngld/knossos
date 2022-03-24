@@ -254,7 +254,7 @@ endif()
 # Check for optional functionality and system configuration
 
 if(NOT WIN32)
-	
+
 	check_symbol_exists(isatty "unistd.h" INNOEXTRACT_HAVE_ISATTY)
 	check_symbol_exists(ioctl "sys/ioctl.h" INNOEXTRACT_HAVE_IOCTL)
 	check_symbol_exists(timegm "time.h" INNOEXTRACT_HAVE_TIMEGM)
@@ -290,11 +290,11 @@ if(NOT WIN32)
 	if(INNOEXTRACT_HAVE_POSIX_SPAWNP OR (INNOEXTRACT_HAVE_FORK AND INNOEXTRACT_HAVE_EXECVP))
 		check_symbol_exists(waitpid "sys/wait.h" INNOEXTRACT_HAVE_WAITPID)
 	endif()
-	
+
 endif()
 
 if(NOT MSVC)
-	
+
 	if(CMAKE_CXX_COMPILER_ID STREQUAL "PathScale")
 		# EKOPath recognizes these but then fails to link
 	else()
@@ -311,7 +311,7 @@ if(NOT MSVC)
 	if(NOT INNOEXTRACT_HAVE_BUILTIN_BSWAP64)
 		check_symbol_exists(bswap_64 "byteswap.h" INNOEXTRACT_HAVE_BSWAP_64)
 	endif()
-	
+
 endif()
 
 if($ENV{PORTAGE_REPO_NAME} MATCHES "gentoo")

@@ -8,6 +8,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/rotisserie/eris"
 )
 
 func InstallTools() error {
@@ -22,7 +24,7 @@ func InstallTools() error {
 	fset := token.NewFileSet()
 	f, err := parser.ParseFile(fset, toolsFile, nil, parser.ImportsOnly)
 	if err != nil {
-		return err
+		return eris.Wrapf(err, "failed to parse %s", toolsFile)
 	}
 
 	for _, path := range f.Imports {
@@ -36,7 +38,7 @@ func InstallTools() error {
 		cmd.Stdout = os.Stdout
 		err := cmd.Run()
 		if err != nil {
-			return err
+			return eris.Wrapf(err, "failed to install %s", dep)
 		}
 	}
 

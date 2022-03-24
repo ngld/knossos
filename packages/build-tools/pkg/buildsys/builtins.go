@@ -22,7 +22,7 @@ import (
 	"mvdan.cc/sh/v3/syntax"
 )
 
-func path2string(thread *starlark.Thread, starPath starlark.Value) (string, error) {
+func path2string(_ *starlark.Thread, starPath starlark.Value) (string, error) {
 	switch value := starPath.(type) {
 	case starlark.String:
 		return value.GoString(), nil
@@ -39,7 +39,12 @@ func resolvePath(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tu
 
 	if len(kwargs) > 0 {
 		for _, kv := range kwargs {
-			key := kv[0].(starlark.String).GoString()
+			starKey, ok := kv[0].(starlark.String)
+			if !ok {
+				return nil, eris.New("expected keyword arguments to be strings")
+			}
+
+			key := starKey.GoString()
 
 			if key == "base" {
 				switch value := kv[1].(type) {
@@ -79,7 +84,7 @@ func resolvePath(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tu
 		var err error
 		normPath, err = filepath.Rel(base, normPath)
 		if err != nil {
-			return nil, err
+			return nil, eris.Wrapf(err, "failed to build relative path for %s in %s", normPath, base)
 		}
 	}
 
@@ -257,14 +262,14 @@ func readYaml(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple
 endLoop:
 	if value.Kind() == reflect.Invalid || value.IsNil() {
 		return defaultValue, nil
-	} else {
-		value, err := interfaceToStarlark(thread, value.Interface())
-		if err != nil {
-			return nil, eris.Wrap(err, fn.Name())
-		}
-
-		return value, nil
 	}
+
+	result, err := interfaceToStarlark(thread, value.Interface())
+	if err != nil {
+		return nil, eris.Wrap(err, fn.Name())
+	}
+
+	return result, nil
 }
 
 func starIsdir(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
@@ -284,9 +289,9 @@ func starIsdir(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tupl
 	info, err := os.Stat(dirPath)
 	if err == nil && info.IsDir() {
 		return starlark.True, nil
-	} else {
-		return starlark.False, nil
 	}
+
+	return starlark.False, nil
 }
 
 func starIsfile(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
@@ -306,9 +311,9 @@ func starIsfile(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tup
 	info, err := os.Stat(filePath)
 	if err == nil && info.Mode().IsRegular() {
 		return starlark.True, nil
-	} else {
-		return starlark.False, nil
 	}
+
+	return starlark.False, nil
 }
 
 func starExec(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
@@ -451,8 +456,11 @@ func starLoadVcvars(thread *starlark.Thread, fn *starlark.Builtin, args starlark
 		return nil, eris.Wrap(err, "could not find vcvarsall.bat")
 	}
 
+	// A weak random number is fine here since it's just used to avoid collisions with other instances running in
+	// parallel which is rare to begin with.
+	//nolint:gosec
 	tmpDir := filepath.Join(os.TempDir(), fmt.Sprintf("knbuildsys-%d", rand.Int()))
-	err = os.Mkdir(tmpDir, 0700)
+	err = os.Mkdir(tmpDir, 0o700)
 	if err != nil {
 		return nil, eris.Wrap(err, "could not create temporary directory")
 	}
@@ -465,7 +473,7 @@ echo KN_PATH=%PATH%
 echo KN_INCLUDE=%INCLUDE%
 echo KN_LIBPATH=%LIBPATH%
 echo KN_LIB=%LIB%
-`), 0700)
+`), 0o700)
 	if err != nil {
 		return nil, eris.Wrap(err, "failed to write helper script")
 	}
@@ -491,7 +499,7 @@ echo KN_LIB=%LIB%
 	return starlark.True, nil
 }
 
-var libCache map[string]string = nil
+var libCache map[string]string
 
 func starLookupLib(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	var lib string
@@ -509,7 +517,7 @@ func starLookupLib(thread *starlark.Thread, fn *starlark.Builtin, args starlark.
 
 		output, err := ldCmd.Output()
 		if err != nil {
-			return nil, err
+			return nil, eris.Wrap(err, "failed to run ldconfig")
 		}
 
 		lines := strings.Split(string(output), "\n")
@@ -552,7 +560,7 @@ func starParseShellArgs(thread *starlark.Thread, fn *starlark.Builtin, args star
 	parser := syntax.NewParser()
 	shellArgs, err := parser.Parse(reader, "shell args")
 	if err != nil {
-		return nil, err
+		return nil, eris.Wrapf(err, "failed to parse %s", argString)
 	}
 
 	if len(shellArgs.Stmts) != 1 {

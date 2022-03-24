@@ -13,7 +13,8 @@ import (
 )
 
 const (
-	RepoEndpoint  = "https://ghcr.io/v2/"
+	RepoEndpoint = "https://ghcr.io/v2/"
+	//nolint:gosec // No, these aren't credentials
 	tokenEndpoint = "https://ghcr.io/token?scope=repository:%s:pull&service=ghcr.io"
 	Repo          = "ngld/knossos/releases"
 )
@@ -57,19 +58,19 @@ var client = http.Client{
 func GetToken(repo string) (string, error) {
 	resp, err := client.Get(fmt.Sprintf(tokenEndpoint, repo))
 	if err != nil {
-		return "", err
+		return "", eris.Wrap(err, "failed to fetch token")
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", err
+		return "", eris.Wrap(err, "failed to read token response")
 	}
 
 	var result TokenResponse
 	err = json.Unmarshal(body, &result)
 	if err != nil {
-		return "", err
+		return "", eris.Wrap(err, "failed to decode token response")
 	}
 
 	if len(result.Errors) > 0 {
@@ -78,25 +79,30 @@ func GetToken(repo string) (string, error) {
 	return result.Token, nil
 }
 
-func doAuthenticatedRequest(ctx context.Context, path string, token string, dest interface{}) error {
+func doAuthenticatedRequest(_ context.Context, path string, token string, dest interface{}) error {
 	req, err := http.NewRequest("GET", RepoEndpoint+path, nil)
 	if err != nil {
-		return err
+		return eris.Wrap(err, "failed to construct request")
 	}
 	req.Header.Add("Authorization", "Bearer "+token)
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return err
+		return eris.Wrap(err, "failed to send request")
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return err
+		return eris.Wrap(err, "failed to read response")
 	}
 
-	return json.Unmarshal(body, dest)
+	err = json.Unmarshal(body, dest)
+	if err != nil {
+		return eris.Wrap(err, "failed to parse response")
+	}
+
+	return nil
 }
 
 func GetAvailableVersions(ctx context.Context, token string) ([]string, error) {
@@ -115,13 +121,13 @@ func GetAvailableVersions(ctx context.Context, token string) ([]string, error) {
 func GetBlobURL(ctx context.Context, token string, digest string) (string, error) {
 	req, err := http.NewRequest("GET", RepoEndpoint+Repo+"/blobs/"+digest, nil)
 	if err != nil {
-		return "", err
+		return "", eris.Wrap(err, "failed to construct request")
 	}
 	req.Header.Add("Authorization", "Bearer "+token)
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", err
+		return "", eris.Wrap(err, "failed to send request")
 	}
 	resp.Body.Close()
 

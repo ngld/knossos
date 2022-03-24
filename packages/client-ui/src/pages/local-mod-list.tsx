@@ -10,6 +10,7 @@ import { API_URL } from '../lib/constants';
 import { launchMod } from '../dialogs/launch-mod';
 import UninstallModDialog from '../dialogs/uninstall-mod';
 import ModstockImage from '../resources/modstock.jpg';
+import RetailImage from '../resources/mod-retail.png';
 
 async function fetchMods(gs: GlobalState): Promise<SimpleModList_Item[]> {
   const result = await gs.client.getLocalMods({});
@@ -48,7 +49,7 @@ export default observer(function LocalModList(): React.ReactElement {
                   {mod.teaser?.fileid ? (
                     <img src={API_URL + '/ref/' + mod.teaser?.fileid} />
                   ) : mod.modid === 'FS2' ? (
-                    <img src={require('../resources/mod-retail.png').default} />
+                    <img src={RetailImage} />
                   ) : (
                     <img src={ModstockImage} />
                   )}

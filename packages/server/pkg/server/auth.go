@@ -26,7 +26,12 @@ var roles = map[int16]string{
 }
 
 func hashPassword(password string, cfg *config.Config) ([]byte, error) {
-	return argon2.GenerateFromPassword([]byte(password), (*argon2.Params)(&cfg.Argon2))
+	hash, err := argon2.GenerateFromPassword([]byte(password), (*argon2.Params)(&cfg.Argon2))
+	if err != nil {
+		return nil, eris.Wrap(err, "failed to hash password")
+	}
+
+	return hash, nil
 }
 
 // Login processes a new login request and returns a valid token on success

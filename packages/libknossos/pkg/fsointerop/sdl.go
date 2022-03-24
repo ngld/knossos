@@ -1,4 +1,4 @@
-package fso_interop
+package fsointerop
 
 import (
 	"context"

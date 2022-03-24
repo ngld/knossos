@@ -43,13 +43,9 @@ export default observer(function RemoteModList(): React.ReactElement {
                   </div>
 
                   <div className="cover flex flex-col justify-center gap-2">
-                    <Button onClick={() => installMod(gs, mod.modid, mod.version)}>
-                      Install
-                    </Button>
+                    <Button onClick={() => installMod(gs, mod.modid, mod.version)}>Install</Button>
 
-                    <Button
-                      onClick={() => navigate('/rmod/' + mod.modid + '/' + mod.version)}
-                    >
+                    <Button onClick={() => navigate('/rmod/' + mod.modid + '/' + mod.version)}>
                       Details
                     </Button>
                   </div>

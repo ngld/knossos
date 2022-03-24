@@ -25,7 +25,7 @@ type manifest struct {
 func listDirContents(dir, prefix string) ([]string, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
-		return nil, err
+		return nil, eris.Wrapf(err, "failed to list contents of %s", dir)
 	}
 
 	files := make([]string, 0, len(entries))
@@ -70,7 +70,7 @@ func main() {
 
 	fmt.Println("Creating output directory")
 	outDir := args[2]
-	err = os.MkdirAll(outDir, 0770)
+	err = os.MkdirAll(outDir, 0o770)
 	if err != nil {
 		fmt.Printf("Failed to create %s: %+v\n", outDir, err)
 	}

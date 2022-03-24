@@ -3,6 +3,8 @@ package pkg
 import "testing"
 
 func TestAnd(t *testing.T) {
+	t.Parallel()
+
 	expr, err := ParseBoolExpr("a && b")
 	if err != nil {
 		t.Fatalf("parser failed with %s for \"a && b\"", err)
@@ -31,6 +33,8 @@ func TestAnd(t *testing.T) {
 }
 
 func TestOr(t *testing.T) {
+	t.Parallel()
+
 	expr, err := ParseBoolExpr("a || b")
 	if err != nil {
 		t.Fatalf("parser failed with %s for \"a || b\"", err)
@@ -59,6 +63,8 @@ func TestOr(t *testing.T) {
 }
 
 func TestParens(t *testing.T) {
+	t.Parallel()
+
 	exprs := []string{"(a && b) || c", "c || (a && b)"}
 	for _, expr := range exprs {
 		expr, err := ParseBoolExpr(expr)
@@ -95,6 +101,8 @@ func TestParens(t *testing.T) {
 }
 
 func TestInvalidStrings(t *testing.T) {
+	t.Parallel()
+
 	_, err := ParseBoolExpr("var+fds")
 	if err == nil {
 		t.Fatal("var+fds didn't fail")
@@ -133,6 +141,8 @@ func TestInvalidStrings(t *testing.T) {
 }
 
 func TestChains(t *testing.T) {
+	t.Parallel()
+
 	exprs := []string{"a && b && c", "a || b && c", "a && (b || c) && d", "(a && !b) || (c && d)", "darwin && (amd64 || !arm64) && ci"}
 	for _, expr := range exprs {
 		_, err := ParseBoolExpr(expr)
@@ -143,6 +153,8 @@ func TestChains(t *testing.T) {
 }
 
 func TestNegate(t *testing.T) {
+	t.Parallel()
+
 	expr, err := ParseBoolExpr("!a")
 	if err != nil {
 		t.Fatalf("!a failed with %s", err)

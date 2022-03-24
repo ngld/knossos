@@ -34,7 +34,12 @@ func Log(ctx context.Context) *zerolog.Logger {
 		return &log.Logger
 	}
 
-	return logger.(*zerolog.Logger)
+	zlogger, ok := logger.(*zerolog.Logger)
+	if !ok {
+		panic("wrong logger in context")
+	}
+
+	return zlogger
 }
 
 // PgxLogger implements pgx's logger interface

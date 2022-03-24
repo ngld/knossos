@@ -9,10 +9,10 @@
     "experimentalDecorators": true,
     "baseUrl": ".",
     "paths": {
-      "@api/*": ["../api/api/*"],
+      "@api/*": ["../api/api/*"]
     },
     "typeRoots": ["node_modules/@types", "../front/types"],
     "types": ["node", "unplugin-icons/types/react"]
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/global.d.ts"]
 }

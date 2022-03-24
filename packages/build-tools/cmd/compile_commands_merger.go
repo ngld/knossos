@@ -58,7 +58,7 @@ var mergeCompileCommansCmd = &cobra.Command{
 			return eris.Wrap(err, "failed to encode output")
 		}
 
-		err = ioutil.WriteFile(args[0], data, 0660)
+		err = ioutil.WriteFile(args[0], data, 0o660)
 		if err != nil {
 			return eris.Wrapf(err, "failed to write to %s", args[0])
 		}

@@ -327,7 +327,7 @@ export function installMod(gs: GlobalState, modid: string, version: string): voi
 function triggerModInstallation(
   gs: GlobalState,
   state: InstallState,
-  props: InstallModDialogProps,
+  _props: InstallModDialogProps,
 ): void {
   const mods = {} as Record<string, InstallModRequest_Mod>;
   for (const [key, selected] of Object.entries(state.userSelected)) {

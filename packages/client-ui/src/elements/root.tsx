@@ -1,10 +1,10 @@
-import CiWindowMinLine from "~icons/clarity/window-min-line";
-import CiWindowRestoreLine from "~icons/clarity/window-restore-line";
-import CiWindowMaxLine from "~icons/clarity/window-max-line";
-import CiWindowCloseLine from "~icons/clarity/window-close-line";
-import CiPictureLine from "~icons/clarity/picture-line";
-import CiFilterLine from "~icons/clarity/filter-line";
-import CiCogLine from "~icons/clarity/cog-line";
+import CiWindowMinLine from '~icons/clarity/window-min-line';
+import CiWindowRestoreLine from '~icons/clarity/window-restore-line';
+import CiWindowMaxLine from '~icons/clarity/window-max-line';
+import CiWindowCloseLine from '~icons/clarity/window-close-line';
+import CiPictureLine from '~icons/clarity/picture-line';
+import CiFilterLine from '~icons/clarity/filter-line';
+import CiCogLine from '~icons/clarity/cog-line';
 
 import { useState, useEffect } from 'react';
 import { observer } from 'mobx-react-lite';
@@ -99,8 +99,8 @@ const ModContainer = observer(function ModContainer(props: {
       <ErrorBoundary>
         {props.gs.startupDone ? (
           <Routes>
-            <Route path="/" element={<Navigate to="/play" />}/>
-            <Route path="/index.html" element={<Navigate to="/play" />}/>
+            <Route path="/" element={<Navigate to="/play" />} />
+            <Route path="/index.html" element={<Navigate to="/play" />} />
             <Route path="/play" element={<LocalModList />} />
             <Route path="/explore" element={<RemoteModList />} />
             <Route path="/settings" element={<Settings />} />
@@ -155,7 +155,7 @@ export default function Root(): React.ReactElement {
         console.error('failed to fetch knossos version', e);
       }
     })();
-  }, []);
+  }, [gs]);
 
   return (
     <div className="flex flex-col h-full">

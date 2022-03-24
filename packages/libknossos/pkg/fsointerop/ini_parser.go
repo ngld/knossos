@@ -1,4 +1,4 @@
-package fso_interop
+package fsointerop
 
 import (
 	"context"
@@ -36,6 +36,8 @@ func skipWhitespace(f io.RuneScanner) error {
 		char, _, err := f.ReadRune()
 		if err != nil {
 			if eris.Is(err, io.EOF) {
+				// There's no point in wrapping this error
+				//nolint:wrapcheck
 				return err
 			}
 			return eris.Wrap(err, "failed to read rune")
@@ -163,9 +165,7 @@ func parseFile(ctx context.Context, f io.RuneScanner, dest interface{}) error {
 			case reflect.Uint32:
 				num, err := strconv.Atoi(value)
 				if err != nil {
-					if value == "No Joystick" {
-						num = 0
-					} else {
+					if value != "No Joystick" {
 						api.Log(ctx, api.LogWarn, "fs2_open.ini: failed to parse value %s for key %s", value, key)
 					}
 				} else {
@@ -269,7 +269,7 @@ func SaveSettings(ctx context.Context, settings *client.FSOSettings) error {
 	}
 
 	iniPath := filepath.Join(GetPrefPath(ctx), "fs2_open.ini")
-	err := os.WriteFile(iniPath, []byte(buffer.String()), 0600)
+	err := os.WriteFile(iniPath, []byte(buffer.String()), 0o600)
 	if err != nil {
 		return eris.Wrapf(err, "failed to write %s", iniPath)
 	}

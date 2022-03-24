@@ -88,6 +88,7 @@ func main() {
 		log.Fatal().Err(err).Msg("Failed to start server")
 	}
 
+	//nolint:forcetypeassert // We know the result type of twirp.NewServer()
 	twirpPrefix := twirpServer.(client.TwirpServer).PathPrefix()
 
 	router := mux.NewRouter()

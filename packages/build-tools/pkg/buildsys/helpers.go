@@ -16,13 +16,14 @@ func normalizePath(ctx *parserCtx, pathList ...string) string {
 	result := filepath.Dir(ctx.filepath)
 
 	for _, path := range pathList {
-		if strings.HasPrefix(path, "//") {
+		switch {
+		case strings.HasPrefix(path, "//"):
 			result = filepath.Join(ctx.projectRoot, path[2:])
-		} else if strings.HasPrefix(path, "/") {
+		case strings.HasPrefix(path, "/"):
 			result = filepath.Join(filepath.VolumeName(result), path)
-		} else if !filepath.IsAbs(path) {
+		case !filepath.IsAbs(path):
 			result = filepath.Join(result, path)
-		} else {
+		default:
 			result = path
 		}
 	}
@@ -65,6 +66,7 @@ func getEnvVars(overrides map[string]string) []string {
 	return shellEnv
 }
 
+//nolint:unparam // starlark always passes the thread to custom functions
 func interfaceToStarlark(thread *starlark.Thread, value interface{}) (starlark.Value, error) {
 	// handle a few simple and common cases first
 	switch value := value.(type) {
@@ -75,9 +77,9 @@ func interfaceToStarlark(thread *starlark.Thread, value interface{}) (starlark.V
 	case bool:
 		if value {
 			return starlark.True, nil
-		} else {
-			return starlark.False, nil
 		}
+
+		return starlark.False, nil
 	case float32:
 		return starlark.Float(value), nil
 	case float64:
@@ -94,7 +96,7 @@ func interfaceToStarlark(thread *starlark.Thread, value interface{}) (starlark.V
 		for k, v := range value {
 			err := dict.SetKey(starlark.String(k), starlark.String(v))
 			if err != nil {
-				return nil, err
+				return nil, eris.Wrapf(err, "could not store %v as %v in dictionary", v, k)
 			}
 		}
 
@@ -137,7 +139,7 @@ func interfaceToStarlark(thread *starlark.Thread, value interface{}) (starlark.V
 
 			err = dict.SetKey(key, value)
 			if err != nil {
-				return nil, err
+				return nil, eris.Wrapf(err, "failed to store %v in key %v in dictionary", value, key)
 			}
 		}
 
@@ -160,12 +162,12 @@ func interfaceToStarlark(thread *starlark.Thread, value interface{}) (starlark.V
 
 			err = dict.SetKey(starlark.String(key), value)
 			if err != nil {
-				return nil, err
+				return nil, eris.Wrapf(err, "failed to store %v in key %v in dictionary", value, key)
 			}
 		}
 
 		return dict, err
+	default:
+		return nil, eris.Errorf("encountered unsupported type %v", refValue.Kind())
 	}
-
-	return nil, eris.Errorf("encountered unsupported type %v", refValue.Kind())
 }

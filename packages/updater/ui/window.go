@@ -115,14 +115,15 @@ func introWindow() {
 		} else {
 			info, err := os.Stat(installPath)
 			ok := false
-			if eris.Is(err, os.ErrNotExist) {
+			switch {
+			case eris.Is(err, os.ErrNotExist):
 				// This is fine, we can create the folder
 				ok = true
-			} else if err != nil {
+			case err != nil:
 				platform.ShowError(fmt.Sprintf("Failed to check installation folder:\n%s", err))
-			} else if !info.IsDir() {
+			case !info.IsDir():
 				platform.ShowError("The entered path doesn't point to a folder!")
-			} else {
+			default:
 				ok = true
 			}
 

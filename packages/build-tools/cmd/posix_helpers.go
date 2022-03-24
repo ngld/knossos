@@ -12,6 +12,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// NOTE: These commands aren't entirely POSIX-compliant; they're just good enough for our build scripts.
+
 var cpCmd = &cobra.Command{
 	Use:   "cp",
 	Short: "Cross-platform implementation of the POSIX cp command",
@@ -166,12 +168,12 @@ var rmCmd = &cobra.Command{
 		items := []string{}
 		recursive, err := cmd.Flags().GetBool("recursive")
 		if err != nil {
-			return err
+			return eris.Wrap(err, "failed to check --recursive flag")
 		}
 
 		force, err := cmd.Flags().GetBool("force")
 		if err != nil {
-			return err
+			return eris.Wrap(err, "failed to check --force flag")
 		}
 
 		if runtime.GOOS == "windows" {
@@ -223,14 +225,14 @@ var mkdirCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		makeParents, err := cmd.Flags().GetBool("parents")
 		if err != nil {
-			return err
+			return eris.Wrap(err, "failed to check --parents flag")
 		}
 
 		for _, item := range args {
 			if makeParents {
-				err = os.MkdirAll(item, 0770)
+				err = os.MkdirAll(item, 0o770)
 			} else {
-				err = os.Mkdir(item, 0770)
+				err = os.Mkdir(item, 0o770)
 			}
 
 			if err != nil {
@@ -250,15 +252,15 @@ var touchCmd = &cobra.Command{
 
 		for _, item := range args {
 			// Make sure the file exists
-			hdl, err := os.OpenFile(item, os.O_CREATE|os.O_RDONLY, 0660)
+			hdl, err := os.OpenFile(item, os.O_CREATE|os.O_RDONLY, 0o660)
 			if err != nil {
-				return err
+				return eris.Wrapf(err, "failed to open %s", item)
 			}
 			hdl.Close()
 
 			err = os.Chtimes(item, now, now)
 			if err != nil {
-				return err
+				return eris.Wrapf(err, "failed to update access time for %s", item)
 			}
 		}
 
@@ -276,7 +278,7 @@ var sleepCmd = &cobra.Command{
 
 		seconds, err := strconv.Atoi(args[0])
 		if err != nil {
-			return err
+			return eris.Wrapf(err, "failed to parse %s as integer", args[0])
 		}
 
 		time.Sleep(time.Duration(seconds) * time.Second)
