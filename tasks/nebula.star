@@ -17,7 +17,7 @@ def nebula_configure(binext):
         hidden = True,
         skip_if_exists = [".tools/db_setup"],
         cmds = [
-            "docker network create '%s'" % db_network,
+            "docker network create '%s' || true" % db_network,
             "docker create --name '%s' --network '%s' -p '%s:5432' -e POSTGRES_USER='%s' -e POSTGRES_PASSWORD='%s' -e POSTGRES_DB='%s' postgres:alpine" % (db_container, db_network, db_port, db_user, db_pass, db_name),
             "touch .tools/db_setup",
         ],

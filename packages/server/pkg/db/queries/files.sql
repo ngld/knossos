@@ -5,3 +5,6 @@ INSERT INTO files (storage_key, filesize, public, external, owner)
 
 -- name: GetPublicFileByID :one
 SELECT storage_key, external FROM files WHERE public = true AND id = pggen.arg('id') LIMIT 1;
+
+-- name: GetExternalFileByURL :one
+SELECT id FROM files WHERE external = pggen.arg('external') AND owner = 1;

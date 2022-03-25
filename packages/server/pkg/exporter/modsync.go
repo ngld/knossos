@@ -204,7 +204,7 @@ func buildReleaseFromRow(ctx context.Context, q queries.Querier, row queries.Get
 			Checksum: archive.ChecksumDigest.Bytes,
 			Size:     uint64(*archive.Filesize),
 			Mirrors:  mirrors,
-			Files:    make([]*common.ChecksumPack_Archive_File, len(files)),
+			Files:    make([]*common.ChecksumPack_Archive_File, 0, len(files)),
 		}
 
 		for fpath, chksum := range files {

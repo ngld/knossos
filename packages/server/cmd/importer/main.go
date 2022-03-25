@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/aidarkhanov/nanoid"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/rotisserie/eris"
@@ -30,7 +31,12 @@ func handleFile(ctx context.Context, q *queries.DBQuerier, url string) int32 {
 		return 0
 	}
 
-	fid, err := q.CreateExternalFile(ctx, queries.CreateExternalFileParams{
+	fid, err := q.GetExternalFileByURL(ctx, []string{url})
+	if err == nil {
+		return fid
+	}
+
+	fid, err = q.CreateExternalFile(ctx, queries.CreateExternalFileParams{
 		StorageKey: "ext#" + nanoid.New(),
 		Filesize:   0,
 		Public:     true,
@@ -42,6 +48,11 @@ func handleFile(ctx context.Context, q *queries.DBQuerier, url string) int32 {
 	}
 
 	return fid
+}
+
+type relInfo struct {
+	updated time.Time
+	aID     int
 }
 
 type FilesSource struct {
@@ -212,14 +223,6 @@ func main() {
 		log.Fatal().Err(err).Msg("Failed to setup the transaction")
 	}
 
-	_, err = tx.Exec(ctx, `
-TRUNCATE mods CASCADE;
-TRUNCATE files CASCADE;
-`)
-	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to truncate tables")
-	}
-
 	q := queries.NewQuerier(tx)
 
 	modIDs := map[string]bool{}
@@ -227,10 +230,38 @@ TRUNCATE files CASCADE;
 		modIDs[mod.ID] = true
 	}
 
+	knownReleases := map[string]time.Time{}
 	count := len(data.Mods)
 	aidCache := map[string]int32{}
+
+	log.Info().Msg("Loading existing releases")
+
+	rows, err := q.GetModReleaseVersions(ctx)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed")
+	}
+
+	for _, row := range rows {
+		knownReleases[*row.Modid+"#"+*row.Version] = row.Updated.Time
+		aidCache[*row.Modid] = *row.Aid
+	}
+
 modLoop:
 	for i, mod := range data.Mods {
+		newRel := true
+		if lastImport, ok := knownReleases[mod.ID+"#"+mod.Version]; ok {
+			lastUpdate, err := time.Parse("2006-01-02", mod.LastUpdate)
+			if err != nil {
+				log.Fatal().Err(err).Msgf("Failed to parse last update %s for mod %s %s", mod.LastUpdate, mod.ID, mod.Version)
+			}
+
+			if lastImport.After(lastUpdate) {
+				continue
+			}
+
+			newRel = false
+		}
+
 		log.Info().Msgf("Mod %4d of %d", i, count)
 
 		for _, pkg := range mod.Packages {
@@ -260,9 +291,8 @@ modLoop:
 			}
 
 			aidCache[mod.ID] = aid
+			log.Info().Msgf("AID %d", aid)
 		}
-
-		log.Info().Msgf("AID %d", aid)
 
 		rStabilility, ok := stabilityMap[mod.Stability]
 		if !ok {
@@ -292,6 +322,41 @@ modLoop:
 		screens := make([]int32, len(mod.Screenshots))
 		for idx, url := range mod.Screenshots {
 			screens[idx] = handleFile(ctx, q, url)
+		}
+
+		if !newRel {
+			// Update only the metadata since that's the only things that's allowed to change after release.
+			modParams := queries.UpdateReleaseForImportParams{
+				ModAid:        aid,
+				Version:       mod.Version,
+				Stability:     int16(rStabilility),
+				Description:   mod.Description,
+				ReleaseThread: mod.ReleaseThread,
+				Videos:        mod.Videos,
+				Notes:         mod.Notes,
+				Cmdline:       mod.Cmdline,
+				Screenshots:   screens,
+				Teaser:        handleFile(ctx, q, mod.Tile),
+				Banner:        handleFile(ctx, q, mod.Banner),
+				ModOrder:      mod.ModFlag,
+			}
+
+			err = modParams.Released.Set(relDate)
+			if err != nil {
+				log.Fatal().Err(err).Msgf("Failed to set release date %s for %s (%s)", relDate, mod.ID, mod.Version)
+			}
+
+			err = modParams.Updated.Set(updateDate)
+			if err != nil {
+				log.Fatal().Err(err).Msgf("Failed to set updated date %s for %s (%s)", updateDate, mod.ID, mod.Version)
+			}
+
+			_, err = q.UpdateReleaseForImport(ctx, modParams)
+			if err != nil {
+				log.Fatal().Err(err).Msgf("Failed to update release %s (%s)", mod.ID, mod.Version)
+			}
+
+			continue
 		}
 
 		modParams := queries.CreateReleaseParams{
@@ -424,6 +489,19 @@ modLoop:
 			archiveMap := make(map[string]int32)
 			archiveResults := tx.SendBatch(ctx, archiveBatch)
 			rowIdx := 0
+			renames := make(map[string]string)
+
+			for _, item := range pkg.Filelist {
+				if item.OrigName != "" && item.OrigName != item.Filename {
+					renames[strings.TrimPrefix(item.OrigName, "./")] = strings.TrimPrefix(item.Filename, "./")
+				}
+			}
+
+			if len(renames) > 0 {
+				spew.Dump(renames)
+			}
+			pkg.Filelist = make([]importer.KnFile, 0)
+
 			for idx := 0; idx < archiveBatch.Len(); idx++ {
 				rows, err := archiveResults.Query()
 				if err != nil {
@@ -438,20 +516,17 @@ modLoop:
 					}
 
 					archiveMap[pkg.Files[rowIdx].Filename] = archiveID
+					arlist, err := buildFilelist(ctx, pkg.Files[rowIdx], archiveID, renames)
+					if err != nil {
+						log.Fatal().Err(err).Msgf("Failed to build filelist for %s of %s (%s)", pkg.Name, mod.ID, mod.Version)
+					}
+
+					pkg.Filelist = append(pkg.Filelist, arlist...)
 					rowIdx++
 				}
 				rows.Close()
 			}
 			archiveResults.Close()
-
-			for idx, item := range pkg.Filelist {
-				aid, ok := archiveMap[item.Archive]
-				if !ok {
-					log.Fatal().Msgf("Failed to find archive %s in archive map for file %s", item.Archive, item.Filename)
-				}
-
-				pkg.Filelist[idx].ArchiveID = aid
-			}
 
 			count, err := CopyFromFiles(ctx, tx, pid, pkg.Filelist)
 			if err != nil {
