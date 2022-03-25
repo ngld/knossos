@@ -6,9 +6,8 @@ package libarchive
 // #include <libarchive/archive.h>
 // #include <libarchive/archive_entry.h>
 //
-// inline void archive_entry_set_mode_helper(struct archive_entry *entry, uint32_t mode) {
-//   archive_entry_set_mode(entry, (__LA_MODE_T)mode);
-// }
+// extern int libarchive_get_fd(intptr_t handle);
+// extern void libarchive_close_fd(int fd);
 import "C"
 
 import (
@@ -25,6 +24,7 @@ var knossosStr = C.CString("knossos")
 type Archive struct {
 	handle     *C.struct_archive
 	fileHandle *os.File
+	fd         C.int
 	fileSize   int64
 	buffer     unsafe.Pointer
 	Filename   string
@@ -86,19 +86,16 @@ func OpenArchive(filename string) (*Archive, error) {
 		return nil, eris.Wrap(err, "failed to open file")
 	}
 
-	size, err := a.fileHandle.Seek(0, io.SeekEnd)
+	info, err := os.Stat(a.Filename)
 	if err != nil {
 		a.Close()
-		return nil, eris.Wrapf(err, "failed to seek in %s", a.Filename)
+		return nil, eris.Wrap(err, "failed to stat file")
 	}
 
-	a.fileSize = size
-	if _, err = a.fileHandle.Seek(0, io.SeekStart); err != nil {
-		a.Close()
-		return nil, eris.Wrapf(err, "failed to seek in %s", a.Filename)
-	}
+	a.fileSize = info.Size()
+	a.fd = C.libarchive_get_fd(C.intptr_t(a.fileHandle.Fd()))
 
-	code := C.archive_read_open_fd(a.handle, C.int(a.fileHandle.Fd()), 4096)
+	code := C.archive_read_open_fd(a.handle, a.fd, 128*1024)
 	if code != C.ARCHIVE_OK {
 		err := a.code2error(code)
 		a.Close()
@@ -196,6 +193,10 @@ func (a *Archive) Close() error {
 		a.buffer = nil
 	}
 
+	if a.fd > 0 {
+		C.libarchive_close_fd(a.fd)
+	}
+
 	if a.fileHandle != nil {
 		if err := a.fileHandle.Close(); err != nil {
 			return eris.Wrap(err, "failed to close file handle")
@@ -258,7 +259,7 @@ func (w *ArchiveWriter) CreateFile(filename string, mode uint32, size int64) err
 
 	C.archive_entry_set_uname(w.entry, knossosStr)
 	C.archive_entry_set_gname(w.entry, knossosStr)
-	C.archive_entry_set_mode_helper(w.entry, C.uint32_t(mode))
+	C.archive_entry_set_mode(w.entry, C.__LA_MODE_T(mode))
 	C.archive_entry_set_size(w.entry, C.int64_t(size))
 
 	cfilename := C.CString(filename)

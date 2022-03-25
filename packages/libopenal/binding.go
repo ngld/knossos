@@ -36,7 +36,7 @@ func splitZeroString(input *C.char) []string {
 			break
 		}
 
-		result = append(result, C.GoString(input))
+		result = append(result, C.GoStringN(input, C.int(itemLen)))
 		input = (*C.char)(unsafe.Add(unsafe.Pointer(input), uintptr(itemLen+1)*charLen))
 	}
 

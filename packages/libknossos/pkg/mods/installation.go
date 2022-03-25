@@ -356,7 +356,11 @@ func InstallMod(ctx context.Context, req *client.InstallModRequest) error {
 	stepCount := len(plan) * 100
 	done := uint32(0)
 
-	queue := downloader.NewQueue(dlItems)
+	queue, err := downloader.NewQueue(ctx, dlItems)
+	if err != nil {
+		return eris.Wrap(err, "failed to prepare download queue")
+	}
+
 	queue.ProgressCb = func(progress float32, speed float64) {
 		done := atomic.LoadUint32(&done)
 		progress += float32(done) / float32(stepCount)
@@ -486,7 +490,12 @@ func InstallMod(ctx context.Context, req *client.InstallModRequest) error {
 				}
 			}
 
-			err = downloader.NewQueue(queueItems).Run(ctx)
+			dlq, err := downloader.NewQueue(ctx, queueItems)
+			if err != nil {
+				return eris.Wrap(err, "failed to prepare download queue for mod images")
+			}
+
+			err = dlq.Run(ctx)
 			if err != nil {
 				return eris.Wrap(err, "failed to fetch mod images")
 			}
