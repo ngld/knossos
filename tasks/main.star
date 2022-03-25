@@ -48,6 +48,8 @@ load("nebula.star", "nebula_configure")
 load("knossos.star", "knossos_configure")
 load("third_party.star", "third_party_configure")
 
+initial_path = getenv("PATH")
+
 def configure():
     generator = generator_opt
 
@@ -245,16 +247,19 @@ def configure():
         cmds = [yarn("lint")],
     )
 
+    path_additions = getenv('PATH').replace(initial_path, '%PATH%' if OS == 'windows' else '$PATH')
+
     if OS == "windows":
         write_file("yarn.bat", """@echo off
+setlocal
 set "PATH=%s"
-node %s %*
-""" % (getenv("PATH"), yarn_path))
+node "%s" %%*
+""" % (path_additions, yarn_path))
     else:
         write_file("yarn", """#!/bin/bash
 export PATH="%s"
 exec node "%s" "$@"
-""" % (getenv("PATH"), yarn_path))
+""" % (path_additions, yarn_path))
         execute("chmod u+x ./yarn")
 
     nebula_configure(binext)

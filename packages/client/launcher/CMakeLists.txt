@@ -31,14 +31,29 @@ endif()
 #  list(REMOVE_ITEM CEF_COMPILER_FLAGS /MP)
 #endif()
 
-macro(copy_file target file_path target_dir)
+# Create empty list
+list(APPEND knfiles)
+
+macro(copy_file file_path target_dir)
+  get_filename_component(filename ${file_path} NAME)
+
   add_custom_command(
-    TARGET ${target}
-    POST_BUILD
+    OUTPUT "${target_dir}/${filename}"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${file_path}" "${target_dir}"
     VERBATIM
     DEPENDS "${file_path}"
   )
+  list(APPEND knfiles "${target_dir}/${filename}")
+endmacro()
+
+macro(copy_rename_file file_path target_path)
+  add_custom_command(
+    OUTPUT "${target_path}"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${file_path}" "${target_path}"
+    VERBATIM
+    DEPENDS "${file_path}"
+  )
+  list(APPEND knfiles "${target_path}")
 endmacro()
 
 #
@@ -161,8 +176,8 @@ if(OS_LINUX)
     COPY_FILES("${CEF_TARGET}" "libminigbm.so" "${CEF_BINARY_DIR}" "${CEF_TARGET_OUT_DIR}")
   endif()
 
-  copy_file(${CEF_TARGET} ${libknossos} ${CEF_TARGET_OUT_DIR})
-  copy_file(${CEF_TARGET} "${libinnoextract_dir}/libinnoextract.so" ${CEF_TARGET_OUT_DIR})
+  copy_file(${libknossos} ${CEF_TARGET_OUT_DIR})
+  copy_file("${libinnoextract_dir}/libinnoextract.so" ${CEF_TARGET_OUT_DIR})
 
   if(${CMAKE_BUILD_TYPE} STREQUAL "Release")
     # Strip the libraries on release builds to save a *lot* of space.
@@ -285,8 +300,8 @@ if(OS_MAC)
   set(PREFIXES "mac/")
   COPY_MAC_RESOURCES("${KNOSSOS_RESOURCES_SRCS}" "${PREFIXES}" "${CEF_TARGET}" "${CMAKE_CURRENT_SOURCE_DIR}" "${CEF_APP}")
 
-  copy_file(${CEF_TARGET} "${libknossos}" "${CEF_APP}/Contents/MacOS")
-  copy_file(${CEF_TARGET} "${libinnoextract_dir}/libinnoextract.dylib" "${CEF_APP}/Contents/MacOS")
+  copy_file("${libknossos}" "${CEF_APP}/Contents/MacOS")
+  copy_file("${libinnoextract_dir}/libinnoextract.dylib" "${CEF_APP}/Contents/MacOS")
 endif()
 
 
@@ -319,11 +334,11 @@ if(OS_WINDOWS)
   COPY_FILES("${CEF_TARGET}" "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "${CEF_TARGET_OUT_DIR}")
   COPY_FILES("${CEF_TARGET}" "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "${CEF_TARGET_OUT_DIR}")
 
-  copy_file(${CEF_TARGET} "${libknossos}" ${CEF_TARGET_OUT_DIR})
-  copy_file(${CEF_TARGET} "${libinnoextract_dir}/libinnoextract.dll" ${CEF_TARGET_OUT_DIR})
-  copy_file(${CEF_TARGET} "${libinnoextract_dir}/libwinpthread-1.dll" ${CEF_TARGET_OUT_DIR})
-  copy_file(${CEF_TARGET} "${libopenal_dir}/soft_oal.dll" "${CEF_TARGET_OUT_DIR}/OpenAL32.dll")
-  copy_file(${CEF_TARGET} "${libSDL2_dir}/SDL2.dll" ${CEF_TARGET_OUT_DIR})
+  copy_file("${libknossos}" ${CEF_TARGET_OUT_DIR})
+  copy_file("${libinnoextract_dir}/libinnoextract.dll" ${CEF_TARGET_OUT_DIR})
+  copy_file("${libinnoextract_dir}/libwinpthread-1.dll" ${CEF_TARGET_OUT_DIR})
+  copy_rename_file("${libopenal_dir}/soft_oal.dll" "${CEF_TARGET_OUT_DIR}/OpenAL32.dll")
+  copy_file("${libSDL2_dir}/SDL2.dll" ${CEF_TARGET_OUT_DIR})
 
   if(${CMAKE_BUILD_TYPE} STREQUAL "Release")
     # Strip the libraries on release builds to save a *lot* of space.
@@ -337,3 +352,6 @@ if(OS_WINDOWS)
     endforeach()
   endif()
 endif()
+
+add_custom_target(knossos-resources DEPENDS "${knfiles}")
+add_dependencies(${CEF_TARGET} knossos-resources)

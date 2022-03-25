@@ -39,7 +39,7 @@ func simplifyPath(ctx *parserCtx, path string) string {
 	}
 
 	if strings.HasPrefix(absPath, projectRoot) {
-		return "//" + absPath[len(projectRoot)+1:]
+		return "//" + filepath.ToSlash(absPath[len(projectRoot)+1:])
 	}
 	return path
 }
