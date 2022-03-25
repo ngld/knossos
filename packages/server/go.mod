@@ -14,7 +14,7 @@ require (
 	github.com/jackc/pgtype v1.10.0
 	github.com/jackc/pgx/v4 v4.15.0
 	github.com/jordan-wright/email v4.0.1-0.20210109023952-943e75fe5223+incompatible
-	github.com/ngld/knossos/packages/api v0.0.0-20210718163256-09871a18e506
+	github.com/ngld/knossos/packages/api v0.0.0-00010101000000-000000000000
 	github.com/rotisserie/eris v0.5.2
 	github.com/rs/zerolog v1.26.1
 	github.com/ryanuber/go-glob v1.0.0 // indirect
