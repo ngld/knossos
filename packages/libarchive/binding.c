@@ -1,10 +1,11 @@
 #include <fcntl.h>
-#include <io.h>
 #include <stdint.h>
 
-#include <archive.h>
+#include <libarchive/archive.h>
 
 #ifdef _WIN32
+#include <io.h>
+
 #define close _close
 #endif
 
