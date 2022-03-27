@@ -170,8 +170,10 @@ func (a *Archive) Read(buffer []byte) (int, error) {
 	}
 
 	read := C.archive_read_data(a.handle, a.buffer, C.size_t(bufferSize))
-	if read > 0 {
-		goBuffer := (*[1 << 30]byte)(a.buffer)[:bufferSize]
+	if read < 0 {
+		return 0, a.code2error(C.int(read))
+	} else if read > 0 {
+		goBuffer := (*[1 << 30]byte)(a.buffer)[0:read]
 		/* safer (and slower) version
 		goBuffer := C.GoBytes(a.buffer, C.int(read)) */
 		copy(buffer, goBuffer)

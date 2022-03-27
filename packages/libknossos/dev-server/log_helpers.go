@@ -73,16 +73,21 @@ func getConsoleWriter(out io.Writer) zerolog.ConsoleWriter {
 			parts[1] = parts[2]
 		}
 
-		wd, err := os.Getwd()
-		if err != nil {
-			fmt.Print(err)
-			return callerStr
-		}
+		var rel string
+		if strings.HasPrefix(parts[0], "github.com/ngld/knossos/packages/") {
+			rel = parts[0][33:]
+		} else {
+			wd, err := os.Getwd()
+			if err != nil {
+				fmt.Print(err)
+				return callerStr
+			}
 
-		rel, err := filepath.Rel(wd, parts[0])
-		if err != nil {
-			fmt.Print(err)
-			return callerStr
+			rel, err = filepath.Rel(wd, parts[0])
+			if err != nil {
+				fmt.Print(err)
+				return callerStr
+			}
 		}
 
 		return fmt.Sprintf("\x1b[%dm%s:%s\x1b[0m \x1b[36m>\x1b[0m", 1, filepath.ToSlash(rel), parts[1])

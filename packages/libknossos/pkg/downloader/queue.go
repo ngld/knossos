@@ -9,7 +9,9 @@ import (
 	"io"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"os"
+	"path/filepath"
 	"sort"
 	"sync"
 	"sync/atomic"
@@ -216,7 +218,13 @@ func (q *Queue) download(ctx context.Context, item *QueueItem, progress *uint32)
 		}
 
 		if lastError == nil {
-			api.Log(ctx, api.LogInfo, "Downloading %s", urls[midx])
+			u, err := url.Parse(urls[midx])
+			server := u.Host
+			if err != nil {
+				server = urls[midx]
+			}
+
+			api.Log(ctx, api.LogInfo, "Downloading %s from %s", filepath.Base(item.Filepath), server)
 		} else {
 			api.Log(ctx, api.LogWarn, "Failed (%v), trying again with %s", lastError, urls[midx])
 		}
@@ -268,7 +276,7 @@ func (q *Queue) download(ctx context.Context, item *QueueItem, progress *uint32)
 			// Read() can return io.EOF for the last available block.
 			// This means that we have to process the received data before we can take a look at the error.
 			if read > 0 {
-				_, err := f.Write(buffer[:read])
+				_, err := f.Write(buffer[0:read])
 				if err != nil {
 					q.handleError(eris.Wrap(err, "failed to write"))
 					resp.Body.Close()
@@ -280,7 +288,7 @@ func (q *Queue) download(ctx context.Context, item *QueueItem, progress *uint32)
 
 				if hasher != nil {
 					// hash.Hash's Write() never fails which means we don't have to check it's return values
-					hasher.Write(buffer[:read])
+					hasher.Write(buffer[0:read])
 				}
 			}
 
@@ -333,6 +341,8 @@ func (q *Queue) download(ctx context.Context, item *QueueItem, progress *uint32)
 			q.handleError(eris.Errorf("%s failed due to a checksum mismatch (%s != %s)", urls[midx], fileSum, item.Checksum))
 			return
 		}
+
+		api.Log(ctx, api.LogInfo, "checksum passed for %s", filepath.Base(item.Filepath))
 	}
 
 	// Let Run() know that it can launch the next download.
