@@ -13,6 +13,10 @@ import (
 var fileBucket = []byte("files")
 
 func ImportFile(ctx context.Context, ref *common.FileRef) error {
+	if ref == nil {
+		panic("invalid file ref passed")
+	}
+
 	tx := TxFromCtx(ctx)
 	if tx == nil {
 		return db.Update(func(tx *bbolt.Tx) error {

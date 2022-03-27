@@ -16,6 +16,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/ngld/knossos/packages/api/client"
 	"github.com/ngld/knossos/packages/api/common"
 	"github.com/ngld/knossos/packages/libarchive"
@@ -95,6 +96,7 @@ func handleArchive(ctx context.Context, archivePath string, step *ModInstallStep
 
 		checksum, ok := fileLookup[itemName]
 		if !ok {
+			spew.Dump(fileLookup, itemName)
 			return eris.Errorf("could not find checksum for %s in %s for %s", archive.Entry.Pathname, step.label, step.modInfo.Title)
 		}
 
@@ -122,13 +124,17 @@ func handleArchive(ctx context.Context, archivePath string, step *ModInstallStep
 		for {
 			n, readErr := archive.Read(buffer)
 			if n > 0 {
-				_, err = f.Write(buffer[:n])
+				_, err = f.Write(buffer[0:n])
 				if err != nil {
 					f.Close()
 					return eris.Wrapf(err, "failed to write %s for %s in %s", destPath, step.pkgInfo.Name, step.modInfo.Title)
 				}
 
-				hasher.Write(buffer[:n])
+				_, err = hasher.Write(buffer[0:n])
+				if err != nil {
+					f.Close()
+					return eris.Wrapf(err, "failed to hash chunk of %s for %s in %s", destPath, step.pkgInfo.Name, step.modInfo.Title)
+				}
 			}
 
 			if readErr != nil {
@@ -265,13 +271,11 @@ func InstallMod(ctx context.Context, req *client.InstallModRequest) error {
 					return eris.Wrapf(err, "failed to serialise mod %s", modMeta.Modid)
 				}
 
-				var metaCopy common.ModMeta
-				err = proto.Unmarshal(data, &metaCopy)
+				newMeta[mod.Modid] = new(common.ModMeta)
+				err = proto.Unmarshal(data, newMeta[mod.Modid])
 				if err != nil {
 					return eris.Wrapf(err, "failed to deserialise mod %s", modMeta.Modid)
 				}
-
-				newMeta[mod.Modid] = &metaCopy
 			}
 
 			modMeta = newMeta[mod.Modid]
@@ -283,14 +287,13 @@ func InstallMod(ctx context.Context, req *client.InstallModRequest) error {
 					return eris.Wrapf(err, "failed to serialise mod release %s (%s)", modMeta.Modid, relMeta.Version)
 				}
 
-				var relCopy common.Release
-				err = proto.Unmarshal(data, &relCopy)
+				newRelMeta[relKey] = new(common.Release)
+				err = proto.Unmarshal(data, newRelMeta[relKey])
 				if err != nil {
 					return eris.Wrapf(err, "failed to deserialise mod release %s (%s)", modMeta.Modid, relMeta.Version)
 				}
 
-				relCopy.Packages = make([]*common.Package, 0)
-				newRelMeta[relKey] = &relCopy
+				newRelMeta[relKey].Packages = make([]*common.Package, 0)
 			}
 
 			newRelMeta[relKey].Packages = append(newRelMeta[relKey].Packages, pkg)
@@ -393,7 +396,7 @@ func InstallMod(ctx context.Context, req *client.InstallModRequest) error {
 	}()
 
 	hasher := sha256.New()
-	buffer := make([]byte, 4096)
+	buffer := make([]byte, 32*1024)
 	for queue.NextResult() {
 		item := queue.Result()
 		step := plan[item.Key]
@@ -465,7 +468,11 @@ func InstallMod(ctx context.Context, req *client.InstallModRequest) error {
 			}
 
 			for _, ref := range fileRefs {
-				if ref != nil && (len(ref.Urls) != 1 || !strings.HasPrefix(ref.Urls[0], "file://")) {
+				if ref == nil {
+					continue
+				}
+
+				if len(ref.Urls) != 1 || !strings.HasPrefix(ref.Urls[0], "file://") {
 					dest := "ref_" + hex.EncodeToString([]byte(ref.Fileid)) + filepath.Ext(ref.Urls[0])
 					dest = filepath.Join(modFolder, dest)
 					mirrors := ref.Urls
