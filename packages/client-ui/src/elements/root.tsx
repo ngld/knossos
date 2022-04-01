@@ -5,6 +5,7 @@ import CiWindowCloseLine from '~icons/clarity/window-close-line';
 import CiPictureLine from '~icons/clarity/picture-line';
 import CiFilterLine from '~icons/clarity/filter-line';
 import CiCogLine from '~icons/clarity/cog-line';
+import CiRefreshLine from '~icons/clarity/refresh-line';
 
 import { useState, useEffect } from 'react';
 import { observer } from 'mobx-react-lite';
@@ -194,6 +195,9 @@ export default function Root(): React.ReactElement {
         </div>
 
         <div className="float-right mr-2 text-white text-2xl gap-2">
+          <TooltipButton tooltip="Refresh Mod List" onClick={() => void refreshModList(gs)}>
+            <CiRefreshLine />
+          </TooltipButton>
           <TooltipButton tooltip="Screenshots">
             <CiPictureLine className="ml-2" />
           </TooltipButton>
@@ -209,4 +213,13 @@ export default function Root(): React.ReactElement {
       <OverlayRenderer gs={gs} />
     </div>
   );
+}
+
+async function refreshModList(gs: GlobalState): Promise<void> {
+  await gs.tasks.runTask('Refreshing mod list', (ref) => {
+    gs.sendSignal('showTasks');
+    void gs.client.syncRemoteMods({ ref });
+  });
+
+  gs.sendSignal('reloadRemoteMods');
 }

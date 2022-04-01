@@ -51,6 +51,7 @@ export default observer(function LocalModList(): React.ReactElement {
                       ref={ref}
                       className={cx(
                         'mod-tile bg-important flex flex-col overflow-hidden',
+                        { 'mod-tile-broken': mod.broken },
                         className,
                       )}
                       onContextMenu={onContextMenu}

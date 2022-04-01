@@ -126,6 +126,7 @@ message SimpleModList {
     FileRef teaser = 2;
     string title = 3;
     string version = 4;
+    bool broken = 6;
   }
   repeated Item mods = 2;
 }

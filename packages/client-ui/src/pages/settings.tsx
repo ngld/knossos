@@ -271,6 +271,10 @@ async function selectLibraryFolder(gs: GlobalState, formState: SettingsState): P
         formState.knSettings.libraryPath = result;
       });
 
+      const settings = await gs.client.getSettings({});
+      settings.response.libraryPath = result;
+      await gs.client.saveSettings(settings.response);
+
       void rescanLocalMods(gs);
     }
   } catch (e) {

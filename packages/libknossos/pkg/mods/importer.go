@@ -168,7 +168,7 @@ func ImportMods(ctx context.Context, modFiles []string) error {
 	modCount := float32(len(modFiles))
 	seenMods := make(map[string]bool)
 
-	err := storage.ImportMods(ctx, func(ctx context.Context, importMod func(*common.ModMeta) error, importRelease func(*common.Release) error) error {
+	err := storage.ImportMods(ctx, func(ctx context.Context) error {
 		done := float32(0)
 		for _, modFile := range modFiles {
 			data, err := ioutil.ReadFile(modFile)
@@ -291,8 +291,13 @@ func ImportMods(ctx context.Context, modFiles []string) error {
 			if !seenMods[mod.ID] {
 				seenMods[mod.ID] = true
 				pbMod := &common.ModMeta{
-					Modid: mod.ID,
-					Title: mod.Title,
+					Modid:  mod.ID,
+					Title:  mod.Title,
+					Parent: mod.Parent,
+				}
+
+				if pbMod.Parent == "" {
+					pbMod.Parent = "FS2"
 				}
 
 				switch mod.Type {
@@ -310,7 +315,7 @@ func ImportMods(ctx context.Context, modFiles []string) error {
 					pbMod.Type = common.ModType_MOD
 				}
 
-				err = importMod(pbMod)
+				err = SaveLocalMod(ctx, pbMod)
 				if err != nil {
 					return eris.Wrapf(err, "failed to import mod %s", mod.ID)
 				}
@@ -439,7 +444,7 @@ func ImportMods(ctx context.Context, modFiles []string) error {
 					pbExe.Label = exe.Label
 
 					prio := uint32(0)
-					// See https://github.com/ngld/knossos/blob/1f60d925498c02d3db76a54d3ee20c31b75c5a21/knossos/repo.py#L35-L40
+					// See https://github.com/ngld/old-knossos/blob/1f60d925498c02d3db76a54d3ee20c31b75c5a21/knossos/repo.py#L35-L40
 					if exe.Properties.X64 {
 						prio += 50
 					}
@@ -460,7 +465,7 @@ func ImportMods(ctx context.Context, modFiles []string) error {
 				item.Packages[pIdx] = pbPkg
 			}
 
-			err = importRelease(item)
+			err = SaveLocalModRelease(ctx, item)
 			if err != nil {
 				return err
 			}
@@ -482,7 +487,7 @@ func ImportMods(ctx context.Context, modFiles []string) error {
 			}
 
 			rel.DependencySnapshot = snapshot
-			err = storage.SaveLocalModRelease(ctx, rel)
+			err = SaveLocalModRelease(ctx, rel)
 			if err != nil {
 				return err
 			}

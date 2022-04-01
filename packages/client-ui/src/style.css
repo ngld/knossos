@@ -89,6 +89,10 @@ svg {
     font-size: 12px;
 }
 
+.mod-tile-broken {
+    filter: grayscale();
+}
+
 .mod-tile a {
     color: #fff !important;
     text-decoration: none;

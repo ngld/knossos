@@ -9,7 +9,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/rotisserie/eris"
 
 	"github.com/ngld/knossos/packages/api/client"
@@ -97,6 +96,7 @@ func buildModList(ctx context.Context, modProvider storage.ModProvider) (*client
 			Title:   modInfo.Title,
 			Teaser:  rel.Teaser,
 			Version: rel.Version,
+			Broken:  len(rel.DependencySnapshot) < 1 && modInfo.Type != common.ModType_ENGINE,
 		}
 	}
 
@@ -173,18 +173,16 @@ func (kn *knossosServer) UpdateLocalModList(ctx context.Context, req *client.Tas
 			}
 		}
 
-		err = storage.ImportMods(ctx, func(ctx context.Context, importMod func(*common.ModMeta) error, importRelease func(*common.Release) error) error {
+		err = storage.ImportMods(ctx, func(ctx context.Context) error {
 			for _, modInfo := range modInfos {
-				spew.Dump(modInfo)
-				err := importMod(modInfo)
+				err := storage.SaveLocalMod(ctx, modInfo)
 				if err != nil {
 					return err
 				}
 			}
 
 			for _, releaseInfo := range releaseInfos {
-				spew.Dump(releaseInfo)
-				err := importRelease(releaseInfo)
+				err := storage.SaveLocalModRelease(ctx, releaseInfo)
 				if err != nil {
 					return err
 				}
@@ -232,29 +230,29 @@ func (kn *knossosServer) GetModInfo(ctx context.Context, req *client.ModInfoRequ
 	tools := make([]*client.ToolInfo, 0)
 	if mod.Type != common.ModType_ENGINE {
 		engine, err := mods.GetEngineForMod(ctx, release)
-		if err != nil {
-			return nil, err
-		}
+		if err == nil {
+			for _, pkg := range mods.FilterUnsupportedPackages(ctx, engine.Packages) {
+				for _, exe := range pkg.Executables {
+					found := false
+					for _, t := range tools {
+						if t.Label == exe.Label {
+							found = true
+							break
+						}
+					}
 
-		for _, pkg := range mods.FilterUnsupportedPackages(ctx, engine.Packages) {
-			for _, exe := range pkg.Executables {
-				found := false
-				for _, t := range tools {
-					if t.Label == exe.Label {
-						found = true
-						break
+					if !found {
+						tools = append(tools, &client.ToolInfo{
+							Label: exe.Label,
+							Id:    engine.Modid,
+							Debug: exe.Debug,
+							Fred:  strings.Contains(exe.Label, "FRED"),
+						})
 					}
 				}
-
-				if !found {
-					tools = append(tools, &client.ToolInfo{
-						Label: exe.Label,
-						Id:    engine.Modid,
-						Debug: exe.Debug,
-						Fred:  strings.Contains(exe.Label, "FRED"),
-					})
-				}
 			}
+		} else {
+			api.Log(ctx, api.LogWarn, "Could not resolve engine for mod %s (%s): %s", mod.Title, release.Version, eris.ToString(err, true))
 		}
 	}
 

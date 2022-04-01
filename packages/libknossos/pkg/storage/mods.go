@@ -54,10 +54,7 @@ func modVersionSorter(_ string, versions []string) error {
 	return nil
 }
 
-func ImportMods(ctx context.Context, callback func(context.Context, func(*common.ModMeta) error, func(*common.Release) error) error) error {
-	importMutex.Lock()
-	defer importMutex.Unlock()
-
+func ImportMods(ctx context.Context, callback func(context.Context) error) error {
 	return db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(localModsBucket)
 
@@ -78,50 +75,8 @@ func ImportMods(ctx context.Context, callback func(context.Context, func(*common
 		localVersionIdx.Clear()
 		localTypeIdx.Clear()
 
-		localVersionIdx.StartBatch()
-		localTypeIdx.StartBatch()
-
-		ctx = CtxWithTx(ctx, tx)
-
 		// Call the actual import function
-		err = callback(ctx, func(mod *common.ModMeta) error {
-			encoded, err := proto.Marshal(mod)
-			if err != nil {
-				return eris.Wrapf(err, "failed to serialise mod metadata for %s", mod.Modid)
-			}
-
-			err = bucket.Put([]byte(mod.Modid), encoded)
-			if err != nil {
-				return eris.Wrapf(err, "failed to save mod metadata for %s", mod.Modid)
-			}
-
-			// Add this mod to our type index
-			localTypeIdx.BatchedAdd(mod.Type.String(), mod.Modid)
-			return nil
-		}, func(rel *common.Release) error {
-			encoded, err := proto.Marshal(rel)
-			if err != nil {
-				return eris.Wrapf(err, "failed to serialise mod release %s %s", rel.Modid, rel.Version)
-			}
-
-			err = bucket.Put([]byte(rel.Modid+"#"+rel.Version), encoded)
-			if err != nil {
-				return eris.Wrapf(err, "failed to save mod release %s %s", rel.Modid, rel.Version)
-			}
-
-			localVersionIdx.BatchedAdd(rel.Modid, rel.Version)
-			return nil
-		})
-		if err != nil {
-			return err
-		}
-
-		err = localVersionIdx.FinishBatch(tx)
-		if err != nil {
-			return err
-		}
-
-		return localTypeIdx.FinishBatch(tx)
+		return callback(CtxWithTx(ctx, tx))
 	})
 }
 
@@ -219,6 +174,16 @@ func SaveLocalModRelease(ctx context.Context, release *common.Release) error {
 	err = bucket.Put([]byte(release.Modid+"#"+release.Version), encoded)
 	if err != nil {
 		return eris.Wrapf(err, "failed to save release %s %s", release.Modid, release.Version)
+	}
+
+	files := append([]*common.FileRef{release.Banner, release.Teaser}, release.Screenshots...)
+	for _, item := range files {
+		if item != nil {
+			err = ImportFile(ctx, item)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil
