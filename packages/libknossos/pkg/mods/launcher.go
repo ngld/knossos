@@ -47,7 +47,7 @@ func touchINI(ctx context.Context) error {
 	return nil
 }
 
-func getEngineForMod(ctx context.Context, mod *common.Release) (*common.Release, error) {
+func GetEngineForMod(ctx context.Context, mod *common.Release) (*common.Release, error) {
 	var engine *common.Release
 
 	for modid, version := range mod.DependencySnapshot {
@@ -77,7 +77,7 @@ func getEngineForMod(ctx context.Context, mod *common.Release) (*common.Release,
 	return engine, nil
 }
 
-func getBinaryForEngine(ctx context.Context, engine *common.Release) (string, error) {
+func getBinaryForEngine(ctx context.Context, engine *common.Release, label string) (string, error) {
 	binaryScore := uint32(0)
 	binaryPath := ""
 
@@ -85,7 +85,7 @@ func getBinaryForEngine(ctx context.Context, engine *common.Release) (string, er
 
 	for _, pkg := range engine.Packages {
 		for _, exe := range pkg.Executables {
-			if exe.Label == "" && !exe.Debug && exe.Priority >= binaryScore {
+			if exe.Label == label && exe.Priority >= binaryScore {
 				binaryScore = exe.Priority
 				binaryPath = smartJoin(engine.Folder, pkg.Folder, exe.Path)
 			}
@@ -148,7 +148,7 @@ func getJSONFlagsForBinary(ctx context.Context, binaryPath string) (*storage.JSO
 }
 
 func GetFlagsForMod(ctx context.Context, mod *common.Release) (map[string]*client.FlagInfo_Flag, error) {
-	engine, err := getEngineForMod(ctx, mod)
+	engine, err := GetEngineForMod(ctx, mod)
 	if err != nil {
 		return nil, err
 	}
@@ -164,7 +164,7 @@ func GetFlagsForEngine(ctx context.Context, engine *common.Release) (map[string]
 		return nil, eris.Wrap(err, "failed to load settings")
 	}
 
-	binaryPath, err := getBinaryForEngine(ctx, engine)
+	binaryPath, err := getBinaryForEngine(ctx, engine, "")
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +187,7 @@ func GetFlagsForEngine(ctx context.Context, engine *common.Release) (map[string]
 	return result, nil
 }
 
-func LaunchMod(ctx context.Context, mod *common.Release, settings *client.UserSettings) error {
+func LaunchMod(ctx context.Context, mod *common.Release, settings *client.UserSettings, label string) error {
 	// Resolve the engine by checking all relevant options in the following order:
 	//  1. custom build in the user settings (manual path to the binary)
 	//  2. custom engine version (reference to an engine-type Release)
@@ -198,7 +198,7 @@ func LaunchMod(ctx context.Context, mod *common.Release, settings *client.UserSe
 
 	// TODO unnest
 	//nolint:nestif
-	if binary == "" {
+	if binary == "" || label != "" {
 		var engine *common.Release
 
 		engOpts := settings.GetEngineOptions()
@@ -208,13 +208,13 @@ func LaunchMod(ctx context.Context, mod *common.Release, settings *client.UserSe
 				return eris.Wrap(err, "failed to fetch user engine")
 			}
 		} else {
-			engine, err = getEngineForMod(ctx, mod)
+			engine, err = GetEngineForMod(ctx, mod)
 			if err != nil {
 				return err
 			}
 		}
 
-		binary, err = getBinaryForEngine(ctx, engine)
+		binary, err = getBinaryForEngine(ctx, engine, label)
 		if err != nil {
 			return eris.Wrapf(err, "failed to find binary for engine %s (%s)", engine.Modid, engine.Version)
 		}
@@ -309,9 +309,11 @@ func LaunchMod(ctx context.Context, mod *common.Release, settings *client.UserSe
 		}
 	}
 
-	cmdline += " -mod \""
-	cmdline += strings.Join(modFlag, ",")
-	cmdline += "\""
+	if len(modFlag) > 0 {
+		cmdline += " -mod \""
+		cmdline += strings.Join(modFlag, ",")
+		cmdline += "\""
+	}
 
 	cmdlineFile := filepath.Join(fsointerop.GetPrefPath(ctx), "data", "cmdline_fso.cfg")
 	cmdlineFolder := filepath.Dir(cmdlineFile)

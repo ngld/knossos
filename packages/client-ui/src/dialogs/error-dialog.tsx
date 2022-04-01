@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { Dialog, Callout, Button, Classes } from '@blueprintjs/core';
+import { TaskResult } from '@api/client';
+import { UnaryCall } from '@protobuf-ts/runtime-rpc';
+import { GlobalState } from '../lib/state';
 
 interface ErrorDialogProps {
   title?: string;
@@ -34,4 +37,20 @@ export default function ErrorDialog(props: ErrorDialogProps): React.ReactElement
       </div>
     </Dialog>
   );
+}
+
+export function maybeError(gs: GlobalState, result: TaskResult | Promise<TaskResult> | UnaryCall<any, TaskResult>): void {
+  if ('request' in result) {
+    void result.then((r) => maybeError(gs, r.response));
+    return;
+  }
+
+  if ('then' in result) {
+    void result.then((r) => maybeError(gs, r));
+    return;
+  }
+
+  if (!result.success) {
+    gs.launchOverlay(ErrorDialog, { message: result.error });
+  }
 }

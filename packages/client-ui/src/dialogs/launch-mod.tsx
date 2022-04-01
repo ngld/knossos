@@ -16,16 +16,18 @@ async function performLaunch(gs: GlobalState, props: LaunchModProps): Promise<vo
   await gs.client.launchMod({
     modid: props.modid,
     version: props.version,
+    label: props.label ?? '',
   });
 }
 
 interface LaunchModProps {
   modid?: string;
   version?: string;
+  label?: string;
   onFinished?: () => void;
 }
 
-const LaunchMod = observer(function LaunchMod(props: LaunchModProps): React.ReactElement {
+export const LaunchModDialog = observer(function LaunchMod(props: LaunchModProps): React.ReactElement {
   const gs = useGlobalState();
   const [isOpen, setOpen] = useState(true);
   const [state] = useState(() => fromPromise(performLaunch(gs, props)));
@@ -60,5 +62,5 @@ const LaunchMod = observer(function LaunchMod(props: LaunchModProps): React.Reac
 });
 
 export function launchMod(gs: GlobalState, modid: string, version: string): void {
-  gs.launchOverlay(LaunchMod, { modid, version });
+  gs.launchOverlay(LaunchModDialog, { modid, version });
 }

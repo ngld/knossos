@@ -23,6 +23,7 @@ message SuccessResponse {
 message LaunchModRequest {
   string modid = 1;
   string version = 2;
+  string label = 3;
 }
 
 message TaskRequest {
@@ -372,4 +373,5 @@ service Knossos {
   rpc CancelTask (TaskRequest) returns (SuccessResponse) {};
   rpc DepSnapshotChange (DepSnapshotChangeRequest) returns (SuccessResponse) {};
   rpc UpdateLocalModList (TaskRequest) returns (SuccessResponse) {};
+  rpc OpenDebugLog (NullMessage) returns (TaskResult) {};
 }

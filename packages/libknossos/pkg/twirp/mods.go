@@ -3,6 +3,7 @@ package twirp
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -14,8 +15,10 @@ import (
 	"github.com/ngld/knossos/packages/api/client"
 	"github.com/ngld/knossos/packages/api/common"
 	"github.com/ngld/knossos/packages/libknossos/pkg/api"
+	"github.com/ngld/knossos/packages/libknossos/pkg/fsointerop"
 	"github.com/ngld/knossos/packages/libknossos/pkg/helpers"
 	"github.com/ngld/knossos/packages/libknossos/pkg/mods"
+	"github.com/ngld/knossos/packages/libknossos/pkg/platform"
 	"github.com/ngld/knossos/packages/libknossos/pkg/storage"
 )
 
@@ -226,10 +229,40 @@ func (kn *knossosServer) GetModInfo(ctx context.Context, req *client.ModInfoRequ
 	release.Folder = ""
 	release.Packages = make([]*common.Package, 0)
 
+	tools := make([]*client.ToolInfo, 0)
+	if mod.Type != common.ModType_ENGINE {
+		engine, err := mods.GetEngineForMod(ctx, release)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, pkg := range mods.FilterUnsupportedPackages(ctx, engine.Packages) {
+			for _, exe := range pkg.Executables {
+				found := false
+				for _, t := range tools {
+					if t.Label == exe.Label {
+						found = true
+						break
+					}
+				}
+
+				if !found {
+					tools = append(tools, &client.ToolInfo{
+						Label: exe.Label,
+						Id:    engine.Modid,
+						Debug: exe.Debug,
+						Fred:  strings.Contains(exe.Label, "FRED"),
+					})
+				}
+			}
+		}
+	}
+
 	return &client.ModInfoResponse{
 		Mod:      mod,
 		Release:  release,
 		Versions: versions,
+		Tools:    tools,
 	}, nil
 }
 
@@ -321,7 +354,7 @@ func (kn *knossosServer) LaunchMod(ctx context.Context, req *client.LaunchModReq
 		return nil, err
 	}
 
-	err = mods.LaunchMod(ctx, mod, userSettings)
+	err = mods.LaunchMod(ctx, mod, userSettings, req.Label)
 	if err != nil {
 		return nil, err
 	}
@@ -349,4 +382,21 @@ func (kn *knossosServer) DepSnapshotChange(ctx context.Context, req *client.DepS
 	// TODO: Add warning about potential conflicts (if we detect some).
 
 	return &client.SuccessResponse{Success: true}, nil
+}
+
+func (kn *knossosServer) OpenDebugLog(ctx context.Context, req *client.NullMessage) (*client.TaskResult, error) {
+	prefPath := fsointerop.GetPrefPath(ctx)
+	logPath := filepath.Join(prefPath, "data", "fs2_open.log")
+
+	_, err := os.Stat(logPath)
+	if eris.Is(err, os.ErrNotExist) {
+		return &client.TaskResult{Error: fmt.Sprintf("Could not find %s", logPath)}, nil
+	}
+
+	err = platform.OpenLink(logPath)
+	if err != nil {
+		return nil, err
+	}
+
+	return &client.TaskResult{Success: true}, nil
 }
