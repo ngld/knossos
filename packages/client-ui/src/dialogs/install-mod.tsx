@@ -352,7 +352,6 @@ function triggerModInstallation(
       true,
     ),
     mods: Object.values(mods),
-    snapshotAfter: [],
   });
   gs.sendSignal('showTasks');
 }

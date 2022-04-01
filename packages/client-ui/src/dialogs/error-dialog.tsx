@@ -39,7 +39,10 @@ export default function ErrorDialog(props: ErrorDialogProps): React.ReactElement
   );
 }
 
-export function maybeError(gs: GlobalState, result: TaskResult | Promise<TaskResult> | UnaryCall<any, TaskResult>): void {
+export function maybeError(
+  gs: GlobalState,
+  result: TaskResult | Promise<TaskResult> | UnaryCall<any, TaskResult>,
+): void {
   if ('request' in result) {
     void result.then((r) => maybeError(gs, r.response));
     return;

@@ -27,7 +27,9 @@ interface LaunchModProps {
   onFinished?: () => void;
 }
 
-export const LaunchModDialog = observer(function LaunchMod(props: LaunchModProps): React.ReactElement {
+export const LaunchModDialog = observer(function LaunchMod(
+  props: LaunchModProps,
+): React.ReactElement {
   const gs = useGlobalState();
   const [isOpen, setOpen] = useState(true);
   const [state] = useState(() => fromPromise(performLaunch(gs, props)));

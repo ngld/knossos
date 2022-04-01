@@ -2,5 +2,5 @@
   "prettier.prettierPath": "../../.yarn/sdks/prettier/index.js",
   "eslint.nodePath": "../../.yarn/sdks",
   "eslint.useESLintClass": true,
-  "eslint.options": {"overrideConfigFile": "vscode.eslintrc.yml"}
+  "eslint.options": { "overrideConfigFile": "vscode.eslintrc.yml" }
 }

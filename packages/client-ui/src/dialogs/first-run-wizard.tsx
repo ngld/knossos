@@ -191,9 +191,9 @@ async function retailHandler(
         state.retailDone = true;
         if (dialogRef.current !== null) {
           const index = dialogRef.current.state.selectedIndex + 1;
-          dialogRef.current.setState({lastViewedIndex: index, selectedIndex: index});
+          dialogRef.current.setState({ lastViewedIndex: index, selectedIndex: index });
         }
-      })
+      });
     }
   });
   gs.sendSignal('showTasks');
@@ -205,7 +205,9 @@ async function retailHandler(
   }
 }
 
-const RetailPanel = observer(function RetailPanel(props: StepProps & {dialogRef: React.RefObject<MultistepDialog>}): React.ReactElement {
+const RetailPanel = observer(function RetailPanel(
+  props: StepProps & { dialogRef: React.RefObject<MultistepDialog> },
+): React.ReactElement {
   const gs = useGlobalState();
   const ops = HandleRetailFilesRequest_Operation;
   return (
@@ -220,20 +222,28 @@ const RetailPanel = observer(function RetailPanel(props: StepProps & {dialogRef:
           Solaris), you can skip this step.
         </p>
         <p>
-          <Button onClick={() => void retailHandler(gs, props.state, props.dialogRef, ops.AUTO_GOG)}>
+          <Button
+            onClick={() => void retailHandler(gs, props.state, props.dialogRef, ops.AUTO_GOG)}
+          >
             Detect GOG installation
           </Button>{' '}
-          <Button onClick={() => void retailHandler(gs, props.state, props.dialogRef, ops.AUTO_STEAM)}>
+          <Button
+            onClick={() => void retailHandler(gs, props.state, props.dialogRef, ops.AUTO_STEAM)}
+          >
             Detect Steam installation
           </Button>
         </p>
         <p>
-          <Button onClick={() => void retailHandler(gs, props.state, props.dialogRef, ops.MANUAL_GOG)}>
+          <Button
+            onClick={() => void retailHandler(gs, props.state, props.dialogRef, ops.MANUAL_GOG)}
+          >
             Unpack GOG installer
           </Button>
         </p>
         <p>
-          <Button onClick={() => void retailHandler(gs, props.state, props.dialogRef, ops.MANUAL_FOLDER)}>
+          <Button
+            onClick={() => void retailHandler(gs, props.state, props.dialogRef, ops.MANUAL_FOLDER)}
+          >
             Manually select FS2 folder
           </Button>
         </p>

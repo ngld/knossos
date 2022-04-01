@@ -40,4 +40,3 @@ int64_t libarchive_tell(int fd) {
 void libarchive_close_fd(int fd) {
   close(fd);
 }
-
