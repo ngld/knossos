@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   MultistepDialog,
   DialogStep,
@@ -99,6 +99,10 @@ async function selectLibraryFolder(gs: GlobalState, state: WizardState): Promise
       runInAction(() => {
         state.libraryPath = rpcResult.response.path;
       });
+
+      const settings = await gs.client.getSettings({});
+      settings.response.libraryPath = rpcResult.response.path;
+      await gs.client.saveSettings(settings.response);
     }
   } catch (e) {
     console.error(e);
@@ -147,6 +151,7 @@ const SelectLibraryFolder = observer(function SelectLibraryFolder(
 async function retailHandler(
   gs: GlobalState,
   state: WizardState,
+  dialogRef: React.RefObject<MultistepDialog>,
   op: HandleRetailFilesRequest_Operation,
 ): Promise<void> {
   const ops = HandleRetailFilesRequest_Operation;
@@ -180,11 +185,15 @@ async function retailHandler(
     }
   }
 
-  const ref = gs.tasks.startTask('Unpacking retail files', (success) => {
+  const ref = gs.tasks.startTask('Unpacking retail files and installing FSO', (success) => {
     if (success) {
       runInAction(() => {
         state.retailDone = true;
-      });
+        if (dialogRef.current !== null) {
+          const index = dialogRef.current.state.selectedIndex + 1;
+          dialogRef.current.setState({lastViewedIndex: index, selectedIndex: index});
+        }
+      })
     }
   });
   gs.sendSignal('showTasks');
@@ -196,7 +205,7 @@ async function retailHandler(
   }
 }
 
-const RetailPanel = observer(function RetailPanel(props: StepProps): React.ReactElement {
+const RetailPanel = observer(function RetailPanel(props: StepProps & {dialogRef: React.RefObject<MultistepDialog>}): React.ReactElement {
   const gs = useGlobalState();
   const ops = HandleRetailFilesRequest_Operation;
   return (
@@ -211,20 +220,20 @@ const RetailPanel = observer(function RetailPanel(props: StepProps): React.React
           Solaris), you can skip this step.
         </p>
         <p>
-          <Button onClick={() => void retailHandler(gs, props.state, ops.AUTO_GOG)}>
+          <Button onClick={() => void retailHandler(gs, props.state, props.dialogRef, ops.AUTO_GOG)}>
             Detect GOG installation
           </Button>{' '}
-          <Button onClick={() => void retailHandler(gs, props.state, ops.AUTO_STEAM)}>
+          <Button onClick={() => void retailHandler(gs, props.state, props.dialogRef, ops.AUTO_STEAM)}>
             Detect Steam installation
           </Button>
         </p>
         <p>
-          <Button onClick={() => void retailHandler(gs, props.state, ops.MANUAL_GOG)}>
+          <Button onClick={() => void retailHandler(gs, props.state, props.dialogRef, ops.MANUAL_GOG)}>
             Unpack GOG installer
           </Button>
         </p>
         <p>
-          <Button onClick={() => void retailHandler(gs, props.state, ops.MANUAL_FOLDER)}>
+          <Button onClick={() => void retailHandler(gs, props.state, props.dialogRef, ops.MANUAL_FOLDER)}>
             Manually select FS2 folder
           </Button>
         </p>
@@ -289,9 +298,11 @@ export const FirstRunWizard = observer(function FirstRunWizard(
 ): React.ReactElement {
   const [isOpen, setOpen] = useState(true);
   const [state] = useState<WizardState>(() => new WizardState());
+  const dialogRef = useRef<MultistepDialog>(null);
 
   return (
     <MultistepDialog
+      ref={dialogRef}
       className="bp3-ui-text large-dialog"
       title="First Run"
       finalButtonProps={{
@@ -320,7 +331,7 @@ export const FirstRunWizard = observer(function FirstRunWizard(
       <DialogStep
         id="handleRetailFiles"
         title="Retail Files"
-        panel={<RetailPanel state={state} />}
+        panel={<RetailPanel state={state} dialogRef={dialogRef} />}
         nextButtonProps={{ text: state.retailDone ? 'Next' : 'Skip' }}
       />
       <DialogStep id="finish" title="Finish" panel={<FinalPanel state={state} />} />

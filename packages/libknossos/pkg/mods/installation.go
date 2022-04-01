@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"hash"
 	"io"
@@ -25,7 +24,6 @@ import (
 	"github.com/ngld/knossos/packages/libknossos/pkg/storage"
 	"github.com/rotisserie/eris"
 	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func handleArchive(ctx context.Context, archivePath string, step *ModInstallStep, hasher hash.Hash, buffer []byte, progress *uint32) error {
@@ -521,39 +519,14 @@ func InstallMod(ctx context.Context, req *client.InstallModRequest) error {
 	}
 
 	err = storage.BatchUpdate(ctx, func(ctx context.Context) error {
-		snapQueue := make([]interface{}, len(newRelMeta)+len(req.SnapshotAfter))
-		idx := 0
 		for _, rel := range newRelMeta {
-			snapQueue[idx] = rel
-			idx++
-		}
-
-		for _, snap := range req.SnapshotAfter {
-			snapQueue[idx] = snap
-			idx++
-		}
-
-		for _, item := range snapQueue {
-			rel, ok := item.(*common.Release)
-			if !ok {
-				spec, ok := item.(*client.InstallModRequest_Mod)
-				if !ok {
-					panic("found impossible type in snapQueue")
-				}
-
-				rel, err = storage.LocalMods.GetModRelease(ctx, spec.Modid, spec.Version)
-				if err != nil {
-					return eris.Wrapf(err, "failed to look up mod %s (%s) for snapshotting", spec.Modid, spec.Version)
-				}
-			}
-
 			// Build dependency snapshot for the given mod release.
 			// The user-requested mod will receive the full snapshot but dependencies usually only need a subset.
 			// For example, FSO's dep snapshot would only contain FSO while the MVPs' snapshot would only contain
 			// the MVPs and FSO and any other mods the MVPs might depend on.
 			rel.DependencySnapshot, err = GetDependencySnapshot(ctx, storage.RemoteMods, rel)
 			if err != nil {
-				return eris.Wrapf(err, "failed to build dependency snpashot for %s (%s)", modMetas[rel.Modid].Title, rel.Version)
+				return eris.Wrapf(err, "failed to build dependency snapshot for %s (%s)", modMetas[rel.Modid].Title, rel.Version)
 			}
 
 			for modid := range rel.DependencySnapshot {
@@ -569,54 +542,21 @@ func InstallMod(ctx context.Context, req *client.InstallModRequest) error {
 				}
 			}
 
-			modFolder, err := GetModFolder(ctx, rel)
+			err = SaveLocalModRelease(ctx, rel)
 			if err != nil {
-				return eris.Wrapf(err, "failed to build folder path for %s %s", rel.Modid, rel.Version)
+				return err
 			}
+		}
 
-			// TODO: This should be unnecessary since we've already installed the mod at this point.
-			// If the folder doesn't exist, the mod installation must have failed.
-			err = os.MkdirAll(modFolder, 0o700)
+		for _, modMeta := range modMetas {
+			err = SaveLocalMod(ctx, modMeta)
 			if err != nil {
-				return eris.Wrapf(err, "failed to create mod folder %s for %s %s", modFolder, rel.Modid, rel.Version)
-			}
-
-			releaseData, err := json.MarshalIndent(rel, "", "  ")
-			if err != nil {
-				return eris.Wrapf(err, "failed to serialise release %s %s", rel.Modid, rel.Version)
-			}
-
-			releaseJSON := filepath.Join(modFolder, "knrelease.json")
-			err = os.WriteFile(releaseJSON, releaseData, 0o600)
-			if err != nil {
-				return eris.Wrapf(err, "failed to write %s for %s %s", releaseJSON, rel.Modid, rel.Version)
-			}
-
-			modData, err := json.MarshalIndent(modMetas[rel.Modid], "", "  ")
-			if err != nil {
-				return eris.Wrapf(err, "failed to serialise mod metadata for %s", rel.Modid)
-			}
-
-			modJSON := filepath.Join(settings.LibraryPath, modMetas[rel.Modid].Parent, "knmod-"+rel.Modid+".json")
-			err = os.WriteFile(modJSON, modData, 0o600)
-			if err != nil {
-				return eris.Wrapf(err, "failed to write %s for %s %s", modJSON, rel.Modid, rel.Version)
-			}
-
-			rel.JsonExportUpdated = timestamppb.Now()
-			err = storage.SaveLocalModRelease(ctx, rel)
-			if err != nil {
-				return eris.Wrapf(err, "failed to save release %s (%s)", modMetas[rel.Modid].Title, rel.Version)
+				return err
 			}
 		}
 
 		return nil
 	})
 
-	if err != nil {
-		return err
-	}
-
-	api.Log(ctx, api.LogInfo, "Done")
-	return nil
+	return err
 }

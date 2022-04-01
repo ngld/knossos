@@ -193,7 +193,50 @@ func copyFromGameFolder(ctx context.Context, libraryPath, gameFolder string, mov
 		}
 	}
 
-	err = storage.SaveLocalMod(ctx, &common.ModMeta{
+	err = mods.UpdateRemoteModIndex(ctx)
+	if err != nil {
+		return eris.Wrap(err, "failed to fetch available mods")
+	}
+
+	api.SetProgress(ctx, 0, "Installing FSO")
+	api.Log(ctx, api.LogInfo, "Installing FSO")
+	fsoVersions, err := storage.RemoteMods.GetVersionsForMod(ctx, "FSO")
+	if err != nil || len(fsoVersions) < 1 {
+		return eris.Wrap(err, "failed to retrieve FSO versions")
+	}
+
+	var fsoRel *common.Release
+	var packageNames []string
+	for idx := len(fsoVersions) - 1; idx >= 0; idx-- {
+		fsoRel, err = storage.RemoteMods.GetModRelease(ctx, "FSO", fsoVersions[idx])
+		if err != nil {
+			return eris.Wrapf(err, "failed to load FSO release %s", fsoVersions[idx])
+		}
+
+		// Make sure this release is actually supported on this platform
+		fsoRel.Packages = mods.FilterUnsupportedPackages(ctx, fsoRel.Packages)
+		packageNames = make([]string, len(fsoRel.Packages))
+
+		for idx, pkg := range fsoRel.Packages {
+			packageNames[idx] = pkg.Name
+		}
+
+		if len(fsoRel.Packages) > 0 {
+			break
+		}
+	}
+
+	// NOTE: We assume that FSO has no dependencies here. If that changes, we'll have to perform dependency resolution
+	// as well which means we should probably refactor the above code as well to make installing mods/packages through
+	// the API simpler.
+	err = mods.InstallMod(ctx, &client.InstallModRequest{
+		Mods: []*client.InstallModRequest_Mod{{Modid: "FSO", Version: fsoRel.Version, Packages: packageNames}},
+	})
+	if err != nil {
+		return eris.Wrap(err, "failed to install FSO")
+	}
+
+	err = mods.SaveLocalMod(ctx, &common.ModMeta{
 		Modid: "FS2",
 		Title: "Retail FS2",
 		Type:  common.ModType_TOTAL_CONVERSION,
@@ -242,47 +285,21 @@ func copyFromGameFolder(ctx context.Context, libraryPath, gameFolder string, mov
 		}},
 	}
 
+	// Save the release in our storage since mods.GetDependencySnapshot will look it up
 	err = storage.SaveLocalModRelease(ctx, retailRel)
 	if err != nil {
-		return eris.Wrap(err, "failed to create FS2 release")
+		return eris.Wrap(err, "failed to save FS2 retail release data")
 	}
 
-	api.Log(ctx, api.LogInfo, "Installing FSO")
-	fsoVersions, err := storage.RemoteMods.GetVersionsForMod(ctx, "FSO")
-	if err != nil || len(fsoVersions) < 1 {
-		return eris.Wrap(err, "failed to retrieve FSO versions")
-	}
-
-	var fsoRel *common.Release
-	var packageNames []string
-	for idx := len(fsoVersions) - 1; idx >= 0; idx-- {
-		fsoRel, err = storage.RemoteMods.GetModRelease(ctx, "FSO", fsoVersions[idx])
-		if err != nil {
-			return eris.Wrapf(err, "failed to load FSO release %s", fsoVersions[idx])
-		}
-
-		// Make sure this release is actually supported on this platform
-		fsoRel.Packages = mods.FilterUnsupportedPackages(ctx, fsoRel.Packages)
-		packageNames = make([]string, len(fsoRel.Packages))
-
-		for idx, pkg := range fsoRel.Packages {
-			packageNames[idx] = pkg.Name
-		}
-
-		if len(fsoRel.Packages) > 0 {
-			break
-		}
-	}
-
-	// NOTE: We assume that FSO has no dependencies here. If that changes, we'll have to perform dependency resolution
-	// as well which means we should probably refactor the above code as well to make installing mods/packages through
-	// the API simpler.
-	err = mods.InstallMod(ctx, &client.InstallModRequest{
-		Mods:          []*client.InstallModRequest_Mod{{Modid: "FSO", Version: fsoRel.Version, Packages: packageNames}},
-		SnapshotAfter: []*client.InstallModRequest_Mod{{Modid: "FS2", Version: "1.20.0"}},
-	})
+	retailRel.DependencySnapshot, err = mods.GetDependencySnapshot(ctx, storage.LocalMods, retailRel)
 	if err != nil {
-		return eris.Wrap(err, "failed to install FSO")
+		return eris.Wrap(err, "failed to build dependency snapshot for FS2 retail")
+	}
+
+	// Now we can save the JSON files as well (which are necessary to see the mod after the next launch)
+	err = mods.SaveLocalModRelease(ctx, retailRel)
+	if err != nil {
+		return eris.Wrap(err, "failed to save FS2 retail release data")
 	}
 
 	api.Log(ctx, api.LogInfo, "Done")

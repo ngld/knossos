@@ -227,7 +227,6 @@ message InstallModRequest {
   reserved 2, 3;
 
   repeated Mod mods = 4;
-  repeated Mod snapshot_after = 5;
 }
 
 message UpdaterInfoResult {

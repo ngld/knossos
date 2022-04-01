@@ -104,7 +104,10 @@ func (kn *knossosServer) GetModInstallInfo(ctx context.Context, req *client.ModI
 
 func (kn *knossosServer) InstallMod(ctx context.Context, req *client.InstallModRequest) (*client.SuccessResponse, error) {
 	api.RunTask(ctx, req.Ref, func(ctx context.Context) error {
-		return mods.InstallMod(ctx, req)
+		err := mods.InstallMod(ctx, req)
+		api.Log(ctx, api.LogInfo, "Done")
+
+		return err
 	})
 	return &client.SuccessResponse{Success: true}, nil
 }
