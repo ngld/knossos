@@ -6,8 +6,9 @@ package libarchive
 // #include <libarchive/archive.h>
 // #include <libarchive/archive_entry.h>
 //
-// extern int libarchive_get_fd(intptr_t handle);
-// extern void libarchive_close_fd(int fd);
+// int libarchive_get_fd(const char *filename, char **errormsg);
+// int64_t libarchive_tell(int fd);
+// void libarchive_close_fd(int fd);
 import "C"
 
 import (
@@ -23,7 +24,6 @@ var knossosStr = C.CString("knossos")
 
 type Archive struct {
 	handle     *C.struct_archive
-	fileHandle *os.File
 	fd         C.int
 	fileSize   int64
 	buffer     unsafe.Pointer
@@ -79,13 +79,6 @@ func OpenArchive(filename string) (*Archive, error) {
 
 	a.Filename = filename
 
-	var err error
-	a.fileHandle, err = os.Open(a.Filename)
-	if err != nil {
-		a.Close()
-		return nil, eris.Wrap(err, "failed to open file")
-	}
-
 	info, err := os.Stat(a.Filename)
 	if err != nil {
 		a.Close()
@@ -93,7 +86,18 @@ func OpenArchive(filename string) (*Archive, error) {
 	}
 
 	a.fileSize = info.Size()
-	a.fd = C.libarchive_get_fd(C.intptr_t(a.fileHandle.Fd()))
+	var cerr *C.char
+
+	cfilename := C.CString(a.Filename)
+	defer C.free(unsafe.Pointer(cfilename))
+
+	a.fd = C.libarchive_get_fd(cfilename, &cerr)
+	if a.fd < 0 {
+		err = eris.New(C.GoString(cerr))
+		C.free(unsafe.Pointer(cerr))
+		a.Close()
+		return nil, err
+	}
 
 	code := C.archive_read_open_fd(a.handle, a.fd, 128*1024)
 	if code != C.ARCHIVE_OK {
@@ -127,12 +131,7 @@ func (a *Archive) Size() int64 {
 }
 
 func (a *Archive) Position() int64 {
-	pos, err := a.fileHandle.Seek(0, io.SeekCurrent)
-	if err != nil {
-		return -1
-	}
-
-	return pos
+	return int64(C.libarchive_tell(a.fd))
 }
 
 func (a *Archive) Next() error {
@@ -197,14 +196,7 @@ func (a *Archive) Close() error {
 
 	if a.fd > 0 {
 		C.libarchive_close_fd(a.fd)
-	}
-
-	if a.fileHandle != nil {
-		if err := a.fileHandle.Close(); err != nil {
-			return eris.Wrap(err, "failed to close file handle")
-		}
-
-		a.fileHandle = nil
+		a.fd = -1
 	}
 
 	runtime.SetFinalizer(a, nil)
