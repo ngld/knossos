@@ -18,6 +18,7 @@
     "@types/babel__core": "^7.1.19",
     "@types/babel__preset-env": "^7.9.2",
     "@types/classnames": "^2.3.1",
+    "@types/dompurify": "^2",
     "@types/lodash-es": "^4.17.6",
     "@types/mini-css-extract-plugin": "^2.5.1",
     "@types/postcss-url": "^10",
@@ -35,7 +36,7 @@
     "eslint-plugin-react-hooks": "^4.3.0",
     "pino-pretty": "^7.5.4",
     "prettier": "^2.6.0",
-    "typescript": "^4.6.2",
+    "typescript": "^4.6.3",
     "webpack-dev-server": "^4.7.4"
   },
   "dependencies": {
@@ -67,6 +68,7 @@
     "compression-webpack-plugin": "^9.2.0",
     "css-loader": "^6.7.1",
     "cssnano": "^5.1.5",
+    "dompurify": "^2.3.6",
     "duplicate-package-checker-webpack-plugin": "^3.0.0",
     "eventemitter3": "^4.0.7",
     "fecha": "^4.2.1",

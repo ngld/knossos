@@ -8,7 +8,6 @@ import { FocusStyleManager } from '@blueprintjs/core';
 import { BrowserRouter } from 'react-router-dom';
 
 import Root from './elements/root';
-import { GlobalState, StateProvider } from './lib/state';
 
 FocusStyleManager.onlyShowFocusOnTabs();
 
@@ -19,13 +18,9 @@ if (process.env.NODE_ENV !== 'production' && !window.knIsApp) {
   }
 }
 
-const gs = new GlobalState();
-
 ReactDOM.render(
-  <StateProvider value={gs}>
-    <BrowserRouter>
-      <Root />
-    </BrowserRouter>
-  </StateProvider>,
+  <BrowserRouter>
+    <Root />
+  </BrowserRouter>,
   document.querySelector('#container'),
 );

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect } from 'react';
+import { createContext, useEffect } from 'react';
 import { makeAutoObservable } from 'mobx';
 import { TwirpFetchTransport } from '@protobuf-ts/twirp-transport';
 import { Toaster, IToaster } from '@blueprintjs/core';
@@ -124,10 +124,7 @@ globalStateCtx.displayName = 'StateContext';
 
 export const StateProvider = globalStateCtx.Provider;
 export function useGlobalState(): GlobalState {
-  const ctx = useContext(globalStateCtx);
-  if (ctx === null) {
-    throw new Error('StateContext is missing!');
-  }
-
-  return ctx;
+  return gs;
 }
+
+export const gs = new GlobalState();

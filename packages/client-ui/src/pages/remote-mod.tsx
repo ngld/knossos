@@ -8,7 +8,7 @@ import styled from 'astroturf/react';
 import { ModInfoResponse } from '@api/client';
 
 import { useGlobalState, GlobalState } from '../lib/state';
-import bbparser from '../lib/bbparser';
+import BBRenderer from '../elements/bbrenderer';
 import RefImage from '../elements/ref-image';
 import { InstallModDialog } from '../dialogs/install-mod';
 
@@ -34,11 +34,8 @@ export default observer(function RemoteModDetailsPage(): React.ReactElement {
   const navigate = useNavigate();
   const modDetails = useMemo(() => fromPromise(getModDetails(gs, params)), [gs, params]);
 
-  const rawDesc = (modDetails.value as ModInfoResponse | undefined)?.release?.description;
-  const description = useMemo(() => {
-    const desc = rawDesc ?? '';
-    return { __html: bbparser(desc === '' ? 'No description provided' : desc) };
-  }, [rawDesc]);
+  let desc = (modDetails.value as ModInfoResponse | undefined)?.release?.description ?? '';
+  desc = desc === '' ? 'No description provided' : desc;
 
   return (
     <ModPageContainer>
@@ -99,7 +96,7 @@ export default observer(function RemoteModDetailsPage(): React.ReactElement {
                   title="Description"
                   panel={
                     <div className="bg-base p-2 rounded text-white">
-                      <p dangerouslySetInnerHTML={description} />
+                      <BBRenderer content={desc} />
                     </div>
                   }
                 />

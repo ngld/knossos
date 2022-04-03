@@ -1,10 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { action, makeAutoObservable } from 'mobx';
 import { observer } from 'mobx-react-lite';
-import { fromPromise } from 'mobx-utils';
+import { fromPromise, IPromiseBasedObservable } from 'mobx-utils';
 import { useParams, useNavigate, Params } from 'react-router-dom';
 import {
   Spinner,
+  Button,
   Callout,
   Checkbox,
   NonIdealState,
@@ -19,12 +20,12 @@ import { ModInfoResponse, ModDependencySnapshot, FlagInfo_Flag } from '@api/clie
 import { Release, ModType } from '@api/mod';
 
 import RefImage from '../elements/ref-image';
-import { useGlobalState, GlobalState } from '../lib/state';
-import bbparser from '../lib/bbparser';
+import { gs } from '../lib/state';
+import BBRenderer from '../elements/bbrenderer';
 import ErrorDialog from '../dialogs/error-dialog';
 import RetailBanner from '../resources/banner-retail.png';
 
-async function getModDetails(gs: GlobalState, params: ModDetailsParams): Promise<ModInfoResponse> {
+async function getModDetails(params: ModDetailsParams): Promise<ModInfoResponse> {
   const response = await gs.client.getModInfo({
     id: params.modid ?? '',
     version: params.version ?? '',
@@ -32,10 +33,7 @@ async function getModDetails(gs: GlobalState, params: ModDetailsParams): Promise
   return response.response;
 }
 
-async function getModDependencies(
-  gs: GlobalState,
-  params: ModDetailsParams,
-): Promise<ModDependencySnapshot> {
+async function getModDependencies(params: ModDetailsParams): Promise<ModDependencySnapshot> {
   const response = await gs.client.getModDependencies({
     id: params.modid ?? '',
     version: params.version ?? '',
@@ -44,7 +42,6 @@ async function getModDependencies(
 }
 
 async function getFlagInfos(
-  gs: GlobalState,
   params: ModDetailsParams,
 ): Promise<[Record<string, FlagInfo_Flag[]>, string]> {
   const response = await gs.client.getModFlags({
@@ -67,6 +64,7 @@ async function getFlagInfos(
   const sortedFlags = {} as Record<string, FlagInfo_Flag[]>;
   for (const cat of cats) {
     sortedFlags[cat] = mappedFlags[cat];
+    sortedFlags[cat].sort((a, b) => (a.label < b.label ? -1 : a.label > b.label ? 1 : 0));
   }
 
   makeAutoObservable(sortedFlags);
@@ -74,7 +72,6 @@ async function getFlagInfos(
 }
 
 async function saveFlagInfos(
-  gs: GlobalState,
   params: ModDetailsParams,
   flags: Record<string, boolean>,
   freeform: string,
@@ -101,7 +98,6 @@ interface DepInfoProps extends ModDetailsParams {
 }
 
 async function changeDepSnapshot(
-  gs: GlobalState,
   props: DepInfoProps,
   modid: string,
   version: string,
@@ -127,8 +123,7 @@ async function changeDepSnapshot(
 }
 
 const DepInfo = observer(function DepInfo(props: DepInfoProps): React.ReactElement {
-  const gs = useGlobalState();
-  const deps = useMemo(() => fromPromise(getModDependencies(gs, props)), [gs, props]);
+  const deps = useMemo(() => fromPromise(getModDependencies(props)), [props]);
 
   return deps.case({
     pending: () => <span>Loading...</span>,
@@ -163,7 +158,7 @@ const DepInfo = observer(function DepInfo(props: DepInfoProps): React.ReactEleme
                   <td>
                     <HTMLSelect
                       defaultValue={current}
-                      onChange={(e) => void changeDepSnapshot(gs, props, modID, e.target.value)}
+                      onChange={(e) => void changeDepSnapshot(props, modID, e.target.value)}
                     >
                       {response.available[modID].versions.map((version) => (
                         <option key={version} value={version}>
@@ -183,23 +178,25 @@ const DepInfo = observer(function DepInfo(props: DepInfoProps): React.ReactEleme
 });
 
 function renderFlags(
-  gs: GlobalState,
   params: ModDetailsParams,
-  flags: FlagInfo_Flag[],
+  cat: string,
+  flags: Record<string, FlagInfo_Flag[]>,
   freeform: string,
 ): (React.ReactElement | null)[] {
-  return flags.map((flag) => (
+  return (flags[cat] ?? []).map((flag) => (
     <div key={flag.flag}>
       <Checkbox
         checked={flag.enabled}
         onChange={action((e) => {
           flag.enabled = e.currentTarget.checked;
           const flagMap: Record<string, boolean> = {};
-          for (const item of flags) {
-            flagMap[item.flag] = item.enabled;
+          for (const catFlags of Object.values(flags)) {
+            for (const item of catFlags) {
+              flagMap[item.flag] = item.enabled;
+            }
           }
 
-          void saveFlagInfos(gs, params, flagMap, freeform);
+          void saveFlagInfos(params, flagMap, freeform);
         })}
       >
         {flag.label === '' ? flag.flag : flag.label}
@@ -221,9 +218,24 @@ function renderFlags(
   ));
 }
 
+async function resetModFlags(
+  props: DepInfoProps,
+  setFlags: (flags: IPromiseBasedObservable<[Record<string, FlagInfo_Flag[]>, string]>) => void,
+): Promise<void> {
+  try {
+    await gs.client.resetModFlags({ id: props.modid ?? '', version: props.version ?? '' });
+    setFlags(fromPromise(getFlagInfos(props)));
+  } catch (e) {
+    console.error(e);
+    gs.launchOverlay(ErrorDialog, {
+      title: 'Could not reset flags',
+      message: <pre>{String(e)}</pre>,
+    });
+  }
+}
+
 const FlagsInfo = observer(function FlagsInfo(props: DepInfoProps): React.ReactElement {
-  const gs = useGlobalState();
-  const flags = useMemo(() => fromPromise(getFlagInfos(gs, props)), [gs, props]);
+  const [flags, setFlags] = useState(() => fromPromise(getFlagInfos(props)));
   const [currentCat, setCurrentCat] = useState<string>('combined');
 
   return flags.case({
@@ -250,16 +262,17 @@ const FlagsInfo = observer(function FlagsInfo(props: DepInfoProps): React.ReactE
                 </option>
               ))}
             </HTMLSelect>
+            <Button onClick={() => void resetModFlags(props, setFlags)}>Reset flags</Button>
           </div>
           <div className="p-4 border-black border">
             {currentCat === 'combined'
-              ? Object.entries(mappedFlags).map(([cat, catFlags]) => (
+              ? Object.keys(mappedFlags).map((cat) => (
                   <div key={cat}>
                     <div className="font-bold p-2">{cat}</div>
-                    {renderFlags(gs, props, catFlags, freeform)}
+                    {renderFlags(props, cat, mappedFlags, freeform)}
                   </div>
                 ))
-              : renderFlags(gs, props, mappedFlags[currentCat] ?? [], freeform)}
+              : renderFlags(props, currentCat, mappedFlags, freeform)}
           </div>
         </div>
       );
@@ -276,16 +289,12 @@ const ModPageContainer = styled.div`
 `;
 
 export default observer(function ModDetailsPage(): React.ReactElement {
-  const gs = useGlobalState();
   const params = useParams<ModDetailsParams>();
   const navigate = useNavigate();
-  const modDetails = useMemo(() => fromPromise(getModDetails(gs, params)), [gs, params]);
+  const modDetails = useMemo(() => fromPromise(getModDetails(params)), [params]);
 
-  const rawDesc = (modDetails.value as ModInfoResponse)?.release?.description;
-  const description = useMemo(() => {
-    const desc = rawDesc ?? '';
-    return { __html: bbparser(desc === '' ? 'No description provided' : desc) };
-  }, [rawDesc]);
+  let desc = (modDetails.value as ModInfoResponse)?.release?.description ?? '';
+  desc = desc === '' ? 'No description provided' : desc;
 
   return (
     <ModPageContainer>
@@ -339,7 +348,7 @@ export default observer(function ModDetailsPage(): React.ReactElement {
                   title="Description"
                   panel={
                     <div className="bg-base p-2 rounded text-white">
-                      <p dangerouslySetInnerHTML={description} />
+                      <BBRenderer content={desc} />
                     </div>
                   }
                 />

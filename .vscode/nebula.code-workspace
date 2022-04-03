@@ -4,7 +4,7 @@
             "path": ".."
         },
         {
-            "path": "../tasks",
+            "path": "../tasks"
         },
         {
             "path": "../packages/api"
@@ -37,7 +37,7 @@
             "path": "../packages/libinnoextract"
         },
         {
-            "path": "../packages/libopenal",
+            "path": "../packages/libopenal"
         },
         {
             "path": "../third_party"

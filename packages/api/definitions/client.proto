@@ -353,6 +353,7 @@ service Knossos {
   rpc GetModDependencies (ModInfoRequest) returns (ModDependencySnapshot) {};
   rpc GetModFlags (ModInfoRequest) returns (FlagInfo) {};
   rpc SaveModFlags (SaveFlagsRequest) returns (SuccessResponse) {};
+  rpc ResetModFlags (ModInfoRequest) returns (FlagInfo) {};
   rpc LaunchMod (LaunchModRequest) returns (SuccessResponse) {};
   rpc SyncRemoteMods (TaskRequest) returns (SuccessResponse) {};
   rpc GetRemoteMods (NullMessage) returns (SimpleModList) {};

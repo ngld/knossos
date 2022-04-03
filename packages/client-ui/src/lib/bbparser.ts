@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 // @ts-expect-error xbbcode doesn't have type definitions
 import XBBCode from 'xbbcode';
+import DOMPurify from 'dompurify';
 
 interface BBTag {
   getAttribute(attr: string): string;
@@ -51,5 +52,6 @@ export default (text: string): string => {
     .replace(/\]\s*\n+\s*\[/g, '][')
     .replace(/\n/g, '<br>');
   text = text.replace(/\[hr\]/g, '<hr>').replace(/\[br\]/g, '<br>');
-  return parser(text);
+  const html = parser(text);
+  return DOMPurify.sanitize(html);
 };
