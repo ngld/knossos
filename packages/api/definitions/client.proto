@@ -302,6 +302,12 @@ message DepSnapshotChangeRequest {
   string dep_version = 4;
 }
 
+message VerifyChecksumRequest {
+  string modid = 1;
+  string version = 2;
+  uint32 ref = 3;
+}
+
 // event messages
 
 message ClientSentEvent {
@@ -376,4 +382,5 @@ service Knossos {
   rpc DepSnapshotChange (DepSnapshotChangeRequest) returns (SuccessResponse) {};
   rpc UpdateLocalModList (TaskRequest) returns (SuccessResponse) {};
   rpc OpenDebugLog (NullMessage) returns (TaskResult) {};
+  rpc VerifyChecksums (VerifyChecksumRequest) returns (SuccessResponse) {};
 }

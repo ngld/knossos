@@ -304,9 +304,6 @@ func ProgressCopier(ctx context.Context, stepInfo TaskStep, length int64, input 
 
 // RunTask updates the context with the necessary task info and handles errors as well as panics from the task.
 func RunTask(ctx context.Context, ref uint32, task func(context.Context) error) {
-	ctx, cancel := context.WithCancel(ctx)
-	taskCancels[ref] = cancel
-
 	knCtx, ok := ctx.Value(knKey{}).(KnossosCtxParams)
 	if !ok {
 		panic("wrong type in knossos context")
@@ -314,6 +311,8 @@ func RunTask(ctx context.Context, ref uint32, task func(context.Context) error) 
 
 	taskCtx := WithKnossosContext(context.Background(), knCtx)
 	taskCtx = WithTaskContext(taskCtx, TaskCtxParams{Ref: ref})
+	taskCtx, cancel := context.WithCancel(taskCtx)
+	taskCancels[ref] = cancel
 
 	go func() {
 		defer func() {

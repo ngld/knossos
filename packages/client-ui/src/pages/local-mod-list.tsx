@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import cx from 'classnames';
 import { SimpleModList_Item, ToolInfo } from '@api/client';
 import { ModType } from '@api/mod';
-import { GlobalState, useGlobalState } from '../lib/state';
+import { gs } from '../lib/state';
 import { API_URL } from '../lib/constants';
 import { launchMod, LaunchModDialog } from '../dialogs/launch-mod';
 import { maybeError } from '../dialogs/error-dialog';
@@ -15,19 +15,24 @@ import UninstallModDialog from '../dialogs/uninstall-mod';
 import ModstockImage from '../resources/modstock.jpg';
 import RetailImage from '../resources/mod-retail.png';
 
-async function fetchMods(gs: GlobalState): Promise<SimpleModList_Item[]> {
+async function fetchMods(): Promise<SimpleModList_Item[]> {
   const result = await gs.client.getLocalMods({});
   console.log(result.response.mods);
   return result.response.mods;
 }
 
+function checkFileIntegrity(mod: SimpleModList_Item): void {
+  const ref = gs.tasks.startTask('Verifying file integrity');
+  void gs.client.verifyChecksums({ modid: mod.modid, version: mod.version, ref });
+  gs.sendSignal('showTasks');
+}
+
 export default observer(function LocalModList(): React.ReactElement {
-  const gs = useGlobalState();
   const navigate = useNavigate();
-  const [modList, setModList] = useState(() => fromPromise(fetchMods(gs)));
+  const [modList, setModList] = useState(() => fromPromise(fetchMods()));
 
   gs.useSignal('reloadLocalMods', () => {
-    setModList(fromPromise(fetchMods(gs)));
+    setModList(fromPromise(fetchMods()));
   });
 
   return (
@@ -110,7 +115,6 @@ export default observer(function LocalModList(): React.ReactElement {
 });
 
 function ModActionMenu(props: { mod: SimpleModList_Item }): React.ReactElement {
-  const gs = useGlobalState();
   const [tools, setTools] = useState<ToolInfo[]>([]);
 
   useEffect(() => {
@@ -118,7 +122,7 @@ function ModActionMenu(props: { mod: SimpleModList_Item }): React.ReactElement {
       const resp = await gs.client.getModInfo({ id: props.mod.modid, version: props.mod.version });
       setTools(resp.response.tools);
     })();
-  }, [gs, props.mod.modid, props.mod.version]);
+  }, [props.mod.modid, props.mod.version]);
 
   return (
     <Menu>
@@ -143,6 +147,11 @@ function ModActionMenu(props: { mod: SimpleModList_Item }): React.ReactElement {
         icon="application"
         text="Open Debug Log"
         onClick={() => maybeError(gs, gs.client.openDebugLog({}))}
+      />
+      <MenuItem
+        icon="tick"
+        text="Verify File Integrity"
+        onClick={() => checkFileIntegrity(props.mod)}
       />
     </Menu>
   );

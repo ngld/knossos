@@ -429,3 +429,16 @@ func (kn *knossosServer) OpenDebugLog(ctx context.Context, req *client.NullMessa
 
 	return &client.TaskResult{Success: true}, nil
 }
+
+func (kn *knossosServer) VerifyChecksums(ctx context.Context, req *client.VerifyChecksumRequest) (*client.SuccessResponse, error) {
+	api.RunTask(ctx, req.Ref, func(ctx context.Context) error {
+		rel, err := storage.LocalMods.GetModRelease(ctx, req.Modid, req.Version)
+		if err != nil {
+			return eris.Wrap(err, "failed to read mod release from storage")
+		}
+
+		return mods.VerifyModIntegrity(ctx, rel)
+	})
+
+	return &client.SuccessResponse{Success: true}, nil
+}

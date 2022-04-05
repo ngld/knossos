@@ -213,7 +213,7 @@ func FetchModChecksums(ctx context.Context, modVersions map[string]string) (map[
 	for modID, version := range modVersions {
 		queueItems = append(queueItems, &downloader.QueueItem{
 			Key:      modID,
-			Filepath: filepath.Join(tempFolder, modID),
+			Filepath: filepath.Join(tempFolder, fmt.Sprintf("c.%s.%s", modID, version)),
 			Mirrors:  []string{fmt.Sprintf("%s/c.%s.%s", api.SyncEndpoint, modID, version)},
 		})
 	}
