@@ -23,10 +23,12 @@ type modConstraint struct {
 }
 
 type resolvePathNode struct {
-	versionSnapshot map[string][]string
-	modID           string
-	version         string
-	constraints     []modConstraint
+	versionSnapshot  map[string][]string
+	requiredPackages map[string][]string
+	presentPackages  map[string]bool
+	modID            string
+	version          string
+	constraints      []modConstraint
 }
 
 func makeVersionSnapshot(versions map[string][]string) map[string][]string {
@@ -107,21 +109,6 @@ func GetDependencySnapshot(ctx context.Context, mods storage.ModProvider, releas
 			return nil, eris.Wrapf(err, "failed to parse version %s for mod %s", version, modID)
 		}
 
-		// Ensure this version is compatible with previously chosen mods.
-		for _, node := range path {
-			for _, con := range node.constraints {
-				if con.modID == modID {
-					ok, err := con.constraint.Validate(parsedVersion)
-					if !ok {
-						api.Log(ctx, api.LogDebug, "DEP: Conflict with %s %s: %s", node.modID, node.version, err)
-						availableVersions[modID] = availableVersions[modID][:len(availableVersions[modID])-1]
-						goto repickVersion
-					}
-				}
-			}
-		}
-
-		// Collect constraints
 		rel, err := mods.GetModRelease(ctx, modID, version)
 		if err != nil {
 			return nil, eris.Wrapf(err, "failed to retrieve mod %s %s", modID, version)
@@ -134,6 +121,37 @@ func GetDependencySnapshot(ctx context.Context, mods storage.ModProvider, releas
 			goto repickVersion
 		}
 
+		presentPackages := make(map[string]bool)
+		for _, pkg := range pkgs {
+			presentPackages[pkg.Name] = true
+		}
+
+		// Ensure this version is compatible with previously chosen mods.
+		for _, node := range path {
+			for _, con := range node.constraints {
+				if con.modID == modID {
+					ok, err := con.constraint.Validate(parsedVersion)
+					if !ok {
+						api.Log(ctx, api.LogDebug, "DEP: Conflict with %s %s: %s", node.modID, node.version, err)
+						availableVersions[modID] = availableVersions[modID][:len(availableVersions[modID])-1]
+						goto repickVersion
+					}
+				}
+			}
+
+			if neededPkgs, ok := node.requiredPackages[modID]; ok {
+				for _, needed := range neededPkgs {
+					if !presentPackages[needed] {
+						api.Log(ctx, api.LogDebug, "DEP: Conflict with %s %s: requires missing package %s", node.modID, node.version, needed)
+						availableVersions[modID] = availableVersions[modID][:len(availableVersions[modID])-1]
+						goto repickVersion
+					}
+				}
+			}
+		}
+
+		// Collect constraints
+		requiredPackages := make(map[string][]string)
 		cons := make([]modConstraint, 0)
 		for _, pkg := range pkgs {
 			for _, dep := range pkg.Dependencies {
@@ -155,6 +173,30 @@ func GetDependencySnapshot(ctx context.Context, mods storage.ModProvider, releas
 					return nil, eris.Wrapf(err, "failed to parse constraint %s for mod %s %s", dep.Constraint, modID, version)
 				}
 
+				for _, node := range path {
+					if node.modID == dep.Modid {
+						parsedVersion, err := semver.NewVersion(node.version)
+						if err != nil {
+							return nil, eris.Wrapf(err, "failed to parse version %s for mod %s during constraint check", node.version, node.modID)
+						}
+
+						if !constraint.Check(parsedVersion) {
+							api.Log(ctx, api.LogDebug, "DEP: Conflict with %s %s: previously picked version conflicts with constraint %s on package %s", node.modID, node.version, dep.Constraint, pkg.Name)
+							availableVersions[modID] = availableVersions[modID][:len(availableVersions[modID])-1]
+							goto repickVersion
+						}
+
+						for _, reqPkg := range dep.Packages {
+							if !node.presentPackages[reqPkg] {
+								api.Log(ctx, api.LogDebug, "DEP: Conflict with %s %s: previously picked version is missing package %s required by %s", node.modID, node.version, reqPkg, pkg.Name)
+								availableVersions[modID] = availableVersions[modID][:len(availableVersions[modID])-1]
+								goto repickVersion
+							}
+						}
+					}
+				}
+
+				requiredPackages[dep.Modid] = append(requiredPackages[dep.Modid], dep.Packages...)
 				cons = append(cons, modConstraint{
 					modID:      dep.Modid,
 					constraint: constraint,
@@ -213,10 +255,12 @@ func GetDependencySnapshot(ctx context.Context, mods storage.ModProvider, releas
 		}
 
 		path = append(path, resolvePathNode{
-			modID:           modID,
-			version:         version,
-			constraints:     cons,
-			versionSnapshot: makeVersionSnapshot(availableVersions),
+			modID:            modID,
+			version:          version,
+			constraints:      cons,
+			versionSnapshot:  makeVersionSnapshot(availableVersions),
+			presentPackages:  presentPackages,
+			requiredPackages: requiredPackages,
 		})
 	}
 
