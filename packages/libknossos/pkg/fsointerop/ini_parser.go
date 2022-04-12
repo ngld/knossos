@@ -82,7 +82,9 @@ func parseFile(ctx context.Context, f io.RuneScanner, dest interface{}) error {
 
 			section = destVal.FieldByName(label)
 			if !section.IsValid() {
-				return eris.Errorf("found unexpected section %s", label)
+				api.Log(ctx, api.LogWarn, "fs2_open.ini: found unknown key %s", label)
+				skipWhitespace(f)
+				continue
 			}
 
 			if section.IsNil() {

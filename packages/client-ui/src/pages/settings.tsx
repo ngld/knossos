@@ -25,7 +25,7 @@ class SettingsState {
   saveError = false;
   gs: GlobalState;
   knSettings: Settings = Settings.create();
-  fsoSettings: FSOSettings = FSOSettings.create();
+  fsoSettings?: FSOSettings;
 
   constructor(gs: GlobalState) {
     makeAutoObservable(this, { gs: false }, { proxy: false });
@@ -34,11 +34,16 @@ class SettingsState {
     void (async () => {
       try {
         const settings = await gs.client.getSettings({});
-        const fsoSettings = await gs.client.loadFSOSettings({});
+        let fsoSettings: FinishedUnaryCall<NullMessage, FSOSettings> | undefined;
+        try {
+          fsoSettings = await gs.client.loadFSOSettings({});
+        } catch (e) {
+          this.errorMessage = e instanceof Error ? e.message : String(e);
+        }
 
         runInAction(() => {
           this.knSettings = settings.response;
-          this.fsoSettings = fsoSettings.response;
+          this.fsoSettings = fsoSettings?.response;
           this.loading = false;
         });
       } catch (e) {
@@ -54,16 +59,20 @@ class SettingsState {
 
   get resolution(): string {
     const m = /\(([0-9]+)x([0-9]+)\)x([0-9]+) bit/.exec(
-      this.fsoSettings.default?.videocardFs2Open ?? '',
+      this.fsoSettings?.default?.videocardFs2Open ?? '',
     );
     if (!m) {
       return '';
     }
 
-    return `${m[1]}x${m[2]} - ${this.fsoSettings.video?.display ?? '0'}`;
+    return `${m[1]}x${m[2]} - ${this.fsoSettings?.video?.display ?? '0'}`;
   }
 
   set resolution(value: string) {
+    if (!this.fsoSettings) {
+      this.fsoSettings = FSOSettings.create();
+    }
+
     const m = /([0-9]+)x([0-9]+) - ([0-9]+)/.exec(value);
     if (!m) {
       return;
@@ -92,7 +101,7 @@ class SettingsState {
 
   get depth(): string {
     const m = /\(([0-9]+)x([0-9]+)\)x([0-9]+) bit/.exec(
-      this.fsoSettings.default?.videocardFs2Open ?? '',
+      this.fsoSettings?.default?.videocardFs2Open ?? '',
     );
     if (!m) {
       return '';
@@ -102,6 +111,10 @@ class SettingsState {
   }
 
   set depth(value: string) {
+    if (!this.fsoSettings) {
+      this.fsoSettings = FSOSettings.create();
+    }
+
     let def = this.fsoSettings.default;
     if (!def) {
       this.fsoSettings.default = FSOSettings_DefaultSettings.create();
@@ -115,10 +128,14 @@ class SettingsState {
   }
 
   get textureFilter(): string {
-    return String(this.fsoSettings.default?.textureFilter ?? '');
+    return String(this.fsoSettings?.default?.textureFilter ?? '');
   }
 
   set textureFilter(value: string) {
+    if (!this.fsoSettings) {
+      this.fsoSettings = FSOSettings.create();
+    }
+
     let def = this.fsoSettings.default;
     if (!def) {
       this.fsoSettings.default = FSOSettings_DefaultSettings.create();
@@ -149,6 +166,9 @@ class SettingsState {
 
   async saveFSOSettings() {
     this.saving = true;
+    if (!this.fsoSettings) {
+      this.fsoSettings = FSOSettings.create();
+    }
 
     try {
       await this.gs.client.saveFSOSettings(this.fsoSettings);
@@ -311,6 +331,12 @@ export default observer(function SettingsPage(): React.ReactElement {
           </Callout>
         ) : (
           <>
+            {!formState.fsoSettings ? (
+              <Callout intent="danger" title="Failed to load FSO settings">
+                Failed to load FSO settings.
+                <pre>{formState.errorMessage}</pre>
+              </Callout>
+            ) : null}
             <div className="flex flex-1 flex-col gap-4">
               <Card className="relative">
                 <Button className="absolute top-4 right-4" onClick={() => void formState.saveAll()}>
@@ -365,7 +391,9 @@ export default observer(function SettingsPage(): React.ReactElement {
                 <h5 className="text-xl mb-5">Video</h5>
 
                 <FormContext
-                  value={formState.fsoSettings.default as unknown as Record<string, unknown>}
+                  value={
+                    (formState.fsoSettings?.default as unknown as Record<string, unknown>) ?? {}
+                  }
                 >
                   <div className="flex flex-row gap-4">
                     <FormContext value={formState as unknown as Record<string, unknown>}>
@@ -399,7 +427,7 @@ export default observer(function SettingsPage(): React.ReactElement {
               <Card>
                 <h5 className="text-xl mb-5">Audio</h5>
                 <FormContext
-                  value={formState.fsoSettings.sound as unknown as Record<string, unknown>}
+                  value={(formState.fsoSettings?.sound as unknown as Record<string, unknown>) ?? {}}
                 >
                   <FormGroup label="Playback Device">
                     <HardwareSelect
@@ -425,7 +453,9 @@ export default observer(function SettingsPage(): React.ReactElement {
                     </FormGroup>
 
                     <FormContext
-                      value={formState.fsoSettings.default as unknown as Record<string, unknown>}
+                      value={
+                        (formState.fsoSettings?.default as unknown as Record<string, unknown>) ?? {}
+                      }
                     >
                       <FormGroup className="flex-1" label="Language">
                         <FormSelect name="language">
@@ -440,7 +470,9 @@ export default observer(function SettingsPage(): React.ReactElement {
               <Card>
                 <h5 className="text-xl mb-5">Speech</h5>
                 <FormContext
-                  value={formState.fsoSettings.default as unknown as Record<string, unknown>}
+                  value={
+                    (formState.fsoSettings?.default as unknown as Record<string, unknown>) ?? {}
+                  }
                 >
                   <div className="flex flex-row gap-4">
                     <div className="flex-1">
@@ -467,7 +499,9 @@ export default observer(function SettingsPage(): React.ReactElement {
                 <h5 className="text-xl mb-5">Joystick</h5>
 
                 <FormContext
-                  value={formState.fsoSettings.default as unknown as Record<string, unknown>}
+                  value={
+                    (formState.fsoSettings?.default as unknown as Record<string, unknown>) ?? {}
+                  }
                 >
                   <FormGroup label="Joystick">
                     <JoystickSelect hardwareInfo={hardwareInfo} />
