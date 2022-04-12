@@ -107,7 +107,7 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           if [ "$RUNNER_OS" = 'macOS' ]; then
-            brew install xz
+            brew install xz sdl2
           elif [ "$RUNNER_OS" = 'Linux' ]; then
             sudo apt-get update
             sudo apt-get install -y libgtk-3-dev liblzma-dev libzstd-dev zlib1g-dev libxss-dev libxxf86vm-dev \
