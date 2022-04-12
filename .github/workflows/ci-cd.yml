@@ -271,7 +271,7 @@ jobs:
         if: github.event_name == 'push'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./build/updater/uploader 0.0.1-nightly.${{ needs.setup.outputs.timestamp }}-${{ needs.setup.outputs.short_sha }} ${{ matrix.bucket }} build/client/launcher/Release/
+        run: ./build/updater/uploader 0.0.2-nightly.${{ needs.setup.outputs.timestamp }}-${{ needs.setup.outputs.short_sha }} ${{ matrix.bucket }} build/client/launcher/Release/
 
       - name: Build updater
         if: needs.setup.outputs.updater_changed == '1'
