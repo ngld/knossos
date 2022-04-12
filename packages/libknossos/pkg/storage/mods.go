@@ -217,7 +217,7 @@ func DeleteLocalModRelease(ctx context.Context, release *common.Release) error {
 func (p genericModProvider) GetMods(ctx context.Context) ([]*common.Release, error) {
 	var result []*common.Release
 
-	err := db.View(func(tx *bolt.Tx) error {
+	err := view(ctx, func(tx *bolt.Tx) error {
 		// Retrieve IDs and the latest version for all known local mods
 		bucket := tx.Bucket(p.bucket)
 		result = make([]*common.Release, 0)

@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/ngld/knossos/packages/api/common"
@@ -20,6 +21,11 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
+
+type modPackInfo struct {
+	mod *common.ModIndex_Mod
+	idx int
+}
 
 var errModNotFound = eris.New("remote mod not found")
 
@@ -71,135 +77,212 @@ func calcVersionsChecksum(versions []string) ([]byte, error) {
 	return hasher.Sum(nil), nil
 }
 
-func processRemoteMod(ctx context.Context, params storage.RemoteImportCallbackParams, entry *common.ModIndex_Mod, packDates []time.Time) ([]time.Time, error) {
-	var modMeta common.ModMeta
-	err := fetchRemoteMessage(ctx, fmt.Sprintf("m.%s", entry.Modid), &modMeta)
-	if err != nil {
-		if eris.Is(err, errModNotFound) {
-			err = params.RemoveMod(entry.Modid)
-			if err != nil {
-				return nil, eris.Wrapf(err, "failed to remove mod %s", entry.Modid)
-			}
-
-			return nil, nil
-		}
-
-		return nil, eris.Wrapf(err, "failed to fetch mod meta for %s", entry.Modid)
-	}
-
-	if modMeta.Modid == "" {
-		// We got a 304 response which means that nothing changed. Skip
-		return packDates, nil
-	}
-
-	err = params.AddMod(&modMeta)
-	if err != nil {
-		return nil, err
-	}
-
-	var versionHash []byte
-	localVersions, err := storage.RemoteMods.GetVersionsForMod(ctx, entry.Modid)
-	if err == nil {
-		versionHash, err = calcVersionsChecksum(localVersions)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	versionMismatch := true
-	if len(localVersions) > 0 {
-		versionMismatch = !bytes.Equal(versionHash, entry.VersionChecksum)
-		if versionMismatch {
-			api.Log(ctx, api.LogInfo, "Version mismatch detected, clearing releases for %s.", entry.Modid)
-
-			err = params.RemoveModReleases(entry.Modid)
-			if err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	for idx, curPackDate := range entry.PacksLastModified {
-		if !versionMismatch && idx < len(packDates) && !curPackDate.AsTime().After(packDates[idx]) {
-			continue
-		}
-
-		api.Log(ctx, api.LogInfo, "Fetching pack %d for %s", idx, entry.Modid)
-		var pack common.ReleasePack
-		err = fetchRemoteMessage(ctx, fmt.Sprintf("m.%s.%03d", entry.Modid, idx), &pack)
-		if err != nil {
-			return nil, eris.Wrapf(err, "failed to fetch pack %d of %s", idx, entry.Modid)
-		}
-
-		if pack.Modid != entry.Modid || pack.Packnum != uint32(idx) {
-			return nil, eris.Wrapf(err, "received wrong pack! expected %d for %s but got %d for %s", idx, entry.Modid, pack.Packnum, pack.Modid)
-		}
-
-		for _, rel := range pack.Releases {
-			err = params.AddRelease(rel)
-			if err != nil {
-				return nil, eris.Wrapf(err, "failed to import release %s for %s", rel.Version, entry.Modid)
-			}
-		}
-
-		if idx < len(packDates) {
-			packDates[idx] = curPackDate.AsTime()
-		} else {
-			packDates = append(packDates, curPackDate.AsTime())
-		}
-	}
-
-	return packDates, nil
-}
-
 func UpdateRemoteModIndex(ctx context.Context) error {
-	return storage.ImportRemoteMods(ctx, func(ctx context.Context, params storage.RemoteImportCallbackParams) error {
-		curDates, err := storage.GetRemoteModsLastModifiedDates(ctx)
-		if err != nil {
-			return err
-		}
-
-		api.Log(ctx, api.LogInfo, "Fetching remote index")
-		var index common.ModIndex
-		err = fetchRemoteMessage(ctx, "index", &index)
-		if err != nil {
-			return eris.Wrap(err, "failed to fetch index")
-		}
-
-		// If the mod index hasn't changed since the last time we fetched it, index will be the zero value of common.ModIndex
-		// this means that index.Mods is an empty list which means we do nothing which is exactly what we want.
-		for idx, entry := range index.Mods {
-			api.SetProgress(ctx, float32(idx)/float32(len(index.Mods)), fmt.Sprintf("Processing mod %s (%d of %d)", entry.Modid, idx, len(index.Mods)))
-
-			curModDates, found := curDates[entry.Modid]
-			if found {
-				if !curModDates[0].Equal(entry.LastModified.AsTime()) {
-					curModDates, err = processRemoteMod(ctx, params, entry, curModDates[1:])
-
-					curModDates = append([]time.Time{entry.LastModified.AsTime()}, curModDates...)
-				}
-			} else {
-				curModDates, err = processRemoteMod(ctx, params, entry, make([]time.Time, 0))
-
-				curModDates = append([]time.Time{entry.LastModified.AsTime()}, curModDates...)
-			}
-
+	resyncNeeded := false
+	for resyncNeeded {
+		resyncNeeded = false
+		err := storage.ImportRemoteMods(ctx, func(ctx context.Context, params storage.RemoteImportCallbackParams) error {
+			curDates, err := storage.GetRemoteModsLastModifiedDates(ctx)
 			if err != nil {
 				return err
 			}
 
-			curDates[entry.Modid] = curModDates
+			settings, err := storage.GetSettings(ctx)
+			if err != nil {
+				return err
+			}
+
+			api.Log(ctx, api.LogInfo, "Fetching remote index")
+			var index common.ModIndex
+			err = fetchRemoteMessage(ctx, "index", &index)
+			if err != nil {
+				return eris.Wrap(err, "failed to fetch index")
+			}
+
+			if len(index.Mods) == 0 {
+				api.Log(ctx, api.LogInfo, "No changes since last check")
+				api.SetProgress(ctx, 1, "Done")
+				return nil
+			}
+
+			packs := make([]*downloader.QueueItem, 0)
+			tmpFolder := filepath.Join(settings.LibraryPath, "temp")
+			modEntries := make(map[string]modPackInfo)
+
+			// If the mod index hasn't changed since the last time we fetched it, index will be the zero value of common.ModIndex
+			// this means that index.Mods is an empty list which means we do nothing which is exactly what we want.
+			for _, entry := range index.Mods {
+				curModDates, found := curDates[entry.Modid]
+				if !found || err != nil {
+					curModDates = make([]time.Time, len(entry.PacksLastModified)+1)
+				}
+
+				if !curModDates[0].Equal(entry.LastModified.AsTime()) {
+					key := "mod-" + entry.Modid
+					modEntries[key] = modPackInfo{
+						mod: entry,
+						idx: -1,
+					}
+					packs = append(packs, &downloader.QueueItem{
+						Key:      key,
+						Filepath: filepath.Join(tmpFolder, "modsync-"+key),
+						Mirrors:  []string{api.SyncEndpoint + "/m." + entry.Modid},
+						Checksum: nil,
+						Filesize: 0,
+					})
+				}
+
+				for idx, modified := range entry.PacksLastModified {
+					if len(curModDates) <= idx+1 || !curModDates[idx+1].Equal(modified.AsTime()) {
+						key := fmt.Sprintf("pack-%s-%03d", entry.Modid, idx)
+						modEntries[key] = modPackInfo{
+							mod: entry,
+							idx: idx,
+						}
+						packs = append(packs, &downloader.QueueItem{
+							Key:      key,
+							Filepath: filepath.Join(tmpFolder, "modsync-"+key),
+							Mirrors:  []string{fmt.Sprintf("%s/m.%s.%03d", api.SyncEndpoint, entry.Modid, idx)},
+							Checksum: nil,
+							Filesize: 0,
+						})
+					}
+				}
+			}
+
+			queue, err := downloader.NewQueue(ctx, packs)
+			if err != nil {
+				return eris.Wrap(err, "failed to initialise downloader")
+			}
+
+			// We're downloading a bunch of small files; it's fine to download many in parallel even on slow connections.
+			queue.MaxParallel = 5
+			go queue.Run(ctx)
+
+			done := 0
+			for queue.NextResult() {
+				dlItem := queue.Result()
+				entry := modEntries[dlItem.Key]
+				api.SetProgress(ctx, float32(done)/float32(len(packs)), fmt.Sprintf("Processing mod %s (%d of %d)", entry.mod.Modid, done, len(packs)))
+
+				encoded, err := os.ReadFile(dlItem.Filepath)
+				if err != nil {
+					return eris.Wrapf(err, "failed to open downloaded file %s", dlItem.Filepath)
+				}
+
+				if strings.HasPrefix(dlItem.Key, "mod-") {
+					var modMeta common.ModMeta
+					err = proto.Unmarshal(encoded, &modMeta)
+					if err != nil {
+						return eris.Wrapf(err, "failed to parse mod meta %s", dlItem.Key)
+					}
+
+					err = params.AddMod(&modMeta)
+					if err != nil {
+						return eris.Wrapf(err, "failed to save mod metadata for %s", entry.mod.Modid)
+					}
+
+					if _, ok := curDates[entry.mod.Modid]; !ok {
+						curDates[entry.mod.Modid] = make([]time.Time, 1)
+					}
+
+					curDates[entry.mod.Modid][0] = entry.mod.LastModified.AsTime()
+				} else {
+					var releasePack common.ReleasePack
+					err = proto.Unmarshal(encoded, &releasePack)
+					if err != nil {
+						return eris.Wrapf(err, "failed to parse mod release pack %s", dlItem.Key)
+					}
+
+					if releasePack.Modid != entry.mod.Modid || releasePack.Packnum != uint32(entry.idx) {
+						return eris.Errorf("received wrong pack! expected %d for %s but got %d for %s", entry.idx, entry.mod.Modid, releasePack.Packnum, releasePack.Modid)
+					}
+
+					for _, rel := range releasePack.Releases {
+						err := params.AddRelease(rel)
+						if err != nil {
+							return eris.Wrapf(err, "failed to import release %s for %s", rel.Version, entry.mod.Modid)
+						}
+					}
+
+					modDates := curDates[entry.mod.Modid]
+					for len(modDates) <= entry.idx+1 {
+						modDates = append(modDates, time.Time{})
+					}
+
+					modDates[entry.idx+1] = entry.mod.PacksLastModified[entry.idx].AsTime()
+					curDates[entry.mod.Modid] = modDates
+				}
+
+				done++
+			}
+
+			err = queue.Error()
+			if err != nil {
+				return eris.Wrap(err, "failed to download modsync files")
+			}
+
+			api.Log(ctx, api.LogInfo, "Looking for removed mods")
+			releases, err := storage.RemoteMods.GetMods(ctx)
+			if err != nil {
+				return eris.Wrap(err, "failed to retrieve mod IDs")
+			}
+
+			seen := make(map[string]bool)
+			for _, entry := range index.Mods {
+				seen[entry.Modid] = true
+
+				localVersions, err := storage.RemoteMods.GetVersionsForMod(ctx, entry.Modid)
+				if err == nil {
+					versionHash, err := calcVersionsChecksum(localVersions)
+					if err != nil {
+						return err
+					}
+
+					versionMismatch := !bytes.Equal(versionHash, entry.VersionChecksum)
+					if versionMismatch {
+						api.Log(ctx, api.LogInfo, "Version mismatch detected, clearing releases for %s.", entry.Modid)
+
+						err = params.RemoveModReleases(entry.Modid)
+						if err != nil {
+							return err
+						}
+
+						delete(curDates, entry.Modid)
+						resyncNeeded = true
+					}
+				}
+			}
+
+			for _, rel := range releases {
+				if !seen[rel.Modid] {
+					api.Log(ctx, api.LogInfo, "Removing %s", rel.Modid)
+					err = params.RemoveMod(rel.Modid)
+					if err != nil {
+						return eris.Wrapf(err, "failed to remove mod %s", rel.Modid)
+					}
+				}
+			}
+
+			api.SetProgress(ctx, 1, "Finishing")
+
+			err = storage.UpdateRemoteModsLastModifiedDates(ctx, curDates)
+			if err == nil {
+				api.Log(ctx, api.LogInfo, "Done")
+			}
+
+			return err
+		})
+		if err != nil {
+			return err
 		}
 
-		api.SetProgress(ctx, 1, "Finishing")
-
-		err = storage.UpdateRemoteModsLastModifiedDates(ctx, curDates)
-		if err == nil {
-			api.Log(ctx, api.LogInfo, "Done")
+		if resyncNeeded {
+			api.Log(ctx, api.LogInfo, "Found inconsistencies; will sync again.")
 		}
+	}
 
-		return err
-	})
+	return nil
 }
 
 func FetchModChecksums(ctx context.Context, modVersions map[string]string) (map[string]*common.ChecksumPack, error) {
