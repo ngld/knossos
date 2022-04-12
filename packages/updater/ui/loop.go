@@ -1,11 +1,17 @@
 package ui
 
+// #include <stdlib.h>
+// #include <SDL2/SDL.h>
+// #cgo         LDFLAGS: -lSDL2
+// #cgo windows LDFLAGS: -ldinput8 -lshell32 -lsetupapi -ladvapi32 -luuid -lversion -loleaut32 -lole32 -limm32 -lwinmm -lgdi32 -luser32 -lm -Wl,--no-undefined
+import "C"
+
 import (
 	"runtime"
+	"unsafe"
 
 	"github.com/inkyblackness/imgui-go/v4"
 	"github.com/rotisserie/eris"
-	"github.com/veandco/go-sdl2/sdl"
 )
 
 var (
@@ -17,6 +23,11 @@ func RunOnMain(callback func()) {
 	mainQueue <- callback
 }
 
+func getSDLError() string {
+	msg := C.SDL_GetError()
+	return C.GoString(msg)
+}
+
 func RunApp(title string, width, height int32) error {
 	mainQueue = make(chan func())
 
@@ -24,20 +35,23 @@ func RunApp(title string, width, height int32) error {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
-	err := sdl.Init(sdl.INIT_VIDEO)
-	if err != nil {
-		return eris.Wrap(err, "failed to initialise SDL2")
+	result := C.SDL_Init(C.SDL_INIT_VIDEO)
+	if result < 0 {
+		return eris.Errorf("failed to initialise SDL2: %s", getSDLError())
 	}
-	defer sdl.Quit()
+	defer C.SDL_Quit()
 
-	window, err := sdl.CreateWindow(title, sdl.WINDOWPOS_CENTERED, sdl.WINDOWPOS_CENTERED, width, height,
-		sdl.WINDOW_OPENGL|sdl.WINDOW_RESIZABLE|sdl.WINDOW_ALLOW_HIGHDPI)
-	if err != nil {
-		return eris.Wrap(err, "failed to create window")
+	cTitle := C.CString(title)
+	window := C.SDL_CreateWindow(cTitle, C.SDL_WINDOWPOS_CENTERED, C.SDL_WINDOWPOS_CENTERED, C.int(width), C.int(height),
+		C.SDL_WINDOW_OPENGL|C.SDL_WINDOW_RESIZABLE|C.SDL_WINDOW_ALLOW_HIGHDPI)
+	C.free(unsafe.Pointer(cTitle))
+
+	if window == nil {
+		return eris.Errorf("failed to create window: %s", getSDLError())
 	}
 	// If we fail to destroy the window during quitting, there's nothing we can do about it.
 	//nolint:errcheck
-	defer window.Destroy()
+	defer C.SDL_DestroyWindow(window)
 
 	context := imgui.CreateContext(nil)
 	defer context.Destroy()
@@ -51,101 +65,105 @@ func RunApp(title string, width, height int32) error {
 	// If we fail to set an attribute, it's fine since none of them are critical.
 	if runtime.GOOS == "darwin" {
 		// Always required on Mac
-		_ = sdl.GLSetAttribute(sdl.GL_CONTEXT_FLAGS, sdl.GL_CONTEXT_FORWARD_COMPATIBLE_FLAG)
+		_ = C.SDL_GL_SetAttribute(C.SDL_GL_CONTEXT_FLAGS, C.SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG)
 	} else {
-		_ = sdl.GLSetAttribute(sdl.GL_CONTEXT_FLAGS, 0)
+		_ = C.SDL_GL_SetAttribute(C.SDL_GL_CONTEXT_FLAGS, 0)
 	}
 
-	_ = sdl.GLSetAttribute(sdl.GL_CONTEXT_PROFILE_MASK, sdl.GL_CONTEXT_PROFILE_CORE)
-	_ = sdl.GLSetAttribute(sdl.GL_CONTEXT_MAJOR_VERSION, 3)
-	_ = sdl.GLSetAttribute(sdl.GL_CONTEXT_MINOR_VERSION, 2)
+	_ = C.SDL_GL_SetAttribute(C.SDL_GL_CONTEXT_PROFILE_MASK, C.SDL_GL_CONTEXT_PROFILE_CORE)
+	_ = C.SDL_GL_SetAttribute(C.SDL_GL_CONTEXT_MAJOR_VERSION, 3)
+	_ = C.SDL_GL_SetAttribute(C.SDL_GL_CONTEXT_MINOR_VERSION, 2)
 
-	_ = sdl.GLSetAttribute(sdl.GL_DOUBLEBUFFER, 1)
-	_ = sdl.GLSetAttribute(sdl.GL_DEPTH_SIZE, 24)
-	_ = sdl.GLSetAttribute(sdl.GL_STENCIL_SIZE, 8)
+	_ = C.SDL_GL_SetAttribute(C.SDL_GL_DOUBLEBUFFER, 1)
+	_ = C.SDL_GL_SetAttribute(C.SDL_GL_DEPTH_SIZE, 24)
+	_ = C.SDL_GL_SetAttribute(C.SDL_GL_STENCIL_SIZE, 8)
 
-	glCtx, err := window.GLCreateContext()
-	if err != nil {
-		return eris.Wrap(err, "failed to create OpenGL context")
+	glCtx := C.SDL_GL_CreateContext(window)
+	if glCtx == nil {
+		return eris.Errorf("failed to create OpenGL context: %s", getSDLError())
 	}
 
-	err = window.GLMakeCurrent(glCtx)
-	if err != nil {
-		return eris.Wrap(err, "failed to make the OpenGL context current")
+	result = C.SDL_GL_MakeCurrent(window, glCtx)
+	if result < 0 {
+		return eris.Errorf("failed to make the OpenGL context current: %s", getSDLError())
 	}
 
-	err = sdl.GLSetSwapInterval(1)
-	if err != nil {
-		return eris.Wrap(err, "failed to set OpenGL swap interval")
+	result = C.SDL_GL_SetSwapInterval(1)
+	if result < 0 {
+		return eris.Errorf("failed to set OpenGL swap interval: %s", getSDLError())
 	}
 
 	renderer, err := NewOpenGL3(io)
 	if err != nil {
-		return eris.Wrap(err, "failed to initialise OpenGL3 renderer")
+		return eris.Errorf("failed to initialise OpenGL3 renderer: %s", getSDLError())
 	}
 
-	lastTime := uint64(0)
+	lastTime := C.uint64_t(0)
 	buttonsDown := make([]bool, 3)
 	running = true
 
 	for running {
 		// Process events
-		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
-			switch event.GetType() {
-			case sdl.QUIT:
+		var event C.SDL_Event
+		for count := C.SDL_PollEvent(&event); count > 0; count = C.SDL_PollEvent(&event) {
+			evp := unsafe.Pointer(&event)
+			switch (*C.SDL_CommonEvent)(evp)._type {
+			case C.SDL_QUIT:
 				running = false
-			case sdl.MOUSEWHEEL:
+			case C.SDL_MOUSEWHEEL:
 				//nolint:forcetypeassert // type is guarenteed here
-				wheelEvent := event.(*sdl.MouseWheelEvent)
+				wheelEvent := (*C.SDL_MouseWheelEvent)(evp)
 				var deltaX, deltaY float32
-				if wheelEvent.X > 0 {
+				if wheelEvent.x > 0 {
 					deltaX++
-				} else if wheelEvent.X < 0 {
+				} else if wheelEvent.x < 0 {
 					deltaX--
 				}
-				if wheelEvent.Y > 0 {
+				if wheelEvent.y > 0 {
 					deltaY++
-				} else if wheelEvent.Y < 0 {
+				} else if wheelEvent.y < 0 {
 					deltaY--
 				}
 				io.AddMouseWheelDelta(deltaX, deltaY)
-			case sdl.MOUSEBUTTONDOWN:
+			case C.SDL_MOUSEBUTTONDOWN:
 				//nolint:forcetypeassert // type is guarenteed here
-				buttonEvent := event.(*sdl.MouseButtonEvent)
-				switch buttonEvent.Button {
-				case sdl.BUTTON_LEFT:
+				buttonEvent := (*C.SDL_MouseButtonEvent)(evp)
+				switch buttonEvent.button {
+				case C.SDL_BUTTON_LEFT:
 					buttonsDown[0] = true
-				case sdl.BUTTON_RIGHT:
+				case C.SDL_BUTTON_RIGHT:
 					buttonsDown[1] = true
-				case sdl.BUTTON_MIDDLE:
+				case C.SDL_BUTTON_MIDDLE:
 					buttonsDown[2] = true
 				}
-			case sdl.TEXTINPUT:
+			case C.SDL_TEXTINPUT:
 				//nolint:forcetypeassert // type is guarenteed here
-				inputEvent := event.(*sdl.TextInputEvent)
-				io.AddInputCharacters(string(inputEvent.Text[:]))
-			case sdl.KEYDOWN:
+				inputEvent := (*C.SDL_TextInputEvent)(evp)
+				io.AddInputCharacters(C.GoString(&inputEvent.text[0]))
+			case C.SDL_KEYDOWN:
 				//nolint:forcetypeassert // type is guarenteed here
-				keyEvent := event.(*sdl.KeyboardEvent)
-				io.KeyPress(int(keyEvent.Keysym.Scancode))
+				keyEvent := (*C.SDL_KeyboardEvent)(evp)
+				io.KeyPress(int(keyEvent.keysym.scancode))
 				updateKeyModifier(io)
-			case sdl.KEYUP:
+			case C.SDL_KEYUP:
 				//nolint:forcetypeassert // type is guarenteed here
-				keyEvent := event.(*sdl.KeyboardEvent)
-				io.KeyRelease(int(keyEvent.Keysym.Scancode))
+				keyEvent := (*C.SDL_KeyboardEvent)(evp)
+				io.KeyRelease(int(keyEvent.keysym.scancode))
 				updateKeyModifier(io)
 			}
 		}
 
 		// Update window size in case it was resized
-		displayWidth, displayHeight := window.GetSize()
+		var displayWidth, displayHeight C.int
+		C.SDL_GetWindowSize(window, &displayWidth, &displayHeight)
 		io.SetDisplaySize(imgui.Vec2{X: float32(displayWidth), Y: float32(displayHeight)})
 
-		frameWidth, frameHeight := window.GLGetDrawableSize()
+		var frameWidth, frameHeight C.int
+		C.SDL_GL_GetDrawableSize(window, &frameWidth, &frameHeight)
 
 		// Update time
-		freq := sdl.GetPerformanceFrequency()
-		curTime := sdl.GetPerformanceCounter()
+		freq := C.SDL_GetPerformanceFrequency()
+		curTime := C.SDL_GetPerformanceCounter()
 		if lastTime > 0 {
 			io.SetDeltaTime(float32(curTime-lastTime) / float32(freq))
 		} else {
@@ -155,10 +173,11 @@ func RunApp(title string, width, height int32) error {
 		lastTime = curTime
 
 		// Update mouse state
-		x, y, state := sdl.GetMouseState()
+		var x, y C.int
+		state := C.SDL_GetMouseState(&x, &y)
 		io.SetMousePosition(imgui.Vec2{X: float32(x), Y: float32(y)})
-		for i, button := range []uint32{sdl.BUTTON_LEFT, sdl.BUTTON_RIGHT, sdl.BUTTON_MIDDLE} {
-			io.SetMouseButtonDown(i, buttonsDown[i] || (state&sdl.Button(button)) != 0)
+		for i, button := range []C.uint{C.SDL_BUTTON_LEFT, C.SDL_BUTTON_RIGHT, C.SDL_BUTTON_MIDDLE} {
+			io.SetMouseButtonDown(i, buttonsDown[i] || (state&button) != 0)
 			buttonsDown[i] = false
 		}
 
@@ -172,7 +191,7 @@ func RunApp(title string, width, height int32) error {
 			[2]float32{float32(frameWidth), float32(frameHeight)},
 			imgui.RenderedDrawData(),
 		)
-		window.GLSwap()
+		C.SDL_GL_SwapWindow(window)
 
 		// Process callbacks
 	callbackLoop:
@@ -191,27 +210,27 @@ func RunApp(title string, width, height int32) error {
 
 func initKeyMapping(io imgui.IO) {
 	keyMapping := map[int]int{
-		imgui.KeyTab:        sdl.SCANCODE_TAB,
-		imgui.KeyLeftArrow:  sdl.SCANCODE_LEFT,
-		imgui.KeyRightArrow: sdl.SCANCODE_RIGHT,
-		imgui.KeyUpArrow:    sdl.SCANCODE_UP,
-		imgui.KeyDownArrow:  sdl.SCANCODE_DOWN,
-		imgui.KeyPageUp:     sdl.SCANCODE_PAGEUP,
-		imgui.KeyPageDown:   sdl.SCANCODE_PAGEDOWN,
-		imgui.KeyHome:       sdl.SCANCODE_HOME,
-		imgui.KeyEnd:        sdl.SCANCODE_END,
-		imgui.KeyInsert:     sdl.SCANCODE_INSERT,
-		imgui.KeyDelete:     sdl.SCANCODE_DELETE,
-		imgui.KeyBackspace:  sdl.SCANCODE_BACKSPACE,
-		imgui.KeySpace:      sdl.SCANCODE_BACKSPACE,
-		imgui.KeyEnter:      sdl.SCANCODE_RETURN,
-		imgui.KeyEscape:     sdl.SCANCODE_ESCAPE,
-		imgui.KeyA:          sdl.SCANCODE_A,
-		imgui.KeyC:          sdl.SCANCODE_C,
-		imgui.KeyV:          sdl.SCANCODE_V,
-		imgui.KeyX:          sdl.SCANCODE_X,
-		imgui.KeyY:          sdl.SCANCODE_Y,
-		imgui.KeyZ:          sdl.SCANCODE_Z,
+		imgui.KeyTab:        C.SDL_SCANCODE_TAB,
+		imgui.KeyLeftArrow:  C.SDL_SCANCODE_LEFT,
+		imgui.KeyRightArrow: C.SDL_SCANCODE_RIGHT,
+		imgui.KeyUpArrow:    C.SDL_SCANCODE_UP,
+		imgui.KeyDownArrow:  C.SDL_SCANCODE_DOWN,
+		imgui.KeyPageUp:     C.SDL_SCANCODE_PAGEUP,
+		imgui.KeyPageDown:   C.SDL_SCANCODE_PAGEDOWN,
+		imgui.KeyHome:       C.SDL_SCANCODE_HOME,
+		imgui.KeyEnd:        C.SDL_SCANCODE_END,
+		imgui.KeyInsert:     C.SDL_SCANCODE_INSERT,
+		imgui.KeyDelete:     C.SDL_SCANCODE_DELETE,
+		imgui.KeyBackspace:  C.SDL_SCANCODE_BACKSPACE,
+		imgui.KeySpace:      C.SDL_SCANCODE_BACKSPACE,
+		imgui.KeyEnter:      C.SDL_SCANCODE_RETURN,
+		imgui.KeyEscape:     C.SDL_SCANCODE_ESCAPE,
+		imgui.KeyA:          C.SDL_SCANCODE_A,
+		imgui.KeyC:          C.SDL_SCANCODE_C,
+		imgui.KeyV:          C.SDL_SCANCODE_V,
+		imgui.KeyX:          C.SDL_SCANCODE_X,
+		imgui.KeyY:          C.SDL_SCANCODE_Y,
+		imgui.KeyZ:          C.SDL_SCANCODE_Z,
 	}
 
 	for imKey, sdlKey := range keyMapping {
@@ -220,8 +239,8 @@ func initKeyMapping(io imgui.IO) {
 }
 
 func updateKeyModifier(io imgui.IO) {
-	modState := sdl.GetModState()
-	mapModifier := func(lMask sdl.Keymod, lKey int, rMask sdl.Keymod, rKey int) (lResult int, rResult int) {
+	modState := C.SDL_GetModState()
+	mapModifier := func(lMask C.SDL_Keymod, lKey int, rMask C.SDL_Keymod, rKey int) (lResult int, rResult int) {
 		if (modState & lMask) != 0 {
 			lResult = lKey
 		}
@@ -230,7 +249,7 @@ func updateKeyModifier(io imgui.IO) {
 		}
 		return
 	}
-	io.KeyShift(mapModifier(sdl.KMOD_LSHIFT, sdl.SCANCODE_LSHIFT, sdl.KMOD_RSHIFT, sdl.SCANCODE_RSHIFT))
-	io.KeyCtrl(mapModifier(sdl.KMOD_LCTRL, sdl.SCANCODE_LCTRL, sdl.KMOD_RCTRL, sdl.SCANCODE_RCTRL))
-	io.KeyAlt(mapModifier(sdl.KMOD_LALT, sdl.SCANCODE_LALT, sdl.KMOD_RALT, sdl.SCANCODE_RALT))
+	io.KeyShift(mapModifier(C.KMOD_LSHIFT, C.SDL_SCANCODE_LSHIFT, C.KMOD_RSHIFT, C.SDL_SCANCODE_RSHIFT))
+	io.KeyCtrl(mapModifier(C.KMOD_LCTRL, C.SDL_SCANCODE_LCTRL, C.KMOD_RCTRL, C.SDL_SCANCODE_RCTRL))
+	io.KeyAlt(mapModifier(C.KMOD_LALT, C.SDL_SCANCODE_LALT, C.KMOD_RALT, C.SDL_SCANCODE_RALT))
 }
