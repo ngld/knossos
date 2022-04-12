@@ -109,6 +109,11 @@ func UpdateRemoteModIndex(ctx context.Context) error {
 			tmpFolder := filepath.Join(settings.LibraryPath, "temp")
 			modEntries := make(map[string]modPackInfo)
 
+			err = os.MkdirAll(tmpFolder, 0o777)
+			if err != nil {
+				return eris.Wrapf(err, "failed to create temp folder %s")
+			}
+
 			// If the mod index hasn't changed since the last time we fetched it, index will be the zero value of common.ModIndex
 			// this means that index.Mods is an empty list which means we do nothing which is exactly what we want.
 			for _, entry := range index.Mods {
