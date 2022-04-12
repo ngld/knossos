@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -134,7 +135,96 @@ func VerifyModIntegrity(ctx context.Context, rel *common.Release) error {
 	}
 
 	atomic.StoreInt64(&processedBytes, -1)
+
+	api.Log(ctx, api.LogInfo, "Checking for orphans")
+	err = detectOrphans(ctx, rel, checksums, false)
+	if err != nil {
+		return err
+	}
+
 	api.Log(ctx, api.LogInfo, "Done")
 	api.SetProgress(ctx, 1, "Done")
+	return nil
+}
+
+func buildFilelist(dir, prefix string) ([]string, error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, eris.Wrapf(err, "failed to list contents of %s", dir)
+	}
+
+	result := make([]string, 0)
+	for _, item := range entries {
+		if item.IsDir() {
+			contents, err := buildFilelist(path.Join(dir, item.Name()), path.Join(prefix, item.Name()))
+			if err != nil {
+				return nil, err
+			}
+
+			result = append(result, contents...)
+		} else {
+			result = append(result, path.Join(prefix, item.Name()))
+		}
+	}
+
+	return result, nil
+}
+
+func detectOrphans(ctx context.Context, rel *common.Release, checksums *common.ChecksumPack, delete bool) error {
+	filelist := make(map[string]bool)
+	filelist["knrelease.json"] = true
+
+	modFolder, err := GetModFolder(ctx, rel)
+	if err != nil {
+		return eris.Wrap(err, "failed to build mod folder")
+	}
+
+	filerefs := append([]*common.FileRef{rel.Banner, rel.Teaser}, rel.Screenshots...)
+	for _, ref := range filerefs {
+		if ref != nil && len(ref.Urls) > 0 && strings.HasPrefix(ref.Urls[0], "file://") {
+			relPath, err := filepath.Rel(modFolder, ref.Urls[0][7:])
+			if err != nil {
+				api.Log(ctx, api.LogWarn, "Could not make %s relative to %s", ref.Urls[0][7:], modFolder)
+				continue
+			}
+
+			filelist[filepath.ToSlash(relPath)] = true
+		}
+	}
+
+	for _, pkg := range rel.Packages {
+		for _, ar := range pkg.Archives {
+			arChecksums := checksums.Archives[ar.Label]
+			if arChecksums == nil {
+				api.Log(ctx, api.LogError, "Checksums for archive %s are missing!", ar.Label)
+				continue
+			}
+
+			for _, item := range arChecksums.Files {
+				itemPath := path.Join(pkg.Folder, ar.Destination, item.Filename)
+				filelist[itemPath] = true
+			}
+		}
+	}
+
+	localFiles, err := buildFilelist(modFolder, "")
+	if err != nil {
+		return eris.Wrapf(err, "failed to build file list for %s", modFolder)
+	}
+
+	for _, item := range localFiles {
+		if !filelist[item] {
+			if delete {
+				api.Log(ctx, api.LogInfo, "Deleting orphaned file %s.", item)
+				err = os.Remove(filepath.Join(modFolder, filepath.FromSlash(item)))
+				if err != nil {
+					return eris.Wrapf(err, "failed to remove %s", item)
+				}
+			} else {
+				api.Log(ctx, api.LogWarn, "Found orphaned file %s.", item)
+			}
+		}
+	}
+
 	return nil
 }
