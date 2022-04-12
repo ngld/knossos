@@ -78,7 +78,7 @@ func calcVersionsChecksum(versions []string) ([]byte, error) {
 }
 
 func UpdateRemoteModIndex(ctx context.Context) error {
-	resyncNeeded := false
+	resyncNeeded := true
 	for resyncNeeded {
 		resyncNeeded = false
 		err := storage.ImportRemoteMods(ctx, func(ctx context.Context, params storage.RemoteImportCallbackParams) error {
