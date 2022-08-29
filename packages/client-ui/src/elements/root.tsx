@@ -23,6 +23,7 @@ import RemoteModList from '../pages/remote-mod-list';
 import Settings from '../pages/settings';
 import LocalMod from '../pages/local-mod';
 import RemoteMod from '../pages/remote-mod';
+import { maybeError } from '../dialogs/error-dialog';
 
 const NavTabs = function NavTabs(): React.ReactElement {
   const navigate = useNavigate();
@@ -198,7 +199,7 @@ export default function Root(): React.ReactElement {
           <TooltipButton tooltip="Refresh Mod List" onClick={() => void refreshModList(gs)}>
             <CiRefreshLine />
           </TooltipButton>
-          <TooltipButton tooltip="Screenshots">
+          <TooltipButton tooltip="Screenshots" onClick={() => maybeError(gs, gs.client.openScreenshotsFolder({}))}>
             <CiPictureLine className="ml-2" />
           </TooltipButton>
           <CiFilterLine className="ml-2" />

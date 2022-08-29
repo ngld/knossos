@@ -442,3 +442,20 @@ func (kn *knossosServer) VerifyChecksums(ctx context.Context, req *client.Verify
 
 	return &client.SuccessResponse{Success: true}, nil
 }
+
+func (kn *knossosServer) OpenScreenshotsFolder(ctx context.Context, req *client.NullMessage) (*client.TaskResult, error) {
+	prefPath := fsointerop.GetPrefPath(ctx)
+	logPath := filepath.Join(prefPath, "data", "screenshots")
+
+	_, err := os.Stat(logPath)
+	if eris.Is(err, os.ErrNotExist) {
+		return &client.TaskResult{Error: fmt.Sprintf("Could not find %s", logPath)}, nil
+	}
+
+	err = platform.OpenLink(logPath)
+	if err != nil {
+		return nil, err
+	}
+
+	return &client.TaskResult{Success: true}, nil
+}
