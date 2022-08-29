@@ -383,4 +383,5 @@ service Knossos {
   rpc UpdateLocalModList (TaskRequest) returns (SuccessResponse) {};
   rpc OpenDebugLog (NullMessage) returns (TaskResult) {};
   rpc VerifyChecksums (VerifyChecksumRequest) returns (SuccessResponse) {};
+  rpc OpenScreenshotsFolder (NullMessage) returns (TaskResult) {};
 }
