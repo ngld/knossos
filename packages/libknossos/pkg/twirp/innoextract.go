@@ -1,17 +1,20 @@
 package twirp
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/ngld/knossos/packages/api/client"
 	"github.com/ngld/knossos/packages/api/common"
-	"github.com/ngld/knossos/packages/libinnoextract"
 	"github.com/ngld/knossos/packages/libknossos/pkg/api"
 	"github.com/ngld/knossos/packages/libknossos/pkg/mods"
 	"github.com/ngld/knossos/packages/libknossos/pkg/platform"
@@ -310,13 +313,6 @@ func copyFromGameFolder(ctx context.Context, libraryPath, gameFolder string, mov
 	return nil
 }
 
-var logLevelMap = map[libinnoextract.LogLevel]api.LogLevel{
-	libinnoextract.LogDebug:   api.LogDebug,
-	libinnoextract.LogError:   api.LogError,
-	libinnoextract.LogInfo:    api.LogInfo,
-	libinnoextract.LogWarning: api.LogWarn,
-}
-
 func handleInnoextract(ctx context.Context, libraryPath, installer string) error {
 	if libraryPath == "" {
 		return eris.New("got an empty library path")
@@ -331,33 +327,110 @@ func handleInnoextract(ctx context.Context, libraryPath, installer string) error
 	}
 	defer os.RemoveAll(tempFolder)
 
-	api.Log(ctx, api.LogInfo, "Loading innoextract")
+	api.Log(ctx, api.LogInfo, "Launching innoextract")
 
 	innoPath := api.ResourcePath(ctx)
 	switch runtime.GOOS {
 	case "windows":
-		innoPath = filepath.Join(innoPath, "libinnoextract.dll")
-	case "linux":
-		innoPath = filepath.Join(innoPath, "libinnoextract.so")
-	case "darwin":
-		innoPath = filepath.Join(innoPath, "libinnoextract.dylib")
+		innoPath = filepath.Join(innoPath, "innoextract.exe")
+	case "linux", "darwin":
+		innoPath = filepath.Join(innoPath, "innoextract")
 	default:
 		return eris.Errorf("unsupported OS %s", runtime.GOOS)
 	}
 
-	err = libinnoextract.LoadLibrary(innoPath)
+	proc := exec.CommandContext(ctx, innoPath, "-c0", "-p1", installer, "-d", tempFolder)
+	stdout, err := proc.StdoutPipe()
 	if err != nil {
-		return eris.Wrapf(err, "failed to load %s", innoPath)
+		return eris.Wrap(err, "failed to allocate stdout pipe")
 	}
 
-	api.Log(ctx, api.LogInfo, "Extracting installer")
-	err = libinnoextract.ExtractInstaller(installer, tempFolder, func(progress float32, message string) {
-		api.SetProgress(ctx, progress, message)
-	}, func(level libinnoextract.LogLevel, message string) {
-		api.Log(ctx, logLevelMap[level], message)
-	})
+	stderr, err := proc.StderrPipe()
 	if err != nil {
-		return eris.Wrap(err, "failed to extract installer")
+		return eris.Wrap(err, "failed to allocate stderr pipe")
+	}
+
+	err = proc.Start()
+	if err != nil {
+		return eris.Wrapf(err, "failed to run %s", innoPath)
+	}
+
+	go func() {
+		scanner := bufio.NewScanner(stderr)
+		for scanner.Scan() {
+			api.Log(ctx, api.LogError, "InnoExtract: %s", scanner.Text())
+		}
+	}()
+
+	scanner := bufio.NewScanner(stdout)
+	scanner.Split(func(data []byte, atEOF bool) (advance int, token []byte, err error) {
+		start := 0
+		bracket := -1
+		inEscape := false
+
+	loop:
+		for idx := 0; idx < len(data); idx++ {
+			if inEscape {
+				if data[idx] == 'K' {
+					inEscape = false
+					start = idx + 1
+				}
+				continue
+			}
+
+			switch data[idx] {
+			case '\x1b':
+				inEscape = true
+			case '\r', '\n':
+				if idx == start {
+					start++
+					continue
+				}
+				return idx, data[start:idx], nil
+			case ']':
+				bracket = idx
+				break loop
+			}
+		}
+
+		if bracket == -1 {
+			return 0, nil, nil
+		}
+
+		data = data[bracket+1:]
+		end := bytes.IndexByte(data, '\r')
+		if end > 0 {
+			data = data[:end]
+		} else {
+			end = 0
+		}
+
+		return bracket + end + 2, data, nil
+	})
+
+	for scanner.Scan() {
+		parts := strings.SplitN(scanner.Text(), "%", 2)
+		parts[0] = strings.TrimSpace(parts[0])
+
+		if len(parts) < 2 {
+			if len(parts[0]) > 0 {
+				api.Log(ctx, api.LogInfo, "InnoExtract: %s", parts[0])
+			}
+			continue
+		}
+
+		progress, err := strconv.ParseFloat(parts[0], 32)
+		if err != nil {
+			progress = 0
+		}
+
+		label := strings.TrimSpace(parts[1])
+		api.SetProgress(ctx, float32(progress)/100, label)
+	}
+
+	err = proc.Wait()
+	if err != nil {
+		return eris.Wrap(err, "failed to run innoextract")
 	}
 
 	err = copyFromGameFolder(ctx, libraryPath, tempFolder, true)

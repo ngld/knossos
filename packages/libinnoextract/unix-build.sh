@@ -3,8 +3,8 @@
 set -e
 
 cd "$(dirname "$0")"/../..
-mkdir -p build/libinnoextract
-cd build/libinnoextract
+mkdir -p build/innoextract
+cd build/innoextract
 
 if [ ! -f Makefile ]; then
 	link_opts=""
@@ -18,7 +18,7 @@ if [ ! -f Makefile ]; then
         -Wno-dev
         -DUSE_LTO=OFF # LTO is buggy with GNU's ld
 		$link_opts
-        ../../packages/libinnoextract
+        ../../third_party/innoextract
     )
 
     cmake -G"Unix Makefiles" "${args[@]}"

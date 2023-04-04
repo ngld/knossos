@@ -291,13 +291,8 @@ func ImportMods(ctx context.Context, modFiles []string) error {
 			if !seenMods[mod.ID] {
 				seenMods[mod.ID] = true
 				pbMod := &common.ModMeta{
-					Modid:  mod.ID,
-					Title:  mod.Title,
-					Parent: mod.Parent,
-				}
-
-				if pbMod.Parent == "" {
-					pbMod.Parent = "FS2"
+					Modid: mod.ID,
+					Title: mod.Title,
 				}
 
 				switch mod.Type {

@@ -1,4 +1,4 @@
-import ReactDOM from 'react-dom';
+import { createRoot } from 'react-dom/client';
 import './tw-index.css';
 import './blueprint.precss';
 import '@blueprintjs/popover2/lib/css/blueprint-popover2.css';
@@ -18,10 +18,12 @@ if (process.env.NODE_ENV !== 'production' && !window.knIsApp) {
 
 // eslint-disable-next-line
 const Root = require('./elements/root').default;
+const container = document.querySelector<HTMLDivElement>('div#container');
 
-ReactDOM.render(
-  <BrowserRouter>
-    <Root />
-  </BrowserRouter>,
-  document.querySelector('#container'),
-);
+if (container) {
+  createRoot(container).render(
+    <BrowserRouter>
+      <Root />
+    </BrowserRouter>,
+  );
+}

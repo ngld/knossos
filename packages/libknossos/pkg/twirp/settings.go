@@ -34,21 +34,13 @@ func (kn *knossosServer) GetHardwareInfo(ctx context.Context, req *client.NullMe
 
 	if runtime.GOOS == "darwin" {
 		platform.RunOnMain(func() {
-			err = sdl.Init(sdl.INIT_VIDEO | sdl.INIT_JOYSTICK)
+			err = sdl.Init(sdl.INIT_VIDEO)
 		})
 	} else {
-		err = sdl.Init(sdl.INIT_VIDEO | sdl.INIT_JOYSTICK)
+		err = sdl.Init(sdl.INIT_VIDEO)
 	}
 	if err != nil {
 		return nil, eris.Wrap(err, "failed to init SDL")
-	}
-
-	joysticks := make([]*client.HardwareInfoResponse_Joystick, sdl.NumJoysticks())
-	for idx := range joysticks {
-		joysticks[idx] = &client.HardwareInfoResponse_Joystick{
-			Name: sdl.JoystickNameForIndex(idx),
-			UUID: sdl.JoystickGetGUIDString(sdl.JoystickGetDeviceGUID(idx)),
-		}
 	}
 
 	displayCount, err := sdl.GetNumVideoDisplays()
@@ -89,8 +81,31 @@ func (kn *knossosServer) GetHardwareInfo(ctx context.Context, req *client.NullMe
 		CaptureDevices:  info.Captures,
 		DefaultPlayback: info.DefaultDevice,
 		DefaultCapture:  info.DefaultCapture,
-		Joysticks:       joysticks,
 		Resolutions:     resolutions,
 		Voices:          voices,
 	}, nil
+}
+
+func (kn *knossosServer) GetJoystickInfo(ctx context.Context, req *client.NullMessage) (*client.JoystickInfoResponse, error) {
+	var err error
+	if runtime.GOOS == "darwin" {
+		platform.RunOnMain(func() {
+			err = sdl.Init(sdl.INIT_JOYSTICK)
+		})
+	} else {
+		err = sdl.Init(sdl.INIT_JOYSTICK)
+	}
+	if err != nil {
+		return nil, eris.Wrap(err, "failed to init SDL")
+	}
+
+	joysticks := make([]*client.JoystickInfoResponse_Joystick, sdl.NumJoysticks())
+	for idx := range joysticks {
+		joysticks[idx] = &client.JoystickInfoResponse_Joystick{
+			Name: sdl.JoystickNameForIndex(idx),
+			UUID: sdl.JoystickGetGUIDString(sdl.JoystickGetDeviceGUID(idx)),
+		}
+	}
+
+	return &client.JoystickInfoResponse{Joysticks: joysticks}, nil
 }

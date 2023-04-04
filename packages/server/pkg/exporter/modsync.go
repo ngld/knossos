@@ -438,7 +438,7 @@ func updateModIndex(ctx context.Context, q queries.Querier, entry *common.ModInd
 	}
 
 	var rels []*common.Release
-	if !eris.Is(err, os.ErrNotExist) {
+	if err == nil {
 		err = proto.Unmarshal(encoded, &pack)
 		if err != nil {
 			return eris.Wrapf(err, "failed to deserialise last pack (%d) from mod %s", current, entry.Modid)

@@ -1,5 +1,5 @@
-#ifndef KNOSSOS_LAUNCHER_BROWSER_KNOSSOS_FILE_RESULT_HANDLER
-#define KNOSSOS_LAUNCHER_BROWSER_KNOSSOS_FILE_RESULT_HANDLER
+#ifndef PACKAGES_CLIENT_LAUNCHER_BROWSER_KNOSSOS_FILE_RESULT_HANDLER
+#define PACKAGES_CLIENT_LAUNCHER_BROWSER_KNOSSOS_FILE_RESULT_HANDLER
 
 #include "include/cef_base.h"
 #include "include/cef_browser.h"
@@ -9,8 +9,7 @@ public:
   KnossosFileResultHandler(CefRefPtr<CefFrame> request_frame, int promise_id, bool multi);
 
   virtual void
-  OnFileDialogDismissed(int selected_accept_filter,
-                        const std::vector<CefString> &file_paths) override;
+  OnFileDialogDismissed(const std::vector<CefString> &file_paths) override;
 
 private:
   CefRefPtr<CefFrame> request_frame_;
@@ -20,4 +19,4 @@ private:
   IMPLEMENT_REFCOUNTING(KnossosFileResultHandler);
 };
 
-#endif /* KNOSSOS_LAUNCHER_BROWSER_KNOSSOS_FILE_RESULT_HANDLER */
+#endif /* PACKAGES_CLIENT_LAUNCHER_BROWSER_KNOSSOS_FILE_RESULT_HANDLER */

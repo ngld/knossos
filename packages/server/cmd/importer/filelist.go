@@ -16,7 +16,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func buildFilelist(ctx context.Context, archiveMeta importer.KnArchive, archiveID int32, renames map[string]string) ([]importer.KnFile, error) {
+func buildFilelist(ctx context.Context, archiveMeta importer.KnArchive, archiveID int32, renames map[string]string) ([]importer.KnFile, map[string]int64, error) {
 	result := make([]importer.KnFile, 0)
 
 	url := ""
@@ -51,6 +51,7 @@ func buildFilelist(ctx context.Context, archiveMeta importer.KnArchive, archiveI
 
 	hasher := sha256.New()
 	buffer := make([]byte, 128*1024)
+	filesizes := make(map[string]int64)
 
 	for archive.Next() == nil {
 		if archive.Entry.Size < 1 {
@@ -87,6 +88,7 @@ func buildFilelist(ctx context.Context, archiveMeta importer.KnArchive, archiveI
 			ArchiveID: archiveID,
 			Checksum:  importer.KnChecksum{"sha256", string(hex.EncodeToString(hasher.Sum(nil)))},
 		})
+		filesizes[archive.Entry.Pathname] = archive.Entry.Size
 	}
 
 	err = archive.Error()
@@ -94,5 +96,5 @@ func buildFilelist(ctx context.Context, archiveMeta importer.KnArchive, archiveI
 		return nil, eris.Wrap(err, "failed to read from archive")
 	}
 
-	return result, nil
+	return result, filesizes, nil
 }

@@ -303,6 +303,7 @@ exec node "%s" "$@"
             "mkdir -p build/updater",
             "cd packages/updater",
             "go build %s -ldflags '%s' -o ../../build/updater/updater%s" % (updater_goflags, updater_goldflags, binext),
+            "strip ../../build/updater/updater" if build == "Release" else "",
         ] + updater_cmds,
     )
 

@@ -23,12 +23,12 @@ func SaveLocalMod(ctx context.Context, mod *common.ModMeta) error {
 		return eris.Wrapf(err, "failed to serialise mod metadata for %s", mod.Modid)
 	}
 
-	parent := mod.Parent
-	if parent == "" || mod.Type == common.ModType_TOTAL_CONVERSION {
-		parent = mod.Modid
+	subFolder := "mods"
+	if mod.Type == common.ModType_ENGINE {
+		subFolder = "bin"
 	}
 
-	modJSON := filepath.Join(settings.LibraryPath, parent, "knmod-"+mod.Modid+".json")
+	modJSON := filepath.Join(settings.LibraryPath, subFolder, "knmod-"+mod.Modid+".json")
 	err = os.WriteFile(modJSON, modData, 0o600)
 	if err != nil {
 		return eris.Wrapf(err, "failed to write %s for %s", modJSON, mod.Modid)

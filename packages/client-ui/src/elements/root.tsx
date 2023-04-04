@@ -23,6 +23,8 @@ import RemoteModList from '../pages/remote-mod-list';
 import Settings from '../pages/settings';
 import LocalMod from '../pages/local-mod';
 import RemoteMod from '../pages/remote-mod';
+import ToolsPage from '../pages/tools';
+import BuildPage from '../pages/build';
 
 const NavTabs = function NavTabs(): React.ReactElement {
   const navigate = useNavigate();
@@ -31,6 +33,7 @@ const NavTabs = function NavTabs(): React.ReactElement {
     play: 'Play',
     explore: 'Explore',
     build: 'Build',
+    tools: 'Tools',
   };
 
   return (
@@ -105,6 +108,8 @@ const ModContainer = observer(function ModContainer(props: {
             <Route path="/play" element={<LocalModList />} />
             <Route path="/explore" element={<RemoteModList />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/tools" element={<ToolsPage />} />
+            <Route path="/build" element={<BuildPage />} />
             <Route path="/mod/:modid/:version" element={<LocalMod />} />
             <Route path="/rmod/:modid/:version" element={<RemoteMod />} />
             <Route path="/" element={<div className="text-white">Page not found</div>} />

@@ -232,18 +232,12 @@ func InstallMod(ctx context.Context, req *client.InstallModRequest) error {
 			return eris.Wrapf(err, "failed to read release metadata for %s %s", mod.Modid, mod.Version)
 		}
 
-		parent := modMeta.Parent
-		switch {
-		case modMeta.Type == common.ModType_ENGINE:
-			parent = "bin"
-		case modMeta.Type == common.ModType_TOTAL_CONVERSION:
-			parent = modMeta.Modid
-		case parent == "":
-			parent = "FS2"
+		subFolder := "mods"
+		if modMeta.Type == common.ModType_ENGINE {
+			subFolder = "bin"
 		}
 
-		modMeta.Parent = parent
-		modFolder := filepath.Join(settings.LibraryPath, parent, fmt.Sprintf("%s-%s", relMeta.Modid, relMeta.Version))
+		modFolder := filepath.Join(settings.LibraryPath, subFolder, fmt.Sprintf("%s-%s", relMeta.Modid, relMeta.Version))
 		err = os.MkdirAll(modFolder, 0o700)
 		if err != nil {
 			return eris.Wrapf(err, "failed to create mod folder %s", modFolder)
@@ -366,7 +360,16 @@ func InstallMod(ctx context.Context, req *client.InstallModRequest) error {
 		done := atomic.LoadUint32(&done)
 		progress += float32(done) / float32(stepCount)
 
-		api.SetProgress(ctx, progress/2, api.FormatBytes(speed)+"/s")
+		api.SetProgress(
+			ctx,
+			progress/2,
+			fmt.Sprintf(
+				"%s / %s - %s/s",
+				api.FormatBytes(float64(done)*float64(queue.TotalBytes)),
+				api.FormatBytes(float64(queue.TotalBytes)),
+				api.FormatBytes(speed),
+			),
+		)
 	}
 
 	api.Log(ctx, api.LogInfo, "Starting download")

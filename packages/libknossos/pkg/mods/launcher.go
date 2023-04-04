@@ -233,40 +233,12 @@ func LaunchMod(ctx context.Context, mod *common.Release, settings *client.UserSe
 		cmdline = mod.Cmdline
 	}
 
-	modMeta, err := storage.LocalMods.GetMod(ctx, mod.Modid)
+	globalSettings, err := storage.GetSettings(ctx)
 	if err != nil {
-		return err
+		return eris.Wrap(err, "failed to load settings")
 	}
 
-	var parentFolder string
-	switch {
-	case modMeta.Type == common.ModType_TOTAL_CONVERSION:
-		globalSettings, err := storage.GetSettings(ctx)
-		if err != nil {
-			return eris.Wrap(err, "failed to load settings")
-		}
-
-		parentFolder = filepath.Join(globalSettings.LibraryPath, modMeta.Modid)
-	case modMeta.Parent != "FS2" && modMeta.Parent != "":
-		parentVersions, err := storage.LocalMods.GetVersionsForMod(ctx, modMeta.Parent)
-		if err != nil {
-			return err
-		}
-
-		parent, err := storage.LocalMods.GetModRelease(ctx, modMeta.Parent, parentVersions[len(parentVersions)-1])
-		if err != nil {
-			return err
-		}
-
-		parentFolder = parent.Folder
-	default:
-		globalSettings, err := storage.GetSettings(ctx)
-		if err != nil {
-			return eris.Wrap(err, "failed to load settings")
-		}
-
-		parentFolder = filepath.Join(globalSettings.LibraryPath, "FS2")
-	}
+	parentFolder := filepath.Join(globalSettings.LibraryPath, "mods")
 
 	// Build the -mod flag
 	modFlag := make([]string, 0, len(mod.DependencySnapshot))
@@ -343,6 +315,22 @@ func LaunchMod(ctx context.Context, mod *common.Release, settings *client.UserSe
 	err = touchINI(ctx)
 	if err != nil {
 		return eris.Wrap(err, "failed to touch fs2_open.ini")
+	}
+
+	if runtime.GOOS != "windows" {
+		info, err := os.Stat(binary)
+		if err != nil {
+			return eris.Wrapf(err, "failed to check file permissions for %s", binary)
+		}
+
+		// We assume that the user owns the binary (since we most likely created that file) so we just check if the user
+		// has rwx set on the file.
+		if info.Mode()&0o700 != 0o700 {
+			err = os.Chmod(binary, 0o777)
+			if err != nil {
+				return eris.Wrapf(err, "failed to set executable permission on %s", binary)
+			}
+		}
 	}
 
 	proc := exec.Command(binary)

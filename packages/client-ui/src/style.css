@@ -68,6 +68,10 @@ svg {
     white-space: break-spaces;
 }
 
+.bp4-tree-node-content > .bp4-spinner {
+    margin-right: 5px;
+}
+
 .large-dialog {
     width: 800px;
     max-width: 800px;

@@ -49,21 +49,11 @@ import "C"
     )
 
     libinno_task = cmake_task(
-        "libinnoextract-cmake-build",
+        "innoextract-build",
         hidden = True,
-        desc = "Builds libinnoextract with CMake",
-        inputs = ["third_party/innoextract/{cmake/*.cmake,src/**/*.{cpp,hpp}{,.in}}", "packages/libinnoextract/CMakeLists.txt"],
-        outputs = ["build/libinnoextract/libinnoextract.*"],
+        desc = "Builds innoextract with CMake",
+        inputs = ["third_party/innoextract/{cmake/*.cmake,src/**/*.{cpp,hpp}{,.in}}"],
+        outputs = ["build/innoextract/innoextract.*"],
         windows_script = "packages/libinnoextract/msys2-build.sh",
         unix_script = "packages/libinnoextract/unix-build.sh",
-    )
-
-    task(
-        "libinnoextract-build",
-        desc = "Builds libinnoextract",
-        deps = ["install-tools", "libinnoextract-cmake-build"],
-        base = "packages/libinnoextract",
-        inputs = ["*.go", "**/*.go"],
-        outputs = ["*_string.go"],
-        cmds = ["go generate ."],
     )

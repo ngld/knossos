@@ -18,7 +18,7 @@ endif()
 find_path(libknossos "libknossos.${libext}" PATHS "../../../build/libknossos/" REQUIRED)
 set(libknossos "${libknossos}/libknossos.${libext}")
 
-find_path(libinnoextract_dir "libinnoextract.${libext}" PATHS "../../../build/libinnoextract/" REQUIRED)
+find_path(innoextract_dir "innoextract${CMAKE_EXECUTABLE_SUFFIX}" PATHS "../../../build/innoextract/" REQUIRED)
 
 if(OS_WINDOWS)
   find_path(libopenal_dir "soft_oal.dll" PATHS "../../../third_party/openal/bin/Win64" REQUIRED)
@@ -177,11 +177,11 @@ if(OS_LINUX)
   endif()
 
   copy_file(${libknossos} ${CEF_TARGET_OUT_DIR})
-  copy_file("${libinnoextract_dir}/libinnoextract.so" ${CEF_TARGET_OUT_DIR})
+  copy_file("${innoextract_dir}/innoextract" ${CEF_TARGET_OUT_DIR})
 
   if(${CMAKE_BUILD_TYPE} STREQUAL "Release")
     # Strip the libraries on release builds to save a *lot* of space.
-    foreach(filename libcef.so libknossos.so libinnoextract.so)
+    foreach(filename libcef.so libknossos.so innoextract)
       add_custom_command(
         TARGET ${CEF_TARGET}
         POST_BUILD
@@ -301,7 +301,7 @@ if(OS_MAC)
   COPY_MAC_RESOURCES("${KNOSSOS_RESOURCES_SRCS}" "${PREFIXES}" "${CEF_TARGET}" "${CMAKE_CURRENT_SOURCE_DIR}" "${CEF_APP}")
 
   copy_file("${libknossos}" "${CEF_APP}/Contents/MacOS")
-  copy_file("${libinnoextract_dir}/libinnoextract.dylib" "${CEF_APP}/Contents/MacOS")
+  copy_file("${innoextract_dir}/innoextract" "${CEF_APP}/Contents/MacOS")
 endif()
 
 
@@ -335,14 +335,14 @@ if(OS_WINDOWS)
   COPY_FILES("${CEF_TARGET}" "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "${CEF_TARGET_OUT_DIR}")
 
   copy_file("${libknossos}" ${CEF_TARGET_OUT_DIR})
-  copy_file("${libinnoextract_dir}/libinnoextract.dll" ${CEF_TARGET_OUT_DIR})
-  copy_file("${libinnoextract_dir}/libwinpthread-1.dll" ${CEF_TARGET_OUT_DIR})
-  copy_rename_file("${libopenal_dir}/soft_oal.dll" "${CEF_TARGET_OUT_DIR}/OpenAL32.dll")
+  copy_file("${innoextract_dir}/innoextract.exe" ${CEF_TARGET_OUT_DIR})
+  copy_file("${innoextract_dir}/libwinpthread-1.dll" ${CEF_TARGET_OUT_DIR})
+  copy_file("${libopenal_dir}/soft_oal.dll" ${CEF_TARGET_OUT_DIR})
   copy_file("${libSDL2_dir}/SDL2.dll" ${CEF_TARGET_OUT_DIR})
 
   if(${CMAKE_BUILD_TYPE} STREQUAL "Release")
     # Strip the libraries on release builds to save a *lot* of space.
-    foreach(filename libcef.dll libknossos.dll libinnoextract.dll)
+    foreach(filename libcef.dll libknossos.dll innoextract.exe)
       add_custom_command(
         TARGET ${CEF_TARGET}
         POST_BUILD

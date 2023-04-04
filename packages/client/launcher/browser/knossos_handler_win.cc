@@ -56,7 +56,7 @@ InternalFileDialogHelper(CefBrowserHost::FileDialogMode mode,
   }
 
   browser->GetHost()->RunFileDialog(mode, title, default_filepath,
-                                    accept_filters, 0, callback);
+                                    accept_filters, callback);
 }
 
 void KnossosHandler::SaveFileDialog(
@@ -84,33 +84,33 @@ void KnossosHandler::OpenFolderDialog(
                        IID_IFileOpenDialog, reinterpret_cast<void **>(&dialog));
 
   if (!SUCCEEDED(hr)) {
-    callback->OnFileDialogDismissed(0, {});
+    callback->OnFileDialogDismissed({});
     return;
   }
   FILEOPENDIALOGOPTIONS options;
   hr = dialog->GetOptions(&options);
   if (!SUCCEEDED(hr)) {
-    callback->OnFileDialogDismissed(0, {});
+    callback->OnFileDialogDismissed({});
     return;
   }
 
   hr = dialog->SetOptions(options | FOS_PICKFOLDERS | FOS_FORCEFILESYSTEM |
                           FOS_NOREADONLYRETURN);
   if (!SUCCEEDED(hr)) {
-    callback->OnFileDialogDismissed(0, {});
+    callback->OnFileDialogDismissed({});
     return;
   }
 
   auto mb_title = utf8tomb(title);
   if (!mb_title) {
-    callback->OnFileDialogDismissed(0, {});
+    callback->OnFileDialogDismissed({});
     return;
   }
 
   auto mb_folder = utf8tomb(folder);
   if (!mb_folder) {
     std::free(mb_title);
-    callback->OnFileDialogDismissed(0, {});
+    callback->OnFileDialogDismissed({});
     return;
   }
 
@@ -122,7 +122,7 @@ void KnossosHandler::OpenFolderDialog(
   if (!SUCCEEDED(hr)) {
     std::free(mb_title);
     std::free(mb_folder);
-    callback->OnFileDialogDismissed(0, {});
+    callback->OnFileDialogDismissed({});
     return;
   }
 
@@ -130,7 +130,7 @@ void KnossosHandler::OpenFolderDialog(
   if (!SUCCEEDED(hr)) {
     std::free(mb_title);
     std::free(mb_folder);
-    callback->OnFileDialogDismissed(0, {});
+    callback->OnFileDialogDismissed({});
     return;
   }
 
@@ -140,24 +140,24 @@ void KnossosHandler::OpenFolderDialog(
   std::free(mb_folder);
 
   if (!SUCCEEDED(hr)) {
-    return callback->OnFileDialogDismissed(0, {});
+    return callback->OnFileDialogDismissed({});
     return;
   }
 
   IShellItem *item;
   hr = dialog->GetResult(&item);
   if (!SUCCEEDED(hr)) {
-    callback->OnFileDialogDismissed(0, {});
+    callback->OnFileDialogDismissed({});
     return;
   }
 
   PWSTR path;
   hr = item->GetDisplayName(SIGDN_FILESYSPATH, &path);
   if (!SUCCEEDED(hr)) {
-    callback->OnFileDialogDismissed(0, {});
+    callback->OnFileDialogDismissed({});
     return;
   }
 
-  callback->OnFileDialogDismissed(0, {CefString(path)});
+  callback->OnFileDialogDismissed({CefString(path)});
   std::free(path);
 }

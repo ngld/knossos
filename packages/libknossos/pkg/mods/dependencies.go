@@ -49,9 +49,11 @@ func GetDependencySnapshot(ctx context.Context, mods storage.ModProvider, releas
 	availableVersions := make(map[string][]string)
 	path := make([]resolvePathNode, 0)
 	queue := []string{release.Modid}
+	fromGraph := make(map[string][]string)
 	conflicts := make(map[string]map[string]string)
 
 	availableVersions[release.Modid] = []string{release.Version}
+	fromGraph[release.Modid] = []string{"root"}
 
 	for len(queue) > 0 {
 		modID := queue[0]
@@ -102,7 +104,7 @@ func GetDependencySnapshot(ctx context.Context, mods storage.ModProvider, releas
 		}
 
 		version := availableVersions[modID][len(availableVersions[modID])-1]
-		api.Log(ctx, api.LogDebug, "DEP: Trying %s %s", modID, version)
+		api.Log(ctx, api.LogDebug, "DEP: Trying %s %s from %s", modID, version, strings.Join(fromGraph[modID], ", "))
 
 		parsedVersion, err := semver.NewVersion(version)
 		if err != nil {
@@ -207,6 +209,7 @@ func GetDependencySnapshot(ctx context.Context, mods storage.ModProvider, releas
 		conflictSnapshot := makeVersionSnapshot(availableVersions)
 		queueSnapshot := make([]string, len(queue))
 		copy(queueSnapshot, queue)
+		fromSnapshot := makeVersionSnapshot(fromGraph)
 
 		// Remove all conflicting versions from availableVersions
 		for _, con := range cons {
@@ -218,6 +221,7 @@ func GetDependencySnapshot(ctx context.Context, mods storage.ModProvider, releas
 				}
 
 				availableVersions[con.modID] = versions
+				fromGraph[con.modID] = append(fromGraph[con.modID], modID)
 				queue = append(queue, con.modID)
 			}
 
@@ -247,6 +251,7 @@ func GetDependencySnapshot(ctx context.Context, mods storage.ModProvider, releas
 
 				availableVersions = conflictSnapshot
 				availableVersions[modID] = availableVersions[modID][:len(availableVersions[modID])-1]
+				fromGraph = fromSnapshot
 				queue = queueSnapshot
 				goto repickVersion
 			}

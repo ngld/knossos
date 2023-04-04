@@ -72,7 +72,7 @@ def knossos_configure(binext, libext, generator):
     task(
         "libknossos-build",
         desc = "Builds libknossos (client-side, non-UI logic)",
-        deps = ["build-tool", "proto-build", "libarchive-build", "libinnoextract-build"],
+        deps = ["build-tool", "proto-build", "libarchive-build", "innoextract-build"],
         base = "packages/libknossos",
         inputs = [
             "../../.tools/tool%s" % binext,
@@ -149,7 +149,7 @@ def knossos_configure(binext, libext, generator):
     task(
         "client-ws-build",
         hidden = True,
-        deps = ["proto-build", "libarchive-build", "libinnoextract-build"],
+        deps = ["proto-build", "libarchive-build", "innoextract-build"],
         base = "packages/libknossos",
         inputs = [
             "../../.tools/tool%s" % binext,
@@ -176,10 +176,10 @@ def knossos_configure(binext, libext, generator):
             "third_party/openal/bin/Win64/soft_oal.dll",
             "third_party/msys64/mingw64/bin/SDL2.dll",
         ],
-        outputs=["build/libknossos/{OpenAL32,SDL2}.dll"],
+        outputs=["build/libknossos/{soft_oal,SDL2}.dll"],
         cmds = [
             "mkdir -p build/libknossos",
-            "cp third_party/openal/bin/Win64/soft_oal.dll build/libknossos/OpenAL32.dll",
+            "cp third_party/openal/bin/Win64/soft_oal.dll build/libknossos/soft_oal.dll",
             "cp third_party/msys64/mingw64/bin/SDL2.dll build/libknossos",
         ]
     )

@@ -10,6 +10,7 @@ import {
   FSOSettings_VideoSettings,
   HardwareInfoResponse,
   NullMessage,
+  JoystickInfoResponse,
 } from '@api/client';
 import { FinishedUnaryCall } from '@protobuf-ts/runtime-rpc';
 import { GlobalState, useGlobalState } from '../lib/state';
@@ -252,7 +253,7 @@ const VoiceSelect = observer(function VoiceSelect(props: VoiceSelectProps): Reac
 });
 
 interface JoystickSelectProps {
-  hardwareInfo: IPromiseBasedObservable<FinishedUnaryCall<NullMessage, HardwareInfoResponse>>;
+  hardwareInfo: IPromiseBasedObservable<FinishedUnaryCall<NullMessage, JoystickInfoResponse>>;
 }
 
 const JoystickSelect = observer(function JoystickSelect(
@@ -316,6 +317,7 @@ export default observer(function SettingsPage(): React.ReactElement {
   const gs = useGlobalState();
   const [formState] = useState(() => new SettingsState(gs));
   const [hardwareInfo] = useState(() => fromPromise(gs.client.getHardwareInfo({})));
+  const [joystickInfo] = useState(() => fromPromise(gs.client.getJoystickInfo({})));
 
   return (
     <div className="text-white text-sm">
@@ -504,7 +506,7 @@ export default observer(function SettingsPage(): React.ReactElement {
                   }
                 >
                   <FormGroup label="Joystick">
-                    <JoystickSelect hardwareInfo={hardwareInfo} />
+                    <JoystickSelect hardwareInfo={joystickInfo} />
                   </FormGroup>
 
                   <FormCheckbox name="enableJoystickFF" label="Force Feedback" />

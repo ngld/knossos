@@ -8,7 +8,7 @@ KnossosFileResultHandler::KnossosFileResultHandler(
     : request_frame_(request_frame), promise_id_(promise_id), multi_(multi) {}
 
 void KnossosFileResultHandler::OnFileDialogDismissed(
-    int selected_accept_filter, const std::vector<CefString> &file_paths) {
+    const std::vector<CefString> &file_paths) {
   if (multi_) {
     auto msg = CefProcessMessage::Create("knResolvePromiseWithStringArray");
     auto args = msg->GetArgumentList();

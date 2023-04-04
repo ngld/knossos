@@ -114,6 +114,12 @@ KnossosApp::KnossosApp() {}
 
 void KnossosApp::OnBeforeCommandLineProcessing(
     const CefString &process_type, CefRefPtr<CefCommandLine> command_line) {
+
+  // Disable the component updater since we don't use Widevine and these updates are fetched from Google's
+  // servers which tends to irritate users.
+  // https://github.com/chromiumembedded/cef/issues/3149#issuecomment-1465028143
+  command_line->AppendArgument("disable-component-update");
+
   if (process_type.empty()) {
     // Don't create a "GPUCache" directory
     command_line->AppendSwitch("disable-gpu-shader-disk-cache");

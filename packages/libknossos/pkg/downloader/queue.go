@@ -44,7 +44,7 @@ type Queue struct {
 	speedTracker        api.SpeedTracker
 	MaxParallel         int
 	active              int
-	totalBytes          int
+	TotalBytes          int
 	Retries             int
 	periodReceivedBytes uint32
 	done                bool
@@ -84,7 +84,7 @@ func NewQueue(ctx context.Context, items []*QueueItem) (*Queue, error) {
 		if len(item.Mirrors) < 1 {
 			panic(fmt.Sprintf("no URLs provided for item %s", item.Key))
 		}
-		q.totalBytes += int(item.Filesize)
+		q.TotalBytes += int(item.Filesize)
 	}
 
 	return q, nil
@@ -399,7 +399,7 @@ func (q *Queue) updateProgressTicker() {
 			totalReceived += atomic.LoadUint32(item)
 		}
 
-		progress := float32(totalReceived) / float32(q.totalBytes)
+		progress := float32(totalReceived) / float32(q.TotalBytes)
 		q.ProgressCb(progress, q.speedTracker.GetSpeed())
 
 		time.Sleep(300 * time.Millisecond)

@@ -270,14 +270,18 @@ message HardwareInfoResponse {
   string default_playback = 3;
   string default_capture = 4;
 
+  reserved 6;
+  repeated string resolutions = 7;
+  repeated string voices = 8;
+}
+
+message JoystickInfoResponse {
   message Joystick {
     string name = 1;
     string UUID = 2;
   }
 
-  repeated Joystick joysticks = 5;
-  repeated string resolutions = 7;
-  repeated string voices = 8;
+  repeated Joystick joysticks = 1;
 }
 
 message UninstallModCheckRequest {
@@ -306,6 +310,24 @@ message VerifyChecksumRequest {
   string modid = 1;
   string version = 2;
   uint32 ref = 3;
+}
+
+message SimpleModListResponse {
+  message ModInfo {
+    string modid = 1;
+    string version = 2;
+    string title = 3;
+  }
+
+  repeated ModInfo mods = 1;
+}
+
+message BuildModRelInfoResponse {
+  repeated Package packages = 1;
+}
+
+message SaveBuildModRequest {
+  ModMeta mod = 1;
 }
 
 // event messages
@@ -374,6 +396,7 @@ service Knossos {
   rpc FixLibraryFolderPath (FixLibraryFolderPathPayload) returns (FixLibraryFolderPathPayload) {};
   rpc HandleRetailFiles (HandleRetailFilesRequest) returns (SuccessResponse) {};
   rpc GetHardwareInfo (NullMessage) returns (HardwareInfoResponse) {};
+  rpc GetJoystickInfo (NullMessage) returns (JoystickInfoResponse) {};
   rpc LoadFSOSettings (NullMessage) returns (FSOSettings) {};
   rpc SaveFSOSettings (FSOSettings) returns (SuccessResponse) {};
   rpc UninstallModCheck (UninstallModCheckRequest) returns (UninstallModCheckResponse) {};
@@ -383,4 +406,7 @@ service Knossos {
   rpc UpdateLocalModList (TaskRequest) returns (SuccessResponse) {};
   rpc OpenDebugLog (NullMessage) returns (TaskResult) {};
   rpc VerifyChecksums (VerifyChecksumRequest) returns (SuccessResponse) {};
+  rpc GetSimpleModList (NullMessage) returns (SimpleModListResponse) {};
+  rpc GetBuildModRelInfo (ModInfoRequest) returns (BuildModRelInfoResponse) {};
+  rpc SaveBuildMod (SaveBuildModRequest) returns (SuccessResponse) {};
 }

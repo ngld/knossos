@@ -3,8 +3,8 @@
 set -e
 
 cd "$(dirname "$0")"/../..
-mkdir -p build/libinnoextract
-cd build/libinnoextract
+mkdir -p build/innoextract
+cd build/innoextract
 
 export PATH="/mingw64/bin:$PATH"
 
@@ -16,10 +16,11 @@ if [ ! -f build.ninja ]; then
         -DBoost_NO_WARN_NEW_VERSIONS=ON
         -DUSE_LTO=OFF # LTO is buggy with GNU's ld
 
-        ../../packages/libinnoextract
+        ../../third_party/innoextract
     )
 
     cmake -GNinja "${args[@]}"
 fi
 
 ninja
+cp /mingw64/bin/libwinpthread-1.dll .

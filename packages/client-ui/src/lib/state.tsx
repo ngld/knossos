@@ -1,4 +1,5 @@
 import { createContext, useEffect } from 'react';
+import { createRoot } from 'react-dom/client';
 import { makeAutoObservable } from 'mobx';
 import { TwirpFetchTransport } from '@protobuf-ts/twirp-transport';
 import { Toaster, IToaster } from '@blueprintjs/core';
@@ -7,7 +8,7 @@ import { NebulaClient } from '@api/service.client';
 import { TaskTracker } from './task-tracker';
 import { API_URL } from './constants';
 
-interface OverlayProps {
+export interface OverlayProps {
   onFinished?: () => void;
 }
 
@@ -39,7 +40,14 @@ export class GlobalState {
   startupDone: boolean;
 
   constructor() {
-    this.toaster = Toaster.create({});
+    const toastContainer = document.createElement('div');
+    document.body.appendChild(toastContainer);
+    createRoot(toastContainer).render(<Toaster usePortal={false} ref={(inst) => {
+      if (inst) {
+        this.toaster = inst;
+      }
+    }} />);
+
     this.client = new KnossosClient(
       new TwirpFetchTransport({
         baseUrl: API_URL + '/twirp',

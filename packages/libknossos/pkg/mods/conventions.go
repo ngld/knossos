@@ -26,12 +26,8 @@ func GetModFolder(ctx context.Context, rel *common.Release) (string, error) {
 		switch {
 		case mod.Type == common.ModType_ENGINE || mod.Type == common.ModType_TOOL:
 			folder = filepath.Join(settings.LibraryPath, "bin", folder)
-		case mod.Type == common.ModType_TOTAL_CONVERSION:
-			folder = filepath.Join(settings.LibraryPath, mod.Modid, folder)
-		case mod.Parent == "":
-			return "", eris.Errorf("mod %s is neither a TC nor an engine but doesn't have a parent", rel.Modid)
 		default:
-			folder = filepath.Join(settings.LibraryPath, mod.Parent, folder)
+			folder = filepath.Join(settings.LibraryPath, folder)
 		}
 	}
 

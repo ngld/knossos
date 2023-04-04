@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { observer } from 'mobx-react-lite';
 import styled from 'astroturf/react';
 import {
@@ -217,6 +217,22 @@ export const InstallModDialog = observer(function InstallModDialog(
     title: '',
     notes: '',
   });
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function listener() {
+      if (scrollRef.current) {
+        scrollRef.current.style.maxHeight = `${Math.max(200, window.innerHeight - 320)}px`;
+      }
+    }
+
+    window.addEventListener('resize', listener);
+    listener();
+    return () => {
+      window.removeEventListener('resize', listener);
+    };
+  });
+
   useEffect(() => {
     void getInstallInfo(gs, props, setState);
   }, [gs, props]);
@@ -267,32 +283,34 @@ export const InstallModDialog = observer(function InstallModDialog(
                 </Menu>
               }
             >
-              <StyledTree
-                contents={state.nodes}
-                onNodeExpand={(_node, path) => {
-                  const newTree = [...state.nodes];
-                  Tree.nodeFromPath(path, newTree).isExpanded = true;
-                  setState((prev) => ({ ...prev, nodes: newTree }));
-                }}
-                onNodeCollapse={(_node, path) => {
-                  const newTree = [...state.nodes];
-                  Tree.nodeFromPath(path, newTree).isExpanded = false;
-                  setState((prev) => ({ ...prev, nodes: newTree }));
-                }}
-                onNodeClick={(_node, path) => {
-                  const newTree = [...state.nodes];
-                  const node = Tree.nodeFromPath(path, newTree);
-                  const pkg = node.nodeData?.package;
-                  if (!pkg) {
-                    node.isExpanded = !node.isExpanded;
+              <div ref={scrollRef} className="overflow-auto">
+                <StyledTree
+                  contents={state.nodes}
+                  onNodeExpand={(_node, path) => {
+                    const newTree = [...state.nodes];
+                    Tree.nodeFromPath(path, newTree).isExpanded = true;
                     setState((prev) => ({ ...prev, nodes: newTree }));
-                  }
-                }}
-                onNodeMouseEnter={(_node, path) => {
-                  const node = Tree.nodeFromPath(path, state.nodes);
-                  setState((prev) => ({ ...prev, notes: node.nodeData?.package?.notes ?? '' }));
-                }}
-              />
+                  }}
+                  onNodeCollapse={(_node, path) => {
+                    const newTree = [...state.nodes];
+                    Tree.nodeFromPath(path, newTree).isExpanded = false;
+                    setState((prev) => ({ ...prev, nodes: newTree }));
+                  }}
+                  onNodeClick={(_node, path) => {
+                    const newTree = [...state.nodes];
+                    const node = Tree.nodeFromPath(path, newTree);
+                    const pkg = node.nodeData?.package;
+                    if (!pkg) {
+                      node.isExpanded = !node.isExpanded;
+                      setState((prev) => ({ ...prev, nodes: newTree }));
+                    }
+                  }}
+                  onNodeMouseEnter={(_node, path) => {
+                    const node = Tree.nodeFromPath(path, state.nodes);
+                    setState((prev) => ({ ...prev, notes: node.nodeData?.package?.notes ?? '' }));
+                  }}
+                />
+              </div>
             </ContextMenu2>
             <NoteBox title="Notes">{state.notes}</NoteBox>
             <div className={Classes.DIALOG_FOOTER}>
