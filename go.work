@@ -1,0 +1,12 @@
+go 1.17
+
+use (
+	./packages/api
+	./packages/build-tools
+	./packages/libarchive
+	./packages/libinnoextract
+	./packages/libknossos
+	./packages/libopenal
+	./packages/server
+	./packages/updater
+)

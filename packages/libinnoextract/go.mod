@@ -1,5 +1,5 @@
 module github.com/ngld/knossos/packages/libinnoextract
 
-go 1.17
+go 1.19
 
-require github.com/rotisserie/eris v0.5.2
+require github.com/rotisserie/eris v0.5.4
