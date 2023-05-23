@@ -251,6 +251,9 @@ func (kn *knossosServer) GetModInfo(ctx context.Context, req *client.ModInfoRequ
 					}
 				}
 			}
+			sort.SliceStable(tools, func(i, j int) bool {
+				return tools[i].Label < tools[j].Label
+			})
 		} else {
 			api.Log(ctx, api.LogWarn, "Could not resolve engine for mod %s (%s): %s", mod.Title, release.Version, eris.ToString(err, true))
 		}

@@ -132,7 +132,7 @@ function ModActionMenu(props: { mod: SimpleModList_Item }): React.ReactElement {
             <MenuItem
               key={tool.label}
               icon="play"
-              text={'Open ' + tool.label}
+              text={'Run ' + tool.label}
               onClick={() =>
                 gs.launchOverlay(LaunchModDialog, {
                   modid: props.mod.modid,
